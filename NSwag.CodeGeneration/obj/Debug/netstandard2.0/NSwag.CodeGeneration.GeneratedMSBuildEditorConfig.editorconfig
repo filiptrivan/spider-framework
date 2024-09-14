@@ -1,0 +1,5 @@
+is_global = true
+build_property.RootNamespace = NSwag.CodeGeneration
+build_property.ProjectDir = E:\Projects\Soft.Generator\Source\NSwag.CodeGeneration\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 

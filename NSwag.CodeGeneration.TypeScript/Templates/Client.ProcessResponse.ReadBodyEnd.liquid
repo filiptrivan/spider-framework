@@ -1,0 +1,8 @@
+{% if Framework.IsFetchOrAurelia or operation.RequestAngularBlobs or Framework.Angular.UseHttpClient or operation.RequestAngularJSBlobs -%}
+{%- assign condition_temp = Framework.Angular.UseHttpClient or operation.RequestAngularBlobs %}
+{%     if Framework.IsAngular and Framework.UseRxJs6 and condition_temp -%}
+}));
+{%     else -%}
+});
+{%     endif -%}
+{%- endif %}
