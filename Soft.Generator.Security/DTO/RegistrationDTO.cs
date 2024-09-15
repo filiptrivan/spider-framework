@@ -14,6 +14,6 @@ namespace Soft.Generator.Security.DTO
     {
         public string Email { get; set; }
         public string Password { get; set; }
-        // FT: We don't need BrowserId because only one registration verification link can be valid
+        public string BrowserId { get; set; }
     }
 }

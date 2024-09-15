@@ -43,9 +43,15 @@ namespace Soft.Generator.WebAPI.Controllers
         #region Authentication
 
         [HttpPost]
-        public async Task<LoginResultDTO> Login(LoginDTO loginDTO)
+        public async Task SendLoginVerificationEmail(LoginDTO loginDTO)
         {
-            return await _securityBusinessService.Login(loginDTO, GetIPAddress(HttpContext));
+            await _securityBusinessService.SendLoginVerificationEmail(loginDTO);
+        }
+
+        [HttpPost]
+        public LoginResultDTO Login(VerificationTokenRequestDTO request)
+        {
+            return _securityBusinessService.Login(request, GetIPAddress(HttpContext));
         }
 
         [HttpPost]
@@ -57,7 +63,7 @@ namespace Soft.Generator.WebAPI.Controllers
         [HttpPost]
         public async Task<RegistrationVerificationResultDTO> SendRegistrationVerificationEmail(RegistrationDTO registrationDTO)
         {
-            return await _securityBusinessService.SendRegistrationVerificationEmail(registrationDTO, GetIPAddress(HttpContext));
+            return await _securityBusinessService.SendRegistrationVerificationEmail(registrationDTO);
         }
 
         [HttpPost]

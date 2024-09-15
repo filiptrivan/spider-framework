@@ -42,12 +42,15 @@ namespace Soft.Generator.Security.Services
             validationRules.ValidateAndThrow(loginDTO);
 
             string userEmail = null;
+            long userId = 0;
             await _context.WithTransactionAsync(async () =>
             {
                 User user = await Authenticate(loginDTO);
                 userEmail = user.Email;
+                userId = user.Id;
+
             });
-            string verificationCode = _jwtAuthManagerService.GenerateAndSaveLoginVerificationCode(userEmail);
+            string verificationCode = _jwtAuthManagerService.GenerateAndSaveLoginVerificationCode(userEmail, userId, loginDTO.BrowserId);
             try
             {
                 await _emailingService.SendVerificationEmailAsync(userEmail, verificationCode);
@@ -59,11 +62,16 @@ namespace Soft.Generator.Security.Services
             }
         }
 
-        public async Task<LoginResultDTO> Login(VerificationTokenRequestDTO verificationRequestDTO, string ipAddress)
+        public LoginResultDTO Login(VerificationTokenRequestDTO verificationRequestDTO, string ipAddress)
         {
-            
-            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(ipAddress, loginDTO.BrowserId, user.Id, user.Email);
-            return GetLoginResultDTO(user.Id, user.Email, jwtAuthResultDTO);
+            VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
+            validationRules.ValidateAndThrow(verificationRequestDTO);
+
+            LoginVerificationTokenDTO loginVerificationTokenDTO = _jwtAuthManagerService.ValidateAndGetLoginVerificationTokenDTO(
+                verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
+            // TODO FT: Log somewhere good and bad request
+            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(ipAddress, loginVerificationTokenDTO.BrowserId, loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email);
+            return GetLoginResultDTO(loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email, jwtAuthResultDTO);
         }
 
         public async Task<LoginResultDTO> LoginExternal(ExternalProviderDTO externalProviderDTO, string ipAddress, string googleClientId)
@@ -133,7 +141,7 @@ namespace Soft.Generator.Security.Services
                     User user = await GetUserByEmailAsync(registrationDTO.Email);
                     if (user == null)
                     {
-                        string verificationCode = _jwtAuthManagerService.GenerateAndSaveRegistrationVerificationCode(registrationDTO.Email, registrationDTO.Password);
+                        string verificationCode = _jwtAuthManagerService.GenerateAndSaveRegistrationVerificationCode(registrationDTO.Email, registrationDTO.Password, registrationDTO.BrowserId);
                         try
                         {
                             await _emailingService.SendVerificationEmailAsync(registrationDTO.Email, verificationCode);
@@ -172,14 +180,15 @@ namespace Soft.Generator.Security.Services
             VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
             validationRules.ValidateAndThrow(verificationRequestDTO);
 
-            RegistrationVerificationTokenDTO verificationTokenDTO = _jwtAuthManagerService.ValidateAndGetRegistrationVerificationTokenDTO(verificationRequestDTO.VerificationCode, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
+            RegistrationVerificationTokenDTO registrationVerificationTokenDTO = _jwtAuthManagerService.ValidateAndGetRegistrationVerificationTokenDTO(
+                verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
             User user = null;
             await _context.WithTransactionAsync(async () =>
             {
                 user = new User
                 {
-                    Email = verificationTokenDTO.Email,
-                    Password = BCrypt.Net.BCrypt.EnhancedHashPassword(verificationTokenDTO.Password),
+                    Email = registrationVerificationTokenDTO.Email,
+                    Password = BCrypt.Net.BCrypt.EnhancedHashPassword(registrationVerificationTokenDTO.Password),
                     IsVerified = true,
                     HasLoggedInWithExternalProvider = false, // FT: He couldn't do this if already has account
                     NumberOfFailedAttemptsInARow = 0

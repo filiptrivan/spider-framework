@@ -8,21 +8,23 @@ namespace Soft.Generator.Security.DataMappers
     public static partial class Mapper
     {
 
-        #region User
+        #region Permission
 
-        public static partial User Map(UserDTO dto);
-
-        
-
-        
+        public static partial Permission Map(PermissionDTO dto);
 
                 
-        public static partial IQueryable<UserDTO> ProjectTo(this IQueryable<User> poco);
+        public static partial PermissionDTO Map(Permission poco);
 
                 
-        public static partial IQueryable<UserDTO> ExcelProjectTo(this IQueryable<User> poco);
+        public static partial PermissionDTO ExcelMap(Permission poco);
 
-        public static partial void MergeMap(UserDTO dto, User poco);
+                
+        public static partial IQueryable<PermissionDTO> ProjectTo(this IQueryable<Permission> poco);
+
+                
+        public static partial IQueryable<PermissionDTO> ExcelProjectTo(this IQueryable<Permission> poco);
+
+        public static partial void MergeMap(PermissionDTO dto, Permission poco);
 
         #endregion
 
@@ -48,23 +50,21 @@ namespace Soft.Generator.Security.DataMappers
         #endregion
 
 
-        #region Permission
+        #region User
 
-        public static partial Permission Map(PermissionDTO dto);
+        public static partial User Map(UserDTO dto);
 
-                
-        public static partial PermissionDTO Map(Permission poco);
+        
 
-                
-        public static partial PermissionDTO ExcelMap(Permission poco);
+        
 
                 
-        public static partial IQueryable<PermissionDTO> ProjectTo(this IQueryable<Permission> poco);
+        public static partial IQueryable<UserDTO> ProjectTo(this IQueryable<User> poco);
 
                 
-        public static partial IQueryable<PermissionDTO> ExcelProjectTo(this IQueryable<Permission> poco);
+        public static partial IQueryable<UserDTO> ExcelProjectTo(this IQueryable<User> poco);
 
-        public static partial void MergeMap(PermissionDTO dto, Permission poco);
+        public static partial void MergeMap(UserDTO dto, User poco);
 
         #endregion
 

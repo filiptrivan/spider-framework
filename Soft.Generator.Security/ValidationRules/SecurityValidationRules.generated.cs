@@ -4,13 +4,6 @@ using Soft.Generator.Shared.SoftFluentValidation;
 
 namespace Soft.Generator.Security.ValidationRules
 {
-    public class JwtAuthResultDTOValidationRules : AbstractValidator<JwtAuthResultDTO>
-    {
-        public JwtAuthResultDTOValidationRules()
-        {
-            
-        }
-    }
     public class UserDTOValidationRules : AbstractValidator<UserDTO>
     {
         public UserDTOValidationRules()
@@ -22,16 +15,32 @@ namespace Soft.Generator.Security.ValidationRules
 			RuleFor(x => x.IsVerified).NotEmpty();
         }
     }
-    public class RegistrationVerificationResultDTOValidationRules : AbstractValidator<RegistrationVerificationResultDTO>
+    public class ExternalProviderDTOValidationRules : AbstractValidator<ExternalProviderDTO>
     {
-        public RegistrationVerificationResultDTOValidationRules()
+        public ExternalProviderDTOValidationRules()
         {
             
         }
     }
-    public class ExternalProviderDTOValidationRules : AbstractValidator<ExternalProviderDTO>
+    public class PermissionDTOValidationRules : AbstractValidator<PermissionDTO>
     {
-        public ExternalProviderDTOValidationRules()
+        public PermissionDTOValidationRules()
+        {
+            RuleFor(x => x.Name).NotEmpty().Length(0, 255);
+			RuleFor(x => x.Description).Length(0, 1000);
+        }
+    }
+    public class RoleDTOValidationRules : AbstractValidator<RoleDTO>
+    {
+        public RoleDTOValidationRules()
+        {
+            RuleFor(x => x.Name).NotEmpty().Length(0, 255);
+			RuleFor(x => x.Description).Length(0, 1000);
+        }
+    }
+    public class JwtAuthResultDTOValidationRules : AbstractValidator<JwtAuthResultDTO>
+    {
+        public JwtAuthResultDTOValidationRules()
         {
             
         }
@@ -44,41 +53,9 @@ namespace Soft.Generator.Security.ValidationRules
 			RuleFor(x => x.Password).NotEmpty().Length(6, 20);
         }
     }
-    public class RefreshTokenRequestDTOValidationRules : AbstractValidator<RefreshTokenRequestDTO>
-    {
-        public RefreshTokenRequestDTOValidationRules()
-        {
-            
-        }
-    }
-    public class RegistrationDTOValidationRules : AbstractValidator<RegistrationDTO>
-    {
-        public RegistrationDTOValidationRules()
-        {
-            RuleFor(x => x.Email).NotEmpty().Length(5, 100).EmailAddress();
-			RuleFor(x => x.Password).NotEmpty().Length(6, 20);
-        }
-    }
     public class LoginResultDTOValidationRules : AbstractValidator<LoginResultDTO>
     {
         public LoginResultDTOValidationRules()
-        {
-            
-        }
-    }
-    public class VerificationTokenRequestDTOValidationRules : AbstractValidator<VerificationTokenRequestDTO>
-    {
-        public VerificationTokenRequestDTOValidationRules()
-        {
-            RuleFor(x => x.VerificationCode).NotEmpty().Length(6);
-			RuleFor(x => x.Email).NotEmpty().Length(5, 100).EmailAddress();
-			RuleFor(x => x.VerificationCode).NotEmpty().Length(6);
-			RuleFor(x => x.Email).NotEmpty().Length(5, 100).EmailAddress();
-        }
-    }
-    public class RefreshTokenDTOValidationRules : AbstractValidator<RefreshTokenDTO>
-    {
-        public RefreshTokenDTOValidationRules()
         {
             
         }
@@ -97,9 +74,31 @@ namespace Soft.Generator.Security.ValidationRules
             
         }
     }
-    public class VerificationTokenDTOValidationRules : AbstractValidator<VerificationTokenDTO>
+    public class RefreshTokenDTOValidationRules : AbstractValidator<RefreshTokenDTO>
     {
-        public VerificationTokenDTOValidationRules()
+        public RefreshTokenDTOValidationRules()
+        {
+            
+        }
+    }
+    public class RefreshTokenRequestDTOValidationRules : AbstractValidator<RefreshTokenRequestDTO>
+    {
+        public RefreshTokenRequestDTOValidationRules()
+        {
+            
+        }
+    }
+    public class RegistrationDTOValidationRules : AbstractValidator<RegistrationDTO>
+    {
+        public RegistrationDTOValidationRules()
+        {
+            RuleFor(x => x.Email).NotEmpty().Length(5, 100).EmailAddress();
+			RuleFor(x => x.Password).NotEmpty().Length(6, 20);
+        }
+    }
+    public class RegistrationVerificationResultDTOValidationRules : AbstractValidator<RegistrationVerificationResultDTO>
+    {
+        public RegistrationVerificationResultDTOValidationRules()
         {
             
         }
@@ -111,20 +110,12 @@ namespace Soft.Generator.Security.ValidationRules
             
         }
     }
-    public class RoleDTOValidationRules : AbstractValidator<RoleDTO>
+    public class VerificationTokenRequestDTOValidationRules : AbstractValidator<VerificationTokenRequestDTO>
     {
-        public RoleDTOValidationRules()
+        public VerificationTokenRequestDTOValidationRules()
         {
-            RuleFor(x => x.Name).NotEmpty().Length(0, 255);
-			RuleFor(x => x.Description).Length(0, 1000);
-        }
-    }
-    public class PermissionDTOValidationRules : AbstractValidator<PermissionDTO>
-    {
-        public PermissionDTOValidationRules()
-        {
-            RuleFor(x => x.Name).NotEmpty().Length(0, 255);
-			RuleFor(x => x.Description).Length(0, 1000);
+            RuleFor(x => x.VerificationCode).NotEmpty().Length(6);
+			RuleFor(x => x.Email).NotEmpty().Length(5, 100).EmailAddress();
         }
     }
 }

@@ -31,13 +31,13 @@ namespace Soft.Generator.Security.Interface
         void RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email);
 
         // Login verification
-        LoginVerificationTokenDTO ValidateAndGetLoginVerificationTokenDTO(string verificationToken, string email);
-        string GenerateAndSaveLoginVerificationCode(string userEmail);
+        LoginVerificationTokenDTO ValidateAndGetLoginVerificationTokenDTO(string verificationToken, string browserId, string email);
+        string GenerateAndSaveLoginVerificationCode(string userEmail, long userId, string browserId);
         void RemoveLoginVerificationTokensByEmail(string email);
 
         // Registration verification
-        RegistrationVerificationTokenDTO ValidateAndGetRegistrationVerificationTokenDTO(string verificationToken, string email);
-        string GenerateAndSaveRegistrationVerificationCode(string userEmail, string password);
+        RegistrationVerificationTokenDTO ValidateAndGetRegistrationVerificationTokenDTO(string verificationToken, string browserId, string email);
+        string GenerateAndSaveRegistrationVerificationCode(string userEmail, string password, string browserId);
         void RemoveRegistrationVerificationTokensByEmail(string email);
     }
 }

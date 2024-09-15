@@ -242,12 +242,12 @@ namespace Soft.Generator.Security.Services
 
         #region Login
 
-        public LoginVerificationTokenDTO ValidateAndGetLoginVerificationTokenDTO(string verificationTokenKey, string email)
+        public LoginVerificationTokenDTO ValidateAndGetLoginVerificationTokenDTO(string verificationTokenKey, string browserId, string email)
         {
             RemoveExpiredLoginVerificationTokens();
 
             // FT: Doing this because there is a chance of generating two same codes.
-            LoginVerificationTokenDTO loginVerificationTokenDTO = _usersLoginVerificationTokens.Where(x => x.Key == verificationTokenKey && x.Value.Email == email).SingleOrDefault().Value;
+            LoginVerificationTokenDTO loginVerificationTokenDTO = _usersLoginVerificationTokens.Where(x => x.Key == verificationTokenKey && x.Value.Email == email && x.Value.BrowserId == browserId).SingleOrDefault().Value;
 
             if (loginVerificationTokenDTO == null)
             {
@@ -265,11 +265,13 @@ namespace Soft.Generator.Security.Services
             return loginVerificationTokenDTO;
         }
 
-        public string GenerateAndSaveLoginVerificationCode(string userEmail)
+        public string GenerateAndSaveLoginVerificationCode(string userEmail, long userId, string browserId)
         {
             LoginVerificationTokenDTO loginVerificationTokenDTO = new LoginVerificationTokenDTO
             {
                 Email = userEmail,
+                UserId = userId,
+                BrowserId = browserId,
                 ExpireAt = DateTime.Now.AddMinutes(SettingsProvider.Current.VerificationTokenExpiration),
             };
 
@@ -282,12 +284,13 @@ namespace Soft.Generator.Security.Services
 
         #region Registration
 
-        public RegistrationVerificationTokenDTO ValidateAndGetRegistrationVerificationTokenDTO(string verificationTokenKey, string email)
+        public RegistrationVerificationTokenDTO ValidateAndGetRegistrationVerificationTokenDTO(string verificationTokenKey, string browserId, string email)
         {
             RemoveExpiredRegistrationVerificationTokens();
 
             // FT: Doing this because there is a chance of generating two same codes.
-            RegistrationVerificationTokenDTO registrationVerificationTokenDTO = _usersRegistrationVerificationTokens.Where(x => x.Key == verificationTokenKey && x.Value.Email == email).SingleOrDefault().Value;
+            RegistrationVerificationTokenDTO registrationVerificationTokenDTO = _usersRegistrationVerificationTokens
+                .Where(x => x.Key == verificationTokenKey && x.Value.Email == email && x.Value.BrowserId == browserId).SingleOrDefault().Value;
 
             if (registrationVerificationTokenDTO == null)
             {
@@ -305,12 +308,13 @@ namespace Soft.Generator.Security.Services
             return registrationVerificationTokenDTO;
         }
 
-        public string GenerateAndSaveRegistrationVerificationCode(string userEmail, string password)
+        public string GenerateAndSaveRegistrationVerificationCode(string userEmail, string password, string browserId)
         {
             RegistrationVerificationTokenDTO registrationVerificationTokenDTO = new RegistrationVerificationTokenDTO
             {
                 Email = userEmail,
                 Password = password,
+                BrowserId = browserId,
                 ExpireAt = DateTime.Now.AddMinutes(SettingsProvider.Current.VerificationTokenExpiration),
             };
 
