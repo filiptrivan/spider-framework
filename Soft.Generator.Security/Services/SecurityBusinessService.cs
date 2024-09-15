@@ -35,29 +35,35 @@ namespace Soft.Generator.Security.Services
             _emailingService = emailingService;
         }
 
-        public async Task<LoginResultDTO> Login(LoginDTO loginDTO, string ipAddress)
+        // Login
+        public async Task SendLoginVerificationEmail(LoginDTO loginDTO)
         {
+            LoginDTOValidationRules validationRules = new LoginDTOValidationRules();
+            validationRules.ValidateAndThrow(loginDTO);
+
+            string userEmail = null;
+            await _context.WithTransactionAsync(async () =>
+            {
+                User user = await Authenticate(loginDTO);
+                userEmail = user.Email;
+            });
+            string verificationCode = _jwtAuthManagerService.GenerateAndSaveLoginVerificationCode(userEmail);
             try
             {
-                LoginDTOValidationRules validationRules = new LoginDTOValidationRules();
-                validationRules.ValidateAndThrow(loginDTO);
-
-                return await _context.WithTransactionAsync(async () =>
-                {
-                    User user = await Authenticate(loginDTO);
-                    JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(ipAddress, loginDTO.BrowserId, user.Id, user.Email);
-                    //await SaveLoginAndReturnDomainAsync(loginDTO); // FT: Is ipAddress == null is checked here // TODO FT: Log it
-                    return GetLoginResultDTO(user.Id, user.Email, jwtAuthResultDTO);
-                });
+                await _emailingService.SendVerificationEmailAsync(userEmail, verificationCode);
             }
             catch (Exception)
             {
-                // We don't want to add NumberOfFailedAttemptsInARow to the user, if something went to the catch block, only if he typed bad password
-                // TODO FT: log it
-                //loginDTO.IsSuccessful = false;
-                //await SaveLoginAndReturnDomainAsync(loginDTO);
+                _jwtAuthManagerService.RemoveRegistrationVerificationTokensByEmail(userEmail); // We didn't send email, set all verification tokens invalid then
                 throw;
             }
+        }
+
+        public async Task<LoginResultDTO> Login(VerificationTokenRequestDTO verificationRequestDTO, string ipAddress)
+        {
+            
+            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(ipAddress, loginDTO.BrowserId, user.Id, user.Email);
+            return GetLoginResultDTO(user.Id, user.Email, jwtAuthResultDTO);
         }
 
         public async Task<LoginResultDTO> LoginExternal(ExternalProviderDTO externalProviderDTO, string ipAddress, string googleClientId)
@@ -111,9 +117,11 @@ namespace Soft.Generator.Security.Services
             }
         }
 
-        public async Task<RegistrationResultDTO> Register(RegistrationDTO registrationDTO, string ipAddress)
+
+        // Registration
+        public async Task<RegistrationVerificationResultDTO> SendRegistrationVerificationEmail(RegistrationDTO registrationDTO)
         {
-            RegistrationResultDTO registrationResultDTO = new RegistrationResultDTO();
+            RegistrationVerificationResultDTO registrationResultDTO = new RegistrationVerificationResultDTO();
 
             try
             {
@@ -125,33 +133,33 @@ namespace Soft.Generator.Security.Services
                     User user = await GetUserByEmailAsync(registrationDTO.Email);
                     if (user == null)
                     {
-                        JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRegistrationVerificationDTO(registrationDTO.Email, SettingsProvider.Current.VerificationTokenExpiration, registrationDTO.Password);
+                        string verificationCode = _jwtAuthManagerService.GenerateAndSaveRegistrationVerificationCode(registrationDTO.Email, registrationDTO.Password);
                         try
                         {
-                            await _emailingService.SendVerificationEmailAsync(registrationDTO.Email, jwtAuthResultDTO.AccessToken, jwtAuthResultDTO.Token.TokenString);
+                            await _emailingService.SendVerificationEmailAsync(registrationDTO.Email, verificationCode);
                         }
                         catch (Exception)
                         {
-                            _jwtAuthManagerService.RemoveVerificationTokensByEmail(registrationDTO.Email); // We didn't send email, set all verification tokens invalid then
+                            _jwtAuthManagerService.RemoveRegistrationVerificationTokensByEmail(registrationDTO.Email); // We didn't send email, set all verification tokens invalid then
                             throw;
                         }
-                        registrationResultDTO.Status = RegistrationResultStatusCodes.UserDoesNotExistAndDoesNotHaveValidToken; // FT: We don't need to show the message to the user here, we will route him to another page
+                        registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UserDoesNotExistAndDoesNotHaveValidToken; // FT: We don't need to show the message to the user here, we will route him to another page
                     }
                     else if (user.HasLoggedInWithExternalProvider && user.Password == null)
                     {
-                        registrationResultDTO.Status = RegistrationResultStatusCodes.UserWithoutPasswordExists;
-                        registrationResultDTO.Message = "Your account already exists with third-party (eg. Google) authentication. If this is you and you want to set up an password as well, please log in to your profile and add a password.";
+                        registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UserWithoutPasswordExists;
+                        registrationResultDTO.Message = "Your account already exists with third-party (eg. Google) authentication. If you want to set up an password as well, please log in to your profile and add a password.";
                     }
                     else if (user.Password != null)
                     {
-                        registrationResultDTO.Status = RegistrationResultStatusCodes.UserWithPasswordExists;
-                        registrationResultDTO.Message = "An account with this email address already exists in our system.";
+                        registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UserWithPasswordExists;
+                        registrationResultDTO.Message = "An account with this email address already exists in the system.";
                     }
                 });
             }
             catch (Exception ex)
             {
-                registrationResultDTO.Status = RegistrationResultStatusCodes.UnexpectedError;
+                registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UnexpectedError;
                 // TODO FT: log it
                 throw;
             }
@@ -159,17 +167,19 @@ namespace Soft.Generator.Security.Services
             return registrationResultDTO;
         }
 
-        public async Task<LoginResultDTO> RegistrationVerification(string verificationToken, string accessToken, string ipAddress, string browserId)
+        public async Task<LoginResultDTO> Register(VerificationTokenRequestDTO verificationRequestDTO, string ipAddress)
         {
-            _jwtAuthManagerService.DecodeJwtToken(accessToken);
-            RefreshTokenDTO verificationTokenDTO = _jwtAuthManagerService.ValidateAndGetVerificationTokenDTO(verificationToken); // FT: Can not be null, if its null it already has thrown
+            VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
+            validationRules.ValidateAndThrow(verificationRequestDTO);
+
+            RegistrationVerificationTokenDTO verificationTokenDTO = _jwtAuthManagerService.ValidateAndGetRegistrationVerificationTokenDTO(verificationRequestDTO.VerificationCode, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
             User user = null;
             await _context.WithTransactionAsync(async () =>
             {
                 user = new User
                 {
                     Email = verificationTokenDTO.Email,
-                    Password = verificationTokenDTO.Password,
+                    Password = BCrypt.Net.BCrypt.EnhancedHashPassword(verificationTokenDTO.Password),
                     IsVerified = true,
                     HasLoggedInWithExternalProvider = false, // FT: He couldn't do this if already has account
                     NumberOfFailedAttemptsInARow = 0
@@ -177,15 +187,64 @@ namespace Soft.Generator.Security.Services
                 await _context.DbSet<User>().AddAsync(user);
                 await _context.SaveChangesAsync();
             });
-            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(ipAddress, browserId, user.Id, user.Email); // FT: User can't be null, it would throw earlier if he is
+            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(ipAddress, verificationRequestDTO.BrowserId, user.Id, user.Email); // FT: User can't be null, it would throw earlier if he is
             //await SaveLoginAndReturnDomainAsync(loginDTO); // FT: Is ipAddress == null is checked here // TODO FT: Log it
             return GetLoginResultDTO(user.Id, user.Email, jwtAuthResultDTO);
         }
 
-        /// <summary>
-        /// userId is nullable because of calling method from registration
-        /// </summary>
-        public JwtAuthResultDTO GetJwtAuthResultWithRefreshDTO(string ipAddress, string browserId, long userId, string userEmail)
+
+        public async Task<LoginResultDTO> GetLoginResultDTOAsync(RefreshTokenRequestDTO request, string accessToken)
+        {
+            List<Claim> principalClaims = _jwtAuthManagerService.GetPrincipalClaimsForAccessToken(request, accessToken);
+            UserDTO userIdAndEmailFromTheAccessToken = GetCurrentUserIdAndEmailFromClaims(principalClaims); // FT: Id will be always the same, it can't change
+            string emailFromTheDb = await GetCurrentUserEmailByIdAsync(userIdAndEmailFromTheAccessToken.Id);
+            if (emailFromTheDb != userIdAndEmailFromTheAccessToken.Email) // The email from db changed, and the user is using the old one in access token
+                _jwtAuthManagerService.RemoveRefreshTokenByEmail(userIdAndEmailFromTheAccessToken.Email);
+
+            JwtAuthResultDTO jwtResult = _jwtAuthManagerService.Refresh(request, userIdAndEmailFromTheAccessToken.Id, emailFromTheDb, principalClaims);
+
+            return new LoginResultDTO
+            {
+                UserId = (long)jwtResult.UserId, // Here it will always be user, if there is not, it will break earlier
+                Email = jwtResult.UserEmail,
+                AccessToken = jwtResult.AccessToken,
+                RefreshToken = jwtResult.Token.TokenString
+            };
+        }
+
+
+
+        public static UserDTO GetCurrentUserIdAndEmail(ClaimsIdentity identity)
+        {
+            if (identity != null)
+            {
+                List<Claim> userClaims = identity.Claims.ToList();
+
+                return GetCurrentUserIdAndEmailFromClaims(userClaims);
+            }
+
+            return null;
+        }
+
+        public async Task<string> GetCurrentUserEmailByIdAsync(long id)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                return await _context.DbSet<User>().AsNoTracking().Where(x => x.Id == id).Select(x => x.Email).SingleOrDefaultAsync();
+            });
+        }
+
+        public async Task<User> GetUserByEmailAsync(string email)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                return await _context.DbSet<User>().AsNoTracking().Where(x => x.Email == email).SingleOrDefaultAsync();
+            });
+        }
+
+        #region Helpers
+
+        private JwtAuthResultDTO GetJwtAuthResultWithRefreshDTO(string ipAddress, string browserId, long userId, string userEmail)
         {
             List<Claim> claims = new List<Claim>
             {
@@ -194,18 +253,6 @@ namespace Soft.Generator.Security.Services
             };
 
             JwtAuthResultDTO jwtAuthResult = _jwtAuthManagerService.GenerateAccessAndRefreshTokens(userEmail, claims, ipAddress, browserId, userId);
-
-            return jwtAuthResult;
-        }
-
-        public JwtAuthResultDTO GetJwtAuthResultWithRegistrationVerificationDTO(string userEmail, int verificationTokenExpiration, string password)
-        {
-            List<Claim> claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Email, userEmail),
-            };
-
-            JwtAuthResultDTO jwtAuthResult = _jwtAuthManagerService.GenerateAccessAndRegistrationVerificationTokens(userEmail, claims, verificationTokenExpiration, password);
 
             return jwtAuthResult;
         }
@@ -219,25 +266,6 @@ namespace Soft.Generator.Security.Services
                 AccessToken = jwtAuthResultDTO.AccessToken,
                 RefreshToken = jwtAuthResultDTO.Token.TokenString,
             };
-        }
-
-        /// <summary>
-        /// FT HACK: Because the DTO validation and db validations are different (i can save null in password for the external provider login user)
-        /// </summary>
-        [Obsolete("Old logic, where we stored all login attempts in the database, we chose to only log it.")]
-        private async Task SaveLoginExternalAsync(LoginDTO loginDTO)
-        {
-            //if (loginDTO.IpAddress == null)
-            //    throw new BusinessException("Your IP address is empty, contact support.");
-
-            //await _context.WithTransactionAsync(async () =>
-            //{
-            //    DbSet<Login> dbSet = _context.DbSet<Login>();
-            //    Login login = Mapper.Map(loginDTO);
-            //    await dbSet.AddAsync(login);
-
-            //    await _context.SaveChangesAsync();
-            //});
         }
 
         private async Task<User> Authenticate(LoginDTO loginDTO)
@@ -265,25 +293,6 @@ namespace Soft.Generator.Security.Services
             });
         }
 
-        public async Task<LoginResultDTO> GetLoginResultDTOAsync(RefreshTokenRequestDTO request, string accessToken)
-        {
-            List<Claim> principalClaims = _jwtAuthManagerService.GetPrincipalClaimsForAccessToken(request, accessToken);
-            UserDTO userIdAndEmailFromTheAccessToken = GetCurrentUserIdAndEmailFromClaims(principalClaims); // FT: Id will be always the same, it can't change
-            string emailFromTheDb = await GetCurrentUserEmailByIdAsync(userIdAndEmailFromTheAccessToken.Id);
-            if (emailFromTheDb != userIdAndEmailFromTheAccessToken.Email) // The email from db changed, and the user is using the old one in access token
-                _jwtAuthManagerService.RemoveRefreshTokenByEmail(userIdAndEmailFromTheAccessToken.Email);
-
-            JwtAuthResultDTO jwtResult = _jwtAuthManagerService.Refresh(request, userIdAndEmailFromTheAccessToken.Id, emailFromTheDb, principalClaims);
-
-            return new LoginResultDTO
-            {
-                UserId = (long)jwtResult.UserId, // Here it will always be user, if there is not, it will break earlier
-                Email = jwtResult.UserEmail,
-                AccessToken = jwtResult.AccessToken,
-                RefreshToken = jwtResult.Token.TokenString
-            };
-        }
-
         private async Task<GoogleJsonWebSignature.Payload> ValidateGoogleToken(string idToken, string clientId)
         {
             GoogleJsonWebSignature.ValidationSettings settings = new GoogleJsonWebSignature.ValidationSettings()
@@ -295,19 +304,7 @@ namespace Soft.Generator.Security.Services
             return payload;
         }
 
-        public static UserDTO GetCurrentUserIdAndEmail(ClaimsIdentity identity)
-        {
-            if (identity != null)
-            {
-                List<Claim> userClaims = identity.Claims.ToList();
-
-                return GetCurrentUserIdAndEmailFromClaims(userClaims);
-            }
-
-            return null;
-        }
-
-        public static UserDTO GetCurrentUserIdAndEmailFromClaims(List<Claim> claims)
+        private static UserDTO GetCurrentUserIdAndEmailFromClaims(List<Claim> claims)
         {
             return new UserDTO
             {
@@ -316,26 +313,12 @@ namespace Soft.Generator.Security.Services
             };
         }
 
-        public async Task<User> GetUserByEmailAsync(string email)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                return await _context.DbSet<User>().AsNoTracking().Where(x => x.Email == email).SingleOrDefaultAsync();
-            });
-        }
-
         protected override void OnBeforeUserIsMapped(UserDTO dto)
         {
             dto.Password = BCrypt.Net.BCrypt.EnhancedHashPassword(dto.Password);
         }
 
-        public async Task<string> GetCurrentUserEmailByIdAsync(long id)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                return await _context.DbSet<User>().AsNoTracking().Where(x => x.Id == id).Select(x => x.Email).SingleOrDefaultAsync();
-            });
-        }
+        #endregion
 
     }
 }

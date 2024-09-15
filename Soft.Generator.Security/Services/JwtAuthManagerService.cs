@@ -23,13 +23,20 @@ namespace Soft.Generator.Security.Services
         // Making ConcurrentDictionary if two users are searching for the refresh token in the same time, use Redis in the future
         // The maximum number of the refresh tokens inside dictionary is SettingsProvider.Current.AllowedBrowsersForTheSingleUser
         private readonly ConcurrentDictionary<string, RefreshTokenDTO> _usersRefreshTokens = new ConcurrentDictionary<string, RefreshTokenDTO>();
-        public IImmutableDictionary<string, RefreshTokenDTO> UsersVerificationTokensReadOnlyDictionary => _usersVerificationTokens.ToImmutableDictionary();
-        private readonly ConcurrentDictionary<string, RefreshTokenDTO> _usersVerificationTokens = new ConcurrentDictionary<string, RefreshTokenDTO>();
 
+        public IImmutableDictionary<string, RegistrationVerificationTokenDTO> UsersRegistrationVerificationTokensReadOnlyDictionary => _usersRegistrationVerificationTokens.ToImmutableDictionary();
+        private readonly ConcurrentDictionary<string, RegistrationVerificationTokenDTO> _usersRegistrationVerificationTokens = new ConcurrentDictionary<string, RegistrationVerificationTokenDTO>();
+
+        public IImmutableDictionary<string, LoginVerificationTokenDTO> UsersLoginVerificationTokensReadOnlyDictionary => _usersLoginVerificationTokens.ToImmutableDictionary();
+        private readonly ConcurrentDictionary<string, LoginVerificationTokenDTO> _usersLoginVerificationTokens = new ConcurrentDictionary<string, LoginVerificationTokenDTO>();
+
+        private static readonly Random Random = new Random();
 
         public JwtAuthManagerService()
         {
         }
+
+        #region Refresh
 
         /// <summary>
         /// 1. Stole refresh but doesn't have access - we validate if he has access ()
@@ -42,7 +49,6 @@ namespace Soft.Generator.Security.Services
             RemoveExpiredRefreshTokens();
             // FT: We can assume that dbUserEmail and refreshTokenEmail are the same, because if they are not anyway we will go through and delete everything
             RemoveTokensForMoreThenAllowedBrowsers(dbUserEmail);
-            //RemoveVerificationTokenByEmail(dbUserEmail); // Always one in the dictionary // TODO FT: dont overhead
 
             // FT: Sometimes in development mode, when the multiple tabs are open, on the save of the angular app we refresh the tabs in the same time, so we don't even manage to change the value of the refresh token in the local storage,
             // and we send another request with the same refresh token as the previous one, and since we deleted it, it doesn't exist
@@ -70,31 +76,21 @@ namespace Soft.Generator.Security.Services
             return GenerateAccessAndRefreshTokens(dbUserEmail, principalClaims, existingRefreshToken.IpAddress, request.BrowserId, dbUserId); // need to recover the original claims
         }
 
-        public RefreshTokenDTO ValidateAndGetVerificationTokenDTO(string verificationToken)
-        {
-            RemoveExpiredRefreshTokens();
-
-            if (!_usersVerificationTokens.TryGetValue(verificationToken, out RefreshTokenDTO validVerificationToken))
-            {
-                throw new ExpiredVerificationException("The verification link has expired."); // We can not give allow user to send again from here, because it is deleted
-            }
-            KeyValuePair<string, RefreshTokenDTO> lastVerificationToken = _usersVerificationTokens.Where(x => x.Value.Email == validVerificationToken.Email).LastOrDefault();
-            if (verificationToken != lastVerificationToken.Key)
-            {
-                throw new ExpiredVerificationException("The verification link has expired. Please, use the latest verification link.");
-            }
-
-            return validVerificationToken;
-        }
-
         /// <summary>
         /// Password and verificationExpiration (minutes) are only needed if we are registering the account, for email verification
         /// </summary>
         public JwtAuthResultDTO GenerateAccessAndRefreshTokens(string userEmail, List<Claim> claims, string ipAddress, string browserId, long userId)
         {
             string accessToken = GenerateAccessToken(claims);
-            RefreshTokenDTO refreshTokenDTO = HandleTokenDTO(userEmail, ipAddress, browserId);
-            RemoveTheLastOneRefreshTokenFromTheSameBrowserAndEmail(browserId, userEmail); // And email also, because the one man can be logged in on the same browser as multiple users
+            RefreshTokenDTO refreshTokenDTO = new RefreshTokenDTO
+            {
+                Email = userEmail,
+                IpAddress = ipAddress,
+                BrowserId = browserId,
+                TokenString = GenerateRandomTokenString(),
+                ExpireAt = DateTime.Now.AddMinutes(SettingsProvider.Current.RefreshTokenExpiration),
+            };
+            RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(browserId, userEmail); // And email also, because the one man can be logged in on the same browser as multiple users
             // It will always generate new token,
             // it is beneficial if the user open the application from different devices
             // if the user open the application on the multiple tabs in the same browser, we are working with the local storage so it will not make the difference
@@ -108,21 +104,7 @@ namespace Soft.Generator.Security.Services
             };
         }
 
-        public JwtAuthResultDTO GenerateAccessAndRegistrationVerificationTokens(string userEmail, List<Claim> claims, int verificationExpiration, string password)
-        {
-            string accessToken = GenerateAccessToken(claims, verificationExpiration);
-            RefreshTokenDTO registrationVerificationTokenDTO = HandleTokenDTO(userEmail, null, null, verificationExpiration, password);
-            // It will always generate new token,
-            // it is beneficial if the user open the application from different devices
-            // if the user open the application on the multiple tabs in the same browser, we are working with the local storage so it will not make the difference
-            _usersVerificationTokens.AddOrUpdate(registrationVerificationTokenDTO.TokenString, registrationVerificationTokenDTO, (_, _) => registrationVerificationTokenDTO);
-            return new JwtAuthResultDTO
-            {
-                UserEmail = userEmail,
-                AccessToken = accessToken,
-                Token = registrationVerificationTokenDTO
-            };
-        }
+        #region Helpers
 
         private string GenerateAccessToken(List<Claim> claims, int? verificationExpiration = null)
         {
@@ -140,21 +122,6 @@ namespace Soft.Generator.Security.Services
             string accessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken);
 
             return accessToken;
-        }
-
-        private RefreshTokenDTO HandleTokenDTO(string userEmail, string ipAddress, string browserId, int? verificationExpiration = null, string password = null)
-        {
-            RefreshTokenDTO refreshTokenDTO = new RefreshTokenDTO
-            {
-                Email = userEmail,
-                IpAddress = ipAddress,
-                BrowserId = browserId,
-                TokenString = GenerateRandomTokenString(),
-                ExpireAt = DateTime.Now.AddMinutes(verificationExpiration ?? SettingsProvider.Current.RefreshTokenExpiration),
-                Password = password
-            };
-
-            return refreshTokenDTO;
         }
 
         public List<Claim> GetPrincipalClaimsForAccessToken(RefreshTokenRequestDTO request, string accessToken)
@@ -208,31 +175,12 @@ namespace Soft.Generator.Security.Services
             return (principal, jwtToken);
         }
 
-        public RefreshTokenDTO GetLastVerificationTokenForTheEmail(string email)
+        public void RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email)
         {
-            return _usersVerificationTokens.Where(x => x.Value.Email == email && x.Value.Password != null).LastOrDefault().Value;
-        }
-
-        /// <summary>
-        /// If we find it we will always remove only one token here
-        /// </summary>
-        public void RemoveTheLastOneRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email)
-        {
-            KeyValuePair<string, RefreshTokenDTO> refreshToken = _usersRefreshTokens.Where(x => x.Value.BrowserId == browserId && x.Value.Email == email).FirstOrDefault();
+            KeyValuePair<string, RefreshTokenDTO> refreshToken = _usersRefreshTokens.Where(x => x.Value.BrowserId == browserId && x.Value.Email == email).SingleOrDefault();
             if (!string.IsNullOrEmpty(refreshToken.Key))
             {
                 _usersRefreshTokens.TryRemove(refreshToken.Key, out _);
-            }
-        }
-
-        /// <summary>
-        /// </summary>
-        public void RemoveVerificationTokensByEmail(string email)
-        {
-            var verificationTokens = _usersVerificationTokens.Where(x => x.Value.Email == email).ToList();
-            foreach (var verificationToken in verificationTokens)
-            {
-                _usersVerificationTokens.TryRemove(verificationToken.Key, out _);
             }
         }
 
@@ -243,15 +191,6 @@ namespace Soft.Generator.Security.Services
             foreach (var expiredToken in expiredTokens)
             {
                 _usersRefreshTokens.TryRemove(expiredToken.Key, out _);
-            }
-        }
-
-        public void RemoveExpiredVerificationTokens()
-        {
-            var expiredTokens = _usersVerificationTokens.Where(x => x.Value.ExpireAt < DateTime.Now).ToList();
-            foreach (var expiredToken in expiredTokens)
-            {
-                _usersVerificationTokens.TryRemove(expiredToken.Key, out _);
             }
         }
 
@@ -275,7 +214,7 @@ namespace Soft.Generator.Security.Services
 
         private bool IsRefreshTokenWithNewIpAddress(string email, string ipAddress)
         {
-            if (_usersRefreshTokens.Where(x => x.Value.Email == email).LastOrDefault().Value.IpAddress != ipAddress)
+            if (_usersRefreshTokens.Where(x => x.Value.Email == email).OrderByDescending(x => x.Value.ExpireAt).FirstOrDefault().Value?.IpAddress != ipAddress)
                 return true;
             else
                 return false;
@@ -293,6 +232,142 @@ namespace Soft.Generator.Security.Services
                 }
             }
         }
+
+        #endregion
+
+        #endregion
+
+
+        #region Verification
+
+        #region Login
+
+        public LoginVerificationTokenDTO ValidateAndGetLoginVerificationTokenDTO(string verificationTokenKey, string email)
+        {
+            RemoveExpiredLoginVerificationTokens();
+
+            // FT: Doing this because there is a chance of generating two same codes.
+            LoginVerificationTokenDTO loginVerificationTokenDTO = _usersLoginVerificationTokens.Where(x => x.Key == verificationTokenKey && x.Value.Email == email).SingleOrDefault().Value;
+
+            if (loginVerificationTokenDTO == null)
+            {
+                throw new ExpiredVerificationException("The verification code has expired."); // We can not give allow user to send again from here, because it is deleted
+            }
+            KeyValuePair<string, LoginVerificationTokenDTO> lastVerificationToken = _usersLoginVerificationTokens
+                .Where(x => x.Value.Email == loginVerificationTokenDTO.Email)
+                .OrderByDescending(x => x.Value.ExpireAt)
+                .FirstOrDefault();
+            if (verificationTokenKey != lastVerificationToken.Key)
+            {
+                throw new ExpiredVerificationException("Please, use the latest code sent.");
+            }
+
+            return loginVerificationTokenDTO;
+        }
+
+        public string GenerateAndSaveLoginVerificationCode(string userEmail)
+        {
+            LoginVerificationTokenDTO loginVerificationTokenDTO = new LoginVerificationTokenDTO
+            {
+                Email = userEmail,
+                ExpireAt = DateTime.Now.AddMinutes(SettingsProvider.Current.VerificationTokenExpiration),
+            };
+
+            string code = GenerateVerificationCodeKey();
+            _usersLoginVerificationTokens.AddOrUpdate(code, loginVerificationTokenDTO, (_, _) => loginVerificationTokenDTO);
+            return code;
+        }
+
+        #endregion
+
+        #region Registration
+
+        public RegistrationVerificationTokenDTO ValidateAndGetRegistrationVerificationTokenDTO(string verificationTokenKey, string email)
+        {
+            RemoveExpiredRegistrationVerificationTokens();
+
+            // FT: Doing this because there is a chance of generating two same codes.
+            RegistrationVerificationTokenDTO registrationVerificationTokenDTO = _usersRegistrationVerificationTokens.Where(x => x.Key == verificationTokenKey && x.Value.Email == email).SingleOrDefault().Value;
+
+            if (registrationVerificationTokenDTO == null)
+            {
+                throw new ExpiredVerificationException("The verification code has expired."); // We can not give allow user to send again from here, because it is deleted
+            }
+            KeyValuePair<string, RegistrationVerificationTokenDTO> lastVerificationToken = _usersRegistrationVerificationTokens
+                .Where(x => x.Value.Email == registrationVerificationTokenDTO.Email)
+                .OrderByDescending(x => x.Value.ExpireAt)
+                .FirstOrDefault();
+            if (verificationTokenKey != lastVerificationToken.Key)
+            {
+                throw new ExpiredVerificationException("Please, use the latest code sent.");
+            }
+
+            return registrationVerificationTokenDTO;
+        }
+
+        public string GenerateAndSaveRegistrationVerificationCode(string userEmail, string password)
+        {
+            RegistrationVerificationTokenDTO registrationVerificationTokenDTO = new RegistrationVerificationTokenDTO
+            {
+                Email = userEmail,
+                Password = password,
+                ExpireAt = DateTime.Now.AddMinutes(SettingsProvider.Current.VerificationTokenExpiration),
+            };
+
+            string code = GenerateVerificationCodeKey();
+            _usersRegistrationVerificationTokens.AddOrUpdate(code, registrationVerificationTokenDTO, (_, _) => registrationVerificationTokenDTO);
+            return code;
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private static string GenerateVerificationCodeKey()
+        {
+            int code = Random.Next(100000, 1000000);
+            return code.ToString("D6");
+        }
+
+        public void RemoveLoginVerificationTokensByEmail(string email)
+        {
+            var verificationTokens = _usersLoginVerificationTokens.Where(x => x.Value.Email == email).ToList();
+            foreach (var verificationToken in verificationTokens)
+            {
+                _usersLoginVerificationTokens.TryRemove(verificationToken.Key, out _);
+            }
+        }
+
+        private void RemoveExpiredLoginVerificationTokens()
+        {
+            var expiredTokens = _usersLoginVerificationTokens.Where(x => x.Value.ExpireAt < DateTime.Now).ToList();
+            foreach (var expiredToken in expiredTokens)
+            {
+                _usersLoginVerificationTokens.TryRemove(expiredToken.Key, out _);
+            }
+        }
+
+        public void RemoveRegistrationVerificationTokensByEmail(string email)
+        {
+            var verificationTokens = _usersRegistrationVerificationTokens.Where(x => x.Value.Email == email).ToList();
+            foreach (var verificationToken in verificationTokens)
+            {
+                _usersRegistrationVerificationTokens.TryRemove(verificationToken.Key, out _);
+            }
+        }
+
+        private void RemoveExpiredRegistrationVerificationTokens()
+        {
+            var expiredTokens = _usersRegistrationVerificationTokens.Where(x => x.Value.ExpireAt < DateTime.Now).ToList();
+            foreach (var expiredToken in expiredTokens)
+            {
+                _usersRegistrationVerificationTokens.TryRemove(expiredToken.Key, out _);
+            }
+        }
+
+        #endregion
+
+        #endregion
 
     }
 }

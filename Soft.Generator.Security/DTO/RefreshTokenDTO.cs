@@ -20,10 +20,5 @@ namespace Soft.Generator.Security.DTO
         public string BrowserId { get; set; }
         public string TokenString { get; set; }
         public DateTime ExpireAt { get; set; }
-
-        /// <summary>
-        /// Password is only needed if we are registering the account, for email verification
-        /// </summary>
-        public string Password { get; set; }
     }
 }

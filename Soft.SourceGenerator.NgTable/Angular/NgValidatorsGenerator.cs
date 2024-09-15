@@ -140,6 +140,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
             if (rules.Contains("Length"))
             {
                 Match lengthMatch = Regex.Match(rules, @"Length\((\d+),\s*(\d+)\)");
+                Match singleLengthMatch = Regex.Match(rules, @"Length\((\d+)\)");
                 if (lengthMatch.Success)
                 {
                     string ruleName = "stringLengthRule";
@@ -153,6 +154,18 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must have a minimum of ${{min}} and a maximum of ${{max}} characters");
                     translationTags.Add("Length");
+                } 
+                else if (singleLengthMatch.Success)
+                {
+                    string ruleName = "stringSingleLengthRule";
+                    string length = singleLengthMatch.Groups[1].Value;
+                    ruleStatements.Add($$"""
+        const length = {{length}};
+        const {{ruleName}} = value?.length == length;
+""");
+                    ruleNames.Add(ruleName);
+                    validationMessages.Add($"must be ${{length}} character long");
+                    translationTags.Add("SingleLength");
                 }
             }
 

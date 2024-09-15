@@ -55,16 +55,15 @@ namespace Soft.Generator.WebAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<RegistrationResultDTO> Register(RegistrationDTO registrationDTO)
+        public async Task<RegistrationVerificationResultDTO> SendRegistrationVerificationEmail(RegistrationDTO registrationDTO)
         {
-            return await _securityBusinessService.Register(registrationDTO, GetIPAddress(HttpContext));
+            return await _securityBusinessService.SendRegistrationVerificationEmail(registrationDTO, GetIPAddress(HttpContext));
         }
 
         [HttpPost]
-        // [AuthGuard] // FT: Without auth guard because we don't validate if access token expired.
-        public async Task<LoginResultDTO> RegistrationVerification(VerificationTokenRequestDTO request)
+        public async Task<LoginResultDTO> Register(VerificationTokenRequestDTO request)
         {
-            return await _securityBusinessService.RegistrationVerification(request.VerificationToken, request.AccessToken, request.BrowserId, GetIPAddress(HttpContext));
+            return await _securityBusinessService.Register(request, GetIPAddress(HttpContext));
         }
 
         [HttpPost]
