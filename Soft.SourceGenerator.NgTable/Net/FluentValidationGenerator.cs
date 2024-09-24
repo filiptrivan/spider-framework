@@ -1,7 +1,9 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using Soft.SourceGenerator.NgTable.Angular;
 using Soft.SourceGenerator.NgTable.Helpers;
+using Soft.SourceGenerator.NgTable.Models;
 using Soft.SourceGenerators.Helpers;
 using System;
 using System.Collections.Generic;
@@ -35,21 +37,20 @@ namespace Soft.SourceGenerator.NgTable.Net
                 static (spc, source) => Execute(source, spc));
         }
 
-        private static void Execute(ImmutableArray<ClassDeclarationSyntax> entityAndDTOClasses, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
-            if (entityAndDTOClasses.Count() == 0) return;
+            if (classes.Count <= 1) return;
 
-            List<ClassDeclarationSyntax> entityClasses = entityAndDTOClasses.Where(x => x.Identifier.Text.EndsWith("DTO") == false).ToList();
-            List<ClassDeclarationSyntax> DTOClasses = entityAndDTOClasses.Where(x => x.Identifier.Text.EndsWith("DTO") == true).ToList();
+            List<ClassDeclarationSyntax> entityClasses = classes.Where(x => x.Identifier.Text.EndsWith("DTO") == false).ToList();
+            List<ClassDeclarationSyntax> DTOClasses = classes.Where(x => x.Identifier.Text.EndsWith("DTO") == true).ToList();
+
+            string outputPath = Helper.GetGeneratorOutputPath(nameof(FluentValidationGenerator), classes);
 
             StringBuilder sb = new StringBuilder();
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0]);
-
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
-            string[] namespacePartsWithoutTwoLastElements = namespacePartsWithoutLastElement.Take(namespacePartsWithoutLastElement.Length - 1).ToArray();
-            string wholeProjectBasePartOfNamespace = string.Join(".", namespacePartsWithoutTwoLastElements); // eg. Soft.Generator
 
             sb.AppendLine($$"""
 using FluentValidation;
@@ -86,7 +87,7 @@ namespace {{basePartOfNamespace}}.ValidationRules
 }
 """);
 
-            Helper.WriteToTheFile(sb.ToString(), $@"E:\Projects\{wholeProjectBasePartOfNamespace}\Source\{basePartOfNamespace}\ValidationRules\{projectName}ValidationRules.generated.cs");
+            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
             //context.AddSource($"{projectName}ValidationRules.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
@@ -180,6 +181,13 @@ namespace {{basePartOfNamespace}}.ValidationRules
                         break;
                     case "Precision":
                         singleRules.Add($"PrecisionScale({attribute.Value}, false)"); // FT: only here the attribute.Value should be two values eg. 6, 7
+                        break;
+                    case "Range":
+                        singleRules.Add($"GreaterThanOrEqualTo({attribute.Value.Split(',')[0].Trim()})");
+                        singleRules.Add($"LessThanOrEqualTo({attribute.Value.Split(',')[1].Trim()})");
+                        break;
+                    case "GreaterThanOrEqualTo":
+                        singleRules.Add($"GreaterThanOrEqualTo({attribute.Value})");
                         break;
                     case "CustomValidator":
                         singleRules.Add(attribute.Value);

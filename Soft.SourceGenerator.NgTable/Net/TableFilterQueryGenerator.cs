@@ -269,7 +269,7 @@ using {{item}};
         /// <returns>Role.Id</returns>
         private static string GetDotNotatioOfEntityFromMappers(IList<ClassDeclarationSyntax> allClasses, ClassDeclarationSyntax DTOClass, string DTOClassProp)
         {
-            List<ClassDeclarationSyntax> bothMapperClasses = Helper.GetAllMapperClassesFromAssembly(allClasses); // Generated and manualy written
+            List<ClassDeclarationSyntax> bothMapperClasses = Helper.GetMapperClasses(allClasses); // Generated and manualy written
 
             foreach (ClassDeclarationSyntax mapperClass in bothMapperClasses)
             {
@@ -296,9 +296,12 @@ using {{item}};
                 foreach (var attribute in attributeList.Attributes)
                 {
                     SeparatedSyntaxList<AttributeArgumentSyntax> arguments = attribute.ArgumentList.Arguments; // "Role.Id", "RoleDisplayName"
-                    if (arguments[1].ToString().Split('.').First().Trim('"') == DTOClassProp)
+                    if (arguments.Count > 1) // Doing this because of MapperIgnoreTarget
                     {
-                        return arguments[0].ToString().Trim('"');
+                        if (arguments[1].ToString().Split('.').First().Trim('"') == DTOClassProp)
+                        {
+                            return arguments[0].ToString().Trim('"');
+                        }
                     }
                 }
             }
@@ -310,17 +313,20 @@ using {{item}};
         {
             // User
             // Role.Permission.Id
+            // Role.Id
             string propName = entityDotNotation.Split('.')[0]; // Role
             List<Prop> entityClassProperties = Helper.GetAllPropertiesOfTheClass(entityClass, allClasses);
-            Prop prop = entityClassProperties.Where(x => x.IdentifierText == propName).Single();
+            Prop prop = entityClassProperties.Where(x => x.IdentifierText == propName).Single(); // Role
 
             int i = 1;
             while (prop.Type.IsBaseType() == false)
             {
-                propName = entityDotNotation.Split('.')[i];
-                entityClass = allClasses.Where(x => x.Identifier.Text == propName).SingleOrDefault(); // FT: entityClass can not be null because if it is not it wouldn't even get to here
-                entityClassProperties = Helper.GetAllPropertiesOfTheClass(entityClass, allClasses);
-                prop = entityClassProperties.Where(x => x.IdentifierText == propName).Single(); // Permission
+                ClassDeclarationSyntax helperClass = allClasses.Where(x => x.Identifier.Text == propName).SingleOrDefault(); // Role
+                if (helperClass == null)
+                    break;
+                List<Prop> helperProps = Helper.GetAllPropertiesOfTheClass(helperClass, allClasses);
+                propName = entityDotNotation.Split('.')[i]; // Id
+                prop = helperProps.Where(x => x.IdentifierText == propName).Single(); // Id
                 i++;
             }
 

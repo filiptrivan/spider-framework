@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\buildMultiTargeting\Soft.Generator.WebAPI.props" />
-</Project>

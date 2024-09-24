@@ -13,7 +13,6 @@ namespace Soft.Generator.Shared.BaseEntities
     {
         public T Id { get; protected set; }
 
-        [Required]
         public DateTime CreatedAt { get; protected set; }
 
         /// <summary>

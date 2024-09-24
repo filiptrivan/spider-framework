@@ -10,6 +10,7 @@ using System.Linq;
 using System.IO;
 using Soft.SourceGenerators.Helpers;
 using System.Diagnostics;
+using Soft.SourceGenerator.NgTable.Angular;
 
 namespace Soft.SourceGenerator.NgTable.Net
 {
@@ -34,10 +35,13 @@ namespace Soft.SourceGenerator.NgTable.Net
                 static (spc, source) => Execute(source, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> entityClasses, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
-            if (entityClasses.Count() == 0) return;
-            List<ClassDeclarationSyntax> uninheritedEntityClasses = Helper.GetUninheritedClasses(entityClasses.ToList());
+            if (classes.Count <= 1) return;
+            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
+            List<ClassDeclarationSyntax> uninheritedEntityClasses = Helper.GetUninheritedClasses(entityClasses);
+
+            string outputPath = Helper.GetGeneratorOutputPath(nameof(EntitiesToDTOGenerator), classes);
 
             StringBuilder sb = new StringBuilder();
 
@@ -45,8 +49,6 @@ namespace Soft.SourceGenerator.NgTable.Net
 
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
-            string[] namespacePartsWithoutTwoLastElements = namespacePartsWithoutLastElement.Take(namespacePartsWithoutLastElement.Length - 1).ToArray();
-            string wholeProjectBasePartOfNamespace = string.Join(".", namespacePartsWithoutTwoLastElements); // eg. Soft.Generator
 
             sb.AppendLine($$"""
 using Soft.Generator.Shared.DTO;
@@ -56,7 +58,9 @@ namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator
 """);
             foreach (ClassDeclarationSyntax c in entityClasses)
             {
-                string baseClass = GetDTOBaseType(c);
+                string baseClass = c.GetDTOBaseType();
+                if (baseClass == null)
+                    continue;
 
                 sb.AppendLine($$"""
     public partial class {{c.Identifier.Text}}DTO : {{baseClass}}
@@ -70,7 +74,7 @@ namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator
 }
 """);
 
-            Helper.WriteToTheFile(sb.ToString(), $@"E:\Projects\{wholeProjectBasePartOfNamespace}\Source\{basePartOfNamespace}\DTO\Generated\{projectName}DTOList.generated.cs");
+            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
 
             // FT: does not generating because we make file on the disk, because mapping can't figure out something inside analyzers
             //context.AddSource($"{projectName}DTOList.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
@@ -85,17 +89,18 @@ namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator
         static List<string> GetDTOProps(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
         {
             List<string> props = new List<string>(); // public string Email { get; set; }
-            List<PropertyDeclarationSyntax> properties = c.Members.OfType<PropertyDeclarationSyntax>().ToList();
+            List<PropertyDeclarationSyntax> properties = c.Members.OfType<PropertyDeclarationSyntax>().Distinct().ToList(); // FT: Trying to solve constant generating duplicate properties in angular with distinct
 
             foreach (PropertyDeclarationSyntax prop in properties)
             {
                 string propType = prop.Type.ToString();
+                string propName = prop.Identifier.Text;
 
                 if (propType.PropTypeIsManyToOne())
                 {
-                    props.Add($"public string {propType}DisplayName {{ get; set; }}");
+                    props.Add($"public string {propName}DisplayName {{ get; set; }}");
                     ClassDeclarationSyntax manyToOneClass = classes.Where(x => x.Identifier.Text == propType).Single();
-                    props.Add($"public {Helper.GetGenericIdType(manyToOneClass, classes)}? {propType}Id {{ get; set; }}");
+                    props.Add($"public {Helper.GetGenericIdType(manyToOneClass, classes)}? {propName}Id {{ get; set; }}");
                     continue;
                 }
                 else if (propType.IsEnumerable())
@@ -118,13 +123,5 @@ namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator
             return props;
         }
 
-        static string GetDTOBaseType(ClassDeclarationSyntax c)
-        {
-            string baseClass = Helper.GetBaseType(c);
-            if(baseClass.Contains("<"))
-                return baseClass.Replace("<", "DTO<");
-            else
-                return $"{baseClass}DTO";
-        }
     }
 }

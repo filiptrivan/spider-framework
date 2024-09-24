@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Nucleus.Core.BusinessObject;
 
 namespace Soft.Generator.Shared.Interfaces
 {

@@ -9,7 +9,7 @@ namespace Soft.Generator.Shared.SoftExceptions
     public class UnauthorizedException : Exception
     {
         // Constructor
-        public UnauthorizedException() : base("Unauthorized access") { }
+        public UnauthorizedException() : base("Unauthorized access.") { }
 
         // Constructor with message
         public UnauthorizedException(string message) : base(message) { }

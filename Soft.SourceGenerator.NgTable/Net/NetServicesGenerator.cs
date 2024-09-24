@@ -18,20 +18,24 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntities(s),
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEntities(ctx))
                 .Where(static c => c is not null);
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-                static (spc, source) => Execute(source, spc));
+            IncrementalValueProvider<IEnumerable<INamedTypeSymbol>> referencedProjectClasses = Helper.GetReferencedProjectsSymbolsEntities(context);
+
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
         /// <summary>
@@ -39,9 +43,10 @@ namespace Soft.SourceGenerator.NgTable.Net
         /// </summary>
         /// <param name="classes">Only EF classes</param>
         /// <param name="context"></param>
-        private static void Execute(IList<ClassDeclarationSyntax> entityClasses, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, IEnumerable<INamedTypeSymbol> referencedClassesEntities, SourceProductionContext context)
         {
-            if (entityClasses.Count() == 0) return;
+            if (classes.Count <= 1) return;
+            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
             List<ClassDeclarationSyntax> uninheritedEntityClasses = Helper.GetUninheritedClasses(entityClasses);
 
             StringBuilder sb = new StringBuilder();
@@ -51,19 +56,23 @@ namespace Soft.SourceGenerator.NgTable.Net
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
+            bool generateAuthorizationMethods = projectName != "Security";
+
             sb.AppendLine($$"""
 using {{basePartOfNamespace}}.ValidationRules;
 using {{basePartOfNamespace}}.DataMappers;
 using {{basePartOfNamespace}}.DTO;
 using {{basePartOfNamespace}}.Entities;
+using {{basePartOfNamespace}}.Enums;
 using Microsoft.EntityFrameworkCore;
 using Soft.NgTable.Models;
 using System.Data;
 using Soft.SourceGenerator.NgTable;
 using Soft.SourceGenerator.ExcelProperties;
+using FluentValidation;
+using Soft.Generator.Security.Services;
 using Soft.Generator.Shared.Excel;
 using Soft.Generator.Shared.Interfaces;
-using FluentValidation;
 using Soft.Generator.Shared.Services;
 using Soft.Generator.Shared.DTO;
 using Soft.Generator.Shared.Extensions;
@@ -74,16 +83,20 @@ namespace {{basePartOfNamespace}}.Services
     {
         private readonly IApplicationDbContext _context;
         private readonly ExcelService _excelService;
+        private readonly AuthorizationService _authorizationService;
 
-        public {{projectName}}BusinessServiceGenerated(IApplicationDbContext context, ExcelService excelService)
+        public {{projectName}}BusinessServiceGenerated(IApplicationDbContext context, ExcelService excelService, AuthorizationService authorizationService)
         : base(context)
         {
             _context=context;
             _excelService = excelService;
+            _authorizationService = authorizationService;
         }
 """);
-            foreach (ClassDeclarationSyntax c in uninheritedEntityClasses)
+            foreach (ClassDeclarationSyntax c in entityClasses)
             {
+                if (c.GetBaseType() == null) // FT: Handling many to many, maybe you should do something else in the future
+                    continue;
                 string nameOfTheEntityClass = c.Identifier.Text;
                 string nameOfTheEntityClassFirstLower = c.Identifier.Text.FirstCharToLower();
                 string idTypeOfTheEntityClass = Helper.GetGenericIdType(c, entityClasses);
@@ -94,11 +107,12 @@ namespace {{basePartOfNamespace}}.Services
         {
             return await _context.WithTransactionAsync(async () =>
             {
+                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
                 return await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectTo().FirstOrDefaultAsync();
             });
         }
 
-        public async Task<BasePaginationResult<{{nameOfTheEntityClass}}>> Load{{nameOfTheEntityClass}}ListForPagination(TableFilterDTO tableFilterPayload)
+        private async Task<BasePaginationResult<{{nameOfTheEntityClass}}>> Load{{nameOfTheEntityClass}}ListForPagination(TableFilterDTO tableFilterPayload)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -114,6 +128,7 @@ namespace {{basePartOfNamespace}}.Services
 
             await _context.WithTransactionAsync(async () =>
             {
+                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
                 paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload);
 
                 data = await paginationResult.Query
@@ -133,6 +148,7 @@ namespace {{basePartOfNamespace}}.Services
 
             await _context.WithTransactionAsync(async () =>
             {
+                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
                 paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload);
 
                 data = await paginationResult.Query.ExcelProjectTo().ToListAsync();
@@ -142,65 +158,13 @@ namespace {{basePartOfNamespace}}.Services
             return _excelService.FillReportTemplate<{{nameOfTheEntityClass}}DTO>(data, paginationResult.TotalRecords, excelPropertiesToExclude).ToArray();
         }
 
-        protected virtual void OnBefore{{nameOfTheEntityClass}}IsMapped({{nameOfTheEntityClass}}DTO dto) { }
-
-        public async Task<{{nameOfTheEntityClass}}> Save{{nameOfTheEntityClass}}AndReturnDomainAsync({{nameOfTheEntityClass}}DTO dto)
-        {
-            {{nameOfTheEntityClass}}DTOValidationRules validationRules = new {{nameOfTheEntityClass}}DTOValidationRules();
-            validationRules.ValidateAndThrow(dto);
-
-            {{nameOfTheEntityClass}} poco = null;
-            await _context.WithTransactionAsync(async () =>
-            {
-                OnBefore{{nameOfTheEntityClass}}IsMapped(dto);
-                DbSet<{{nameOfTheEntityClass}}> dbSet = _context.DbSet<{{nameOfTheEntityClass}}>();
-""");
-                if (c.IsEntityBusinessObject() == false)
-                {
-                    sb.AppendLine($$"""
-                poco = Mapper.Map(dto);
-                await dbSet.AddAsync(poco);
-""");
-                }
-                else
-                {
-                    sb.AppendLine($$"""
-                if (dto.Id > 0)
-                {
-                    poco = await LoadInstanceAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>(dto.Id, dto.Version);
-                    Mapper.MergeMap(dto, poco);
-                    dbSet.Update(poco);
-                }
-                else
-                {
-                    poco = Mapper.Map(dto);
-                    await dbSet.AddAsync(poco);
-                }
-""");
-                }
-                sb.AppendLine($$"""
-{{string.Join("\n", GetManyToOneInstancesForSave(c, entityClasses))}}
-
-                await _context.SaveChangesAsync();
-            });
-
-            return poco;
-        }
-
-        public async Task<{{nameOfTheEntityClass}}DTO> Save{{nameOfTheEntityClass}}AndReturnDTOAsync({{nameOfTheEntityClass}}DTO dto)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                {{nameOfTheEntityClass}} poco = await Save{{nameOfTheEntityClass}}AndReturnDomainAsync(dto);
-
-                return Mapper.Map(poco);
-            });
-        }
-
+        {{(c.IsAbstract() ? "" : GetSavingData(nameOfTheEntityClass, idTypeOfTheEntityClass, c, entityClasses, generateAuthorizationMethods))}}
+        
         public async Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForAutocomplete(int limit, string query, IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query)
         {
             return await _context.WithTransactionAsync(async () =>
             {
+                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
                 if (!string.IsNullOrEmpty(query))
                     {{nameOfTheEntityClassFirstLower}}Query = {{nameOfTheEntityClassFirstLower}}Query.Where(x => x.{{displayNameProperty}}.Contains(query));
 
@@ -219,6 +183,7 @@ namespace {{basePartOfNamespace}}.Services
         {
             return await _context.WithTransactionAsync(async () =>
             {
+                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
                 return await {{nameOfTheEntityClassFirstLower}}Query
                     .Select(x => new NamebookDTO<{{idTypeOfTheEntityClass}}>
                     {
@@ -229,7 +194,17 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-{{string.Join("\n", GetEnumerableGeneratedMethods(c, entityClasses))}}
+        public async Task<List<{{nameOfTheEntityClass}}>> Load{{nameOfTheEntityClass}}List(IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                return await {{nameOfTheEntityClassFirstLower}}Query
+                    .ToListAsync();
+            });
+        }
+
+{{string.Join("\n", GetEnumerableGeneratedMethods(c, entityClasses, generateAuthorizationMethods, referencedClassesEntities))}}
 
 """);
             }
@@ -271,14 +246,14 @@ namespace {{basePartOfNamespace}}.Services
             return result;
         }
 
-        static List<string> GetEnumerableGeneratedMethods(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
+        static List<string> GetEnumerableGeneratedMethods(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> classes, bool generateAuthorizationMethods, IEnumerable<INamedTypeSymbol> referencedClassesEntities)
         {
-            string nameOfTheEntityClass = c.Identifier.Text; // User
-            string nameOfTheEntityClassFirstLower = c.Identifier.Text.FirstCharToLower(); // user
-            string idTypeOfTheEntityClass = Helper.GetGenericIdType(c, classes); // long
+            string nameOfTheEntityClass = entityClass.Identifier.Text; // User
+            string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower(); // user
+            string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, classes); // long
 
             List<string> result = new List<string>();
-            List<Prop> properties = c.Members.OfType<PropertyDeclarationSyntax>()
+            List<Prop> propertiesEntityClass = entityClass.Members.OfType<PropertyDeclarationSyntax>()
                 .Select(prop => new Prop()
                 {
                     Type = prop.Type.ToString(),
@@ -287,13 +262,21 @@ namespace {{basePartOfNamespace}}.Services
                 .Where(prop => prop.Type.IsEnumerable())
                 .ToList();
 
-            foreach (Prop prop in properties) // List<Role> / Roles
+            foreach (Prop prop in propertiesEntityClass) // List<Role> Roles
             {
                 string classNameFromTheList = GetClassNameFromTheList(prop.Type); // Role
+                string classNameFromTheListFirstLower = classNameFromTheList.FirstCharToLower(); // role
                 ClassDeclarationSyntax classFromTheList = classes.Where(x => x.Identifier.Text == classNameFromTheList).SingleOrDefault(); // Role
-                if (classFromTheList == null)
-                    result.Add("INVALID ENTITY CLASS, YOU CAN'T MAKE LIST OF NO ENTITY CLASS");
+
+                INamedTypeSymbol classFromTheListFromTheReferencedProjects = referencedClassesEntities.Where(x => x.Name == classNameFromTheList).SingleOrDefault();
+                if (classFromTheList == null) // && classFromTheListFromTheReferencedProjects == null  // TODO FT: Continue to do this...
+                {
+                    continue;
+                    //result.Add("INVALID ENTITY CLASS, YOU CAN'T MAKE LIST OF NO ENTITY CLASS"); // FT: It can, if the class is from another project.
+                }
+                string idTypeOfTheClassFromTheList = Helper.GetGenericIdType(classFromTheList, classes); // int
                 string classNameFromTheListDisplayNameProp = Helper.GetDisplayNamePropForClass(classFromTheList, classes); // Name
+                //classNameFromTheListDisplayNameProp = classNameFromTheListDisplayNameProp ?? classFromTheListFromTheReferencedProjects.Att.Where(x => ).FirstOrDefault() // TODO FT: Continue to do this...
                 List<Prop> classFromTheListProperties = classFromTheList.Members.OfType<PropertyDeclarationSyntax>()
                     .Select(prop => new Prop()
                     {
@@ -301,40 +284,54 @@ namespace {{basePartOfNamespace}}.Services
                         IdentifierText = prop.Identifier.Text
                     })
                     .ToList();
-                string classFromTheListIdType = Helper.GetGenericIdType(classFromTheList, classes); // long
 
-                Prop manyToManyProp = classFromTheListProperties.Where(x => x.Type.IsEnumerable() && GetClassNameFromTheList(x.Type) == nameOfTheEntityClass).SingleOrDefault(); // List<User> / Users
+                Prop manyToManyPropFromTheListProperties = classFromTheListProperties.Where(x => x.Type.IsEnumerable() && GetClassNameFromTheList(x.Type) == nameOfTheEntityClass).SingleOrDefault(); // List<User> Users
                 Prop manyToOneProp = classFromTheListProperties.Where(x => x.Type.PropTypeIsManyToOne() && prop.Type == nameOfTheEntityClass).SingleOrDefault(); // User / Userando
 
                 if (manyToOneProp != null)
                 {
                     result.Add($$"""
-        public async Task<List<NamebookDTO<{{classFromTheListIdType}}>>> Load{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
+        public async Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Load{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
         {
             return await _context.WithTransactionAsync(async () =>
             {
+                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
                 return await _context.DbSet<{{classNameFromTheList}}>()
+                    .AsNoTracking()
                     .Where(x => x.{{manyToOneProp.IdentifierText}} == {{nameOfTheEntityClassFirstLower}}Id)
-                    .Select(x => new NamebookDTO<{{classFromTheListIdType}}>
+                    .Select(x => new NamebookDTO<{{idTypeOfTheClassFromTheList}}>
                     {
                         Id = x.Id,
                         DisplayName = x.{{classNameFromTheListDisplayNameProp}},
                     })
+                    .ToListAsync();
+            });
+        }
+
+        public async Task<List<{{classNameFromTheList}}>> Load{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                return await _context.DbSet<{{classNameFromTheList}}>()
+                    .Where(x => x.{{manyToOneProp.IdentifierText}} == {{nameOfTheEntityClassFirstLower}}Id)
                     .ToListAsync();
             });
         }
 """);
                 }
-                else if (manyToManyProp != null)
+                else if (manyToManyPropFromTheListProperties != null)
                 {
                     result.Add($$"""
-        public async Task<List<NamebookDTO<{{classFromTheListIdType}}>>> Load{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
+        public async Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Load{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
         {
             return await _context.WithTransactionAsync(async () =>
             {
+                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
                 return await _context.DbSet<{{classNameFromTheList}}>()
-                    .Where(x => x.{{manyToManyProp.IdentifierText}}.Any(x => x.Id == {{nameOfTheEntityClassFirstLower}}Id))
-                    .Select(x => new NamebookDTO<{{classFromTheListIdType}}>
+                    .AsNoTracking()
+                    .Where(x => x.{{manyToManyPropFromTheListProperties.IdentifierText}}.Any(x => x.Id == {{nameOfTheEntityClassFirstLower}}Id))
+                    .Select(x => new NamebookDTO<{{idTypeOfTheClassFromTheList}}>
                     {
                         Id = x.Id,
                         DisplayName = x.{{classNameFromTheListDisplayNameProp}},
@@ -342,12 +339,58 @@ namespace {{basePartOfNamespace}}.Services
                     .ToListAsync();
             });
         }
-""");
+
+        public async Task<List<{{classNameFromTheList}}>> Load{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                return await _context.DbSet<{{classNameFromTheList}}>()
+                    .Where(x => x.{{manyToManyPropFromTheListProperties.IdentifierText}}.Any(x => x.Id == {{nameOfTheEntityClassFirstLower}}Id))
+                    .ToListAsync();
+            });
+        }
+
+        public async Task Update{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, List<{{idTypeOfTheClassFromTheList}}> selected{{classNameFromTheList}}Ids)
+        {
+            if (selected{{classNameFromTheList}}Ids == null)
+                return;
+
+            await _context.WithTransactionAsync(async () =>
+            {
+                // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
+
+                {{(entityClass.IsEntityBusinessObject()
+                ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
+                : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
+                )}}
+
+                if ({{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}} != null)
+                {
+                    foreach ({{classNameFromTheList}} {{classNameFromTheListFirstLower}} in {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.ToList())
+                    {
+                        if (selected{{classNameFromTheList}}Ids.Contains({{classNameFromTheListFirstLower}}.Id))
+                            selected{{classNameFromTheList}}Ids.Remove({{classNameFromTheListFirstLower}}.Id);
+                        else
+                            {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.Remove({{classNameFromTheListFirstLower}});
+                    }
                 }
                 else
                 {
-                    if (classFromTheList == null)
-                        result.Add("Invalid entity class, you can't have List<Entity> without List<AssociationEntity> or AssociationEntity on the other side.");
+                    {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}} = new {{prop.Type}}();
+                }
+
+                List<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}ListToInsert = await _context.DbSet<{{classNameFromTheList}}>().Where(x => selected{{classNameFromTheList}}Ids.Contains(x.Id)).ToListAsync();
+
+                {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.AddRange({{classNameFromTheListFirstLower}}ListToInsert);
+                await _context.SaveChangesAsync();
+            });
+        }
+""");
+                }
+                else if (classFromTheList == null)
+                {
+                    result.Add("Invalid entity class, you can't have List<Entity> without List<AssociationEntity> or AssociationEntity on the other side."); // He can (User/Role example, many to many on the one side)
                 }
 
             }
@@ -370,5 +413,69 @@ namespace {{basePartOfNamespace}}.Services
             return parts[parts.Length-1].Replace(">", "");
         }
 
+        static string GetSavingData(string nameOfTheEntityClass, string idTypeOfTheEntityClass, ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> entityClasses, bool generateAuthorizationMethods)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append($$"""
+        protected virtual void OnBefore{{nameOfTheEntityClass}}IsMapped({{nameOfTheEntityClass}}DTO dto) { }
+
+        public async Task<{{nameOfTheEntityClass}}> Save{{nameOfTheEntityClass}}AndReturnDomainAsync({{nameOfTheEntityClass}}DTO dto)
+        {
+            {{nameOfTheEntityClass}}DTOValidationRules validationRules = new {{nameOfTheEntityClass}}DTOValidationRules();
+            validationRules.ValidateAndThrow(dto);
+
+            {{nameOfTheEntityClass}} poco = null;
+            await _context.WithTransactionAsync(async () =>
+            {
+                OnBefore{{nameOfTheEntityClass}}IsMapped(dto);
+                DbSet<{{nameOfTheEntityClass}}> dbSet = _context.DbSet<{{nameOfTheEntityClass}}>();
+""");
+            if (c.IsEntityBusinessObject() == false)
+            {
+                sb.AppendLine($$"""
+                poco = Mapper.Map(dto);
+                await dbSet.AddAsync(poco);
+""");
+            }
+            else
+            {
+                sb.AppendLine($$"""
+
+                if (dto.Id > 0)
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Edit{nameOfTheEntityClass});" : "")}}
+                    poco = await LoadInstanceAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>(dto.Id, dto.Version);
+                    Mapper.MergeMap(dto, poco);
+                    dbSet.Update(poco);
+                }
+                else
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Insert{nameOfTheEntityClass});" : "")}}
+                    poco = Mapper.Map(dto);
+                    await dbSet.AddAsync(poco);
+                }
+""");
+            }
+            sb.AppendLine($$"""
+{{string.Join("\n", GetManyToOneInstancesForSave(c, entityClasses))}}
+
+                await _context.SaveChangesAsync();
+            });
+
+            return poco;
+        }
+
+        public async Task<{{nameOfTheEntityClass}}DTO> Save{{nameOfTheEntityClass}}AndReturnDTOAsync({{nameOfTheEntityClass}}DTO dto)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                {{nameOfTheEntityClass}} poco = await Save{{nameOfTheEntityClass}}AndReturnDomainAsync(dto);
+
+                return Mapper.Map(poco);
+            });
+        }
+""");
+            return sb.ToString();
+        }
     }
 }

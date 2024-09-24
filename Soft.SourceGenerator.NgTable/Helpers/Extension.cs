@@ -51,6 +51,11 @@ namespace Soft.SourceGenerators.Helpers
             return true;
         }
 
+        public static bool IsAbstract(this ClassDeclarationSyntax c)
+        {
+            return c.Modifiers.Any(x => x.Text == "abstract");
+        }
+
         /// <summary>
         /// User : BusinessObject<long> -> true
         /// User : ReadonlyObject<long> -> false
@@ -84,7 +89,8 @@ namespace Soft.SourceGenerators.Helpers
                 propType == "double" ||
                 propType == "double?" ||
                 propType == "byte" ||
-                propType == "byte?";
+                propType == "byte?" ||
+                propType == "Guid";
         }
 
         /// <summary>
@@ -124,6 +130,27 @@ namespace Soft.SourceGenerators.Helpers
                 return true;
             else
                 return false;
+        }
+
+        public static string GetDTOBaseType(this ClassDeclarationSyntax c)
+        {
+            string baseClass = c.GetBaseType();
+            if (baseClass == null)
+                return null;
+            else if (baseClass.Contains("<"))
+                return baseClass.Replace("<", "DTO<");
+            else
+                return $"{baseClass}DTO";
+        }
+
+        public static string GetBaseType(this ClassDeclarationSyntax c)
+        {
+            TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
+            if (baseType != null)
+                return baseType.ToString();
+            else
+                return null; // FT: It doesn't, many to many doesn't
+                             //return "Every entity class needs to have the base class";
         }
     }
 }

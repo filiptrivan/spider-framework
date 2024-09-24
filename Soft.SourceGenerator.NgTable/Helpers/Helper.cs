@@ -1,12 +1,16 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Soft.SourceGenerator.NgTable.Angular;
 using Soft.SourceGenerator.NgTable.Models;
 using Soft.SourceGenerators.Helpers;
+using Soft.SourceGenerators.Models;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -25,9 +29,75 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
         public static readonly string EntitiesNamespaceEnding = "Entities";
         public static readonly string DTONamespaceEnding = "DTO";
+        public static readonly string ValidationNamespaceEnding = "ValidationRules";
         public static readonly string MapperNamespaceEnding = "DataMappers";
 
         #region Syntax and Semantic targets
+
+        public static IncrementalValueProvider<IEnumerable<INamedTypeSymbol>> GetReferencedProjectsSymbolsDTO(IncrementalGeneratorInitializationContext context)
+        {
+            return context.CompilationProvider
+                .Select(static (compilation, _) =>
+                {
+                    var classSymbols = new List<INamedTypeSymbol>();
+                    foreach (var referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
+                             .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
+                    {
+                        GetClassesFromDTO(referencedAssembly.GlobalNamespace, classSymbols);
+                    }
+                    return classSymbols.AsEnumerable();
+                });
+        }
+
+        public static IncrementalValueProvider<IEnumerable<INamedTypeSymbol>> GetReferencedProjectsSymbolsEntities(IncrementalGeneratorInitializationContext context)
+        {
+            return context.CompilationProvider
+                .Select(static (compilation, _) =>
+                {
+                    var classSymbols = new List<INamedTypeSymbol>();
+                    foreach (var referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
+                             .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
+                    {
+                        GetClassesFromEntities(referencedAssembly.GlobalNamespace, classSymbols);
+                    }
+                    return classSymbols.AsEnumerable();
+                });
+        }
+
+        public static bool IsSyntaxTargetForGenerationSettings(SyntaxNode node)
+        {
+            if (node is ClassDeclarationSyntax classDeclaration)
+            {
+                string namespaceName = classDeclaration
+                   .Ancestors()
+                   .OfType<NamespaceDeclarationSyntax>()
+                   .Select(ns => ns.Name.ToString())
+                   .FirstOrDefault();
+
+                if (namespaceName != null && namespaceName.EndsWith($".GeneratorSettings"))
+                    return true;
+            }
+
+            return false;
+        }
+
+        public static ClassDeclarationSyntax GetSemanticTargetForGenerationSettings(GeneratorSyntaxContext context)
+        {
+            ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
+
+            string namespaceName = classDeclaration
+               .Ancestors()
+               .OfType<NamespaceDeclarationSyntax>()
+               .Select(ns => ns.Name.ToString())
+               .FirstOrDefault();
+
+            if (namespaceName != null && namespaceName.EndsWith($".GeneratorSettings"))
+            {
+                return classDeclaration;
+            }
+
+            return null;
+        }
 
         public static bool IsSyntaxTargetForGenerationEntities(SyntaxNode node)
         {
@@ -39,7 +109,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                    .Select(ns => ns.Name.ToString())
                    .FirstOrDefault();
 
-                if (namespaceName != null && namespaceName.EndsWith($".{EntitiesNamespaceEnding}"))
+                if (namespaceName != null && (namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith($".GeneratorSettings")))
                     return true;
             }
 
@@ -56,7 +126,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                .Select(ns => ns.Name.ToString())
                .FirstOrDefault();
 
-            if (namespaceName != null && namespaceName.EndsWith($".{EntitiesNamespaceEnding}"))
+            if (namespaceName != null && (namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith($".GeneratorSettings")))
             {
                 return classDeclaration;
             }
@@ -74,7 +144,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                    .Select(ns => ns.Name.ToString())
                    .FirstOrDefault();
 
-                if (namespaceName != null && namespaceName.EndsWith($".{DTONamespaceEnding}"))
+                if (namespaceName != null && (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith(".GeneratorSettings")))
                     return true;
             }
 
@@ -91,7 +161,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                .Select(ns => ns.Name.ToString())
                .FirstOrDefault();
 
-            if (namespaceName != null && namespaceName.EndsWith($".{DTONamespaceEnding}"))
+            if (namespaceName != null && (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith(".GeneratorSettings")))
             {
                 return classDeclaration;
             }
@@ -109,7 +179,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                    .Select(ns => ns.Name.ToString())
                    .FirstOrDefault();
 
-                if (namespaceName != null && (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}")))
+                if (namespaceName != null && (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".GeneratorSettings")))
                     return true;
             }
 
@@ -126,7 +196,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                .Select(ns => ns.Name.ToString())
                .FirstOrDefault();
 
-            if (namespaceName != null && (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}")))
+            if (namespaceName != null && (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".GeneratorSettings")))
             {
                 return classDeclaration;
             }
@@ -186,7 +256,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                    .FirstOrDefault();
                 if (namespaceName != null)
                 {
-                    if (namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".DataMappers"))
+                    if (namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".DataMappers") || namespaceName.EndsWith(".GeneratorSettings"))
                         return true;
                 }
             }
@@ -206,7 +276,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             if (namespaceName != null)
             {
-                if (namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".DataMappers"))
+                if (namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".DataMappers") || namespaceName.EndsWith(".GeneratorSettings"))
                 {
                     return classDeclaration;
                 }
@@ -267,7 +337,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
                 if (namespaceName != null)
                 {
-                    if (namespaceName.EndsWith(".Controllers"))
+                    if (namespaceName.EndsWith(".Controllers") || namespaceName.EndsWith(".GeneratorSettings"))
                         return true;
                 }
             }
@@ -287,13 +357,49 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             if (namespaceName != null)
             {
-                if (namespaceName.EndsWith(".Controllers"))
+                if (namespaceName.EndsWith(".Controllers") || namespaceName.EndsWith(".GeneratorSettings"))
                 {
                     return classDeclaration;
                 }
             }
 
             return null;
+        }
+
+        public static void GetClassesFromEntities(INamespaceSymbol namespaceSymbol, List<INamedTypeSymbol> classSymbols)
+        {
+            // Add all the type members (classes, structs, etc.) in this namespace
+            foreach (INamedTypeSymbol type in namespaceSymbol.GetTypeMembers())
+            {
+                if (type.TypeKind == TypeKind.Class && type.Name.EndsWith("Entities"))
+                {
+                    classSymbols.Add(type);
+                }
+            }
+
+            // Recursively gather classes from nested namespaces
+            foreach (var nestedNamespace in namespaceSymbol.GetNamespaceMembers())
+            {
+                GetClassesFromEntities(nestedNamespace, classSymbols);
+            }
+        }
+
+        public static void GetClassesFromDTO(INamespaceSymbol namespaceSymbol, List<INamedTypeSymbol> classSymbols)
+        {
+            // Add all the type members (classes, structs, etc.) in this namespace
+            foreach (INamedTypeSymbol type in namespaceSymbol.GetTypeMembers())
+            {
+                if (type.TypeKind == TypeKind.Class && type.Name.EndsWith("DTO"))
+                {
+                    classSymbols.Add(type);
+                }
+            }
+
+            // Recursively gather classes from nested namespaces
+            foreach (var nestedNamespace in namespaceSymbol.GetNamespaceMembers())
+            {
+                GetClassesFromDTO(nestedNamespace, classSymbols);
+            }
         }
 
         public static bool IsSyntaxTargetForGenerationValidationRules(SyntaxNode node)
@@ -306,7 +412,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                    .Select(ns => ns.Name.ToString())
                    .FirstOrDefault();
 
-                if (namespaceName != null && namespaceName.EndsWith(".ValidationRules"))
+                if (namespaceName != null && (namespaceName.EndsWith(".ValidationRules") || namespaceName.EndsWith(".GeneratorSettings")))
                     return true;
             }
 
@@ -323,7 +429,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                .Select(ns => ns.Name.ToString())
                .FirstOrDefault();
 
-            if (namespaceName != null && namespaceName.EndsWith(".ValidationRules"))
+            if (namespaceName != null && (namespaceName.EndsWith(".ValidationRules") || namespaceName.EndsWith(".GeneratorSettings")))
             {
                 return classDeclaration;
             }
@@ -341,7 +447,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                    .Select(ns => ns.Name.ToString())
                    .FirstOrDefault();
 
-                if (namespaceName != null && namespaceName.EndsWith(".Enums"))
+                if (namespaceName != null && (namespaceName.EndsWith(".Enums") || namespaceName.EndsWith(".GeneratorSettings")))
                     return true;
             }
 
@@ -358,12 +464,86 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                .Select(ns => ns.Name.ToString())
                .FirstOrDefault();
 
-            if (namespaceName != null && namespaceName.EndsWith(".Enums"))
+            if (namespaceName != null && (namespaceName.EndsWith(".Enums") || namespaceName.EndsWith(".GeneratorSettings")))
             {
                 return enumDeclaration;
             }
 
             return null;
+        }
+
+        #endregion
+
+        #region Class list filters
+
+        public static ClassDeclarationSyntax GetSettingsClass(IList<ClassDeclarationSyntax> classes)
+        {
+            return classes
+                .Where(x => x.Ancestors()
+                    .OfType<NamespaceDeclarationSyntax>()
+                    .Select(ns => ns.Name.ToString())
+                    .Any(ns => ns.EndsWith($".GeneratorSettings")))
+                .SingleOrDefault();
+        }
+
+        public static string GetGeneratorOutputPath(string generatorName, IList<ClassDeclarationSyntax> classes)
+        {
+            ClassDeclarationSyntax settingsClass = GetSettingsClass(classes);
+            if (settingsClass == null) return null;
+            List<Prop> properties = GetAllPropertiesOfTheClass(settingsClass, classes);
+            Prop p = properties?.Where(x => x.IdentifierText == generatorName)?.SingleOrDefault();
+            string outputPath = p?.Attributes?.Where(x => x.Name == "Output")?.SingleOrDefault()?.Value;
+            return outputPath;
+        }
+
+        public static List<ClassDeclarationSyntax> GetEntityClasses(IList<ClassDeclarationSyntax> classes)
+        {
+            return classes
+                .Where(x => x.Ancestors()
+                    .OfType<NamespaceDeclarationSyntax>()
+                    .Select(ns => ns.Name.ToString())
+                    .Any(ns => ns.EndsWith($".{EntitiesNamespaceEnding}")))
+                .ToList();
+        }
+
+        public static List<ClassDeclarationSyntax> GetDTOClasses(IList<ClassDeclarationSyntax> classes)
+        {
+            return classes
+                .Where(x => x.Ancestors()
+                    .OfType<NamespaceDeclarationSyntax>()
+                    .Select(ns => ns.Name.ToString())
+                    .Any(ns => ns.EndsWith($".{DTONamespaceEnding}")))
+                .ToList();
+        }
+
+        public static List<ClassDeclarationSyntax> GetValidationClasses(IList<ClassDeclarationSyntax> classes)
+        {
+            return classes
+                .Where(x => x.Ancestors()
+                    .OfType<NamespaceDeclarationSyntax>()
+                    .Select(ns => ns.Name.ToString())
+                    .Any(ns => ns.EndsWith($".{ValidationNamespaceEnding}")))
+                .ToList();
+        }
+
+        public static List<ClassDeclarationSyntax> GetMapperClasses(IList<ClassDeclarationSyntax> classes)
+        {
+            return classes
+                .Where(x => x.Ancestors()
+                    .OfType<NamespaceDeclarationSyntax>()
+                    .Select(ns => ns.Name.ToString())
+                    .Any(ns => ns.EndsWith($".{MapperNamespaceEnding}")))
+                .ToList();
+        }
+
+        public static List<ClassDeclarationSyntax> GetControllerClasses(IList<ClassDeclarationSyntax> classes)
+        {
+            return classes
+                .Where(x => x.Ancestors()
+                    .OfType<NamespaceDeclarationSyntax>()
+                    .Select(ns => ns.Name.ToString())
+                    .Any(ns => ns.EndsWith($".Controllers")))
+                .ToList();
         }
 
         #endregion
@@ -374,7 +554,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         /// </summary>
         public static List<Prop> GetAllPropertiesOfTheClass(ClassDeclarationSyntax c, IEnumerable<ClassDeclarationSyntax> allClasses, bool getEnumerableProperties = false)
         {
-
             TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
             ClassDeclarationSyntax baseClass = GetClass(baseType, allClasses);
 
@@ -417,13 +596,24 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static List<SoftAttribute> GetAllAttributesOfTheProperty(PropertyDeclarationSyntax prop)
         {
             List<SoftAttribute> softAttributes = new List<SoftAttribute>();
-            softAttributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x => new SoftAttribute
+            softAttributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
             {
-                Name = x.Name.ToString(),
-                Value = x?.ArgumentList?.Arguments.FirstOrDefault()?.ToString()?.Replace("\"", "")
+                return GetSoftAttribute(x);
             })
             .ToList();
             return softAttributes;
+        }
+
+        public static SoftAttribute GetSoftAttribute(AttributeSyntax a)
+        {
+            string argumentValue = a?.ArgumentList?.Arguments != null && a.ArgumentList.Arguments.Any()
+                    ? string.Join(", ", a.ArgumentList.Arguments.Select(arg => arg?.ToString()))
+                    : null; ; // FT: Doing this because of Range(0, 5) (long tail because of null pointer exception)
+            return new SoftAttribute
+            {
+                Name = a.Name.ToString(),
+                Value = argumentValue?.Replace("\"", "").Replace("@", "")
+            };
         }
 
         public static List<SoftAttribute> GetAllAttributesOfTheClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
@@ -435,10 +625,9 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             // FT: Getting the attributes for all base classes also
             do
             {
-                softAttributes.AddRange(cHelper.AttributeLists.SelectMany(x => x.Attributes).Select(x => new SoftAttribute
+                softAttributes.AddRange(cHelper.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
                 {
-                    Name = x.Name.ToString(),
-                    Value = x?.ArgumentList?.Arguments.FirstOrDefault()?.ToString()?.Replace("\"", "")
+                    return GetSoftAttribute(x);
                 })
                 .ToList());
                 cHelper = classes.Where(x => x.Identifier.Text == baseType?.ToString()).FirstOrDefault();
@@ -479,7 +668,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         string attributeName = attribute.Name.ToString();
                         if (attributeName != null && attributeName == $"{MapperlyIgnoreAttribute}")
                         {
-                            string propNameInsideBrackets = attribute.ArgumentList.Arguments.FirstOrDefault().ToString().Split('.').Last().Replace(")", "");
+                            string propNameInsideBrackets = attribute.ArgumentList.Arguments.FirstOrDefault().ToString().Split('.').Last().Replace(")", "").Replace("\"", "");
                             //excludePropAttributes.Add(new SoftAttribute() { Name = attribute.Name.ToString(), PropNameInsideBrackets = propNameInsideBrackets }); // FT: i don't need this if i don't know which prop type it is
                             DTOClassProperties.Add(new Prop { IdentifierText = propNameInsideBrackets });
                         }
@@ -510,7 +699,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         return false;
                     }
                 })
-                .Single(); // FT: It should allways be only one
+                .SingleOrDefault(); // FT: It should allways be only one
 
             return mapperClass;
         }
@@ -541,96 +730,18 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         }
 
         /// <summary>
-        /// Getting generated mapper class and partial non generated mapper class, there should be always be two.
-        /// </summary>
-        public static List<ClassDeclarationSyntax> GetAllMapperClassesFromAssembly(IList<ClassDeclarationSyntax> classes)
-        {
-            List<ClassDeclarationSyntax> mapperClasses = classes
-                .Where(x =>
-                {
-                    string namespaceName = x.Ancestors().OfType<NamespaceDeclarationSyntax>()
-                        .Select(ns => ns.Name.ToString())
-                        .FirstOrDefault(ns => ns.EndsWith($".{MapperNamespaceEnding}"));
-                    if (namespaceName != null)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                })
-                .ToList();
-
-            return mapperClasses;
-        }
-
-        /// <summary>
-        /// From all passed classes, filtering only those that are entities
-        /// </summary>
-        public static List<ClassDeclarationSyntax> GetEntityClasses(IList<ClassDeclarationSyntax> classes)
-        {
-            List<ClassDeclarationSyntax> entityClasses = classes
-                .Where(x =>
-                {
-                    string namespaceName = x.Ancestors().OfType<NamespaceDeclarationSyntax>()
-                        .Select(ns => ns.Name.ToString())
-                        .FirstOrDefault(ns => ns.EndsWith($".{EntitiesNamespaceEnding}"));
-
-                    if (namespaceName != null)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                })
-                .ToList();
-
-            return entityClasses;
-        }
-
-        /// <summary>
-        /// From all passed classes, filtering only those that are DTOs and
-        /// </summary>
-        public static List<ClassDeclarationSyntax> GetDTOClasses(IList<ClassDeclarationSyntax> classes)
-        {
-            List<ClassDeclarationSyntax> DTOClasses = classes
-               .Where(x =>
-               {
-                   string namespaceName = x.Ancestors().OfType<NamespaceDeclarationSyntax>()
-                       .Select(ns => ns.Name.ToString())
-                       .FirstOrDefault(ns => ns.EndsWith($".{DTONamespaceEnding}"));
-
-                   if (namespaceName != null) // Here, the count would be 2 - "public class MyClass : MyBaseClass, IMyInterface { }"
-                   {
-                       return true;
-                   }
-                   else
-                   {
-                       return false;
-                   }
-               }).ToList();
-
-            return DTOClasses;
-        }
-
-        /// <summary>
         /// FT: Without inherited
         /// </summary>
         public static List<Prop> GetPropsOfCurrentClass(ClassDeclarationSyntax c)
         {
-
             List<Prop> properties = c.Members.OfType<PropertyDeclarationSyntax>()
                 .Select(prop => new Prop()
                 {
                     Type = prop.Type.ToString(),
                     IdentifierText = prop.Identifier.Text,
-                    Attributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x => new SoftAttribute
+                    Attributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
                     {
-                        Name = x.Name.ToString(),
-                        Value = x?.ArgumentList?.Arguments.FirstOrDefault()?.ToString()?.Replace("\"", "")
+                        return GetSoftAttribute(x);
                     })
                     .ToList()
                 })
@@ -733,22 +844,23 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         /// <summary>
         /// Pass the properties with the C# data types
         /// </summary>
-        public static List<string> GetAngularImports(List<Prop> properties, string importPath = null)
+        public static List<string> GetAngularImports(List<Prop> properties, string projectName = null, bool generateClassImports = false, string importPath = null)
         {
             List<string> result = new List<string>();
+
             foreach (Prop prop in properties)
             {
                 string cSharpDataType = prop.Type;
                 if (cSharpDataType.IsBaseType() == false)
                 {
                     string angularDataType = GetAngularDataTypeForImport(cSharpDataType);
-                    if (cSharpDataType.Contains($"{DTONamespaceEnding}"))
+                    if (generateClassImports && cSharpDataType.Contains($"{DTONamespaceEnding}"))
                     {
-                        result.Add($"import {{ {angularDataType} }} from \"./{importPath}{angularDataType.FromPascalToKebabCase()}.generated\";");
+                        result.Add($"import {{ {angularDataType} }} from \"./{importPath}{projectName.FromPascalToKebabCase()}-entities.generated\";");
                     }
-                    else if (cSharpDataType.Contains($"Codes"))
+                    else if (generateClassImports && cSharpDataType.Contains($"Codes"))
                     {
-                        result.Add($"import {{ {angularDataType} }} from \"../../enums/generated/{importPath}{angularDataType.FromPascalToKebabCase()}.generated\";"); // TODO FT: When you need, implement so you can also send enums from the controller
+                        result.Add($"import {{ {angularDataType} }} from \"../../enums/generated/{importPath}{projectName.FromPascalToKebabCase()}-enums.generated\";"); // TODO FT: When you need, implement so you can also send enums from the controller
                     }
                 }
             }
@@ -821,7 +933,8 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             if (baseType != null && baseType is GenericNameSyntax genericNameSyntax)
                 return genericNameSyntax.TypeArgumentList.Arguments.FirstOrDefault().ToString(); // long
             else
-                return "Every entity class needs to have the base class";
+                return null; // FT: It doesn't, many to many doesn't
+                             //return "Every entity class needs to have the base class";
         }
 
 
@@ -832,22 +945,18 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             if (baseType != null)
                 return baseType.ToString();
             else
-                return "Every entity class needs to have the base class";
-        }
-
-        public static string GetBaseType(ClassDeclarationSyntax c)
-        {
-            TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
-            if (baseType != null)
-                return baseType.ToString();
-            else
-                return "Every entity class needs to have the base class";
+                return null; // FT: It doesn't, many to many doesn't
+                             //return "Every entity class needs to have the base class";
         }
 
         public static List<string> GetBaseTypeNames(ClassDeclarationSyntax c)
         {
             List<string> baseTypeNames = c.BaseList?.Types.Select(x => x.Type.ToString()).ToList();
-            return baseTypeNames;
+
+            if (baseTypeNames == null)
+                return new List<string>();
+            else
+                return baseTypeNames;
         }
 
         /// <summary>
@@ -869,8 +978,12 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         {
             List<Prop> props = GetAllPropertiesOfTheClass(c, classes);
             Prop displayNamePropForClass = props.Where(x => x.Attributes.Any(x => x.Name == DisplayNameAttribute)).SingleOrDefault();
+
             if (displayNamePropForClass == null)
-                return "YOU DON'T HAVE DISPLAYNAME PROP, OR YOU HAVE MORE THEN ONE";
+                return $"Id.ToString()";
+
+            if (displayNamePropForClass.Type != "string")
+                return $"{displayNamePropForClass.IdentifierText}.ToString()";
 
             return displayNamePropForClass.IdentifierText;
         }
@@ -889,18 +1002,39 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return namespacePartsWithoutLastElement; // eg. Soft, Generator, Security
         }
 
+        /// <summary>
+        /// List<long>
+        /// </summary>
         public static string ExtractAngularClassNameFromGenericType(string input)
         {
             string result;
 
-            string[] parts = input.Split('<');
-            parts[parts.Length-1] = parts[parts.Length-1].Replace(">", "");
+            string[] parts = input.Split('<'); // List, long>
+            parts[parts.Length-1] = parts[parts.Length-1].Replace(">", ""); // long
             if (parts[parts.Length-1].IsBaseType() && parts[parts.Length-2].IsEnumerable() == false)
-                result = parts[parts.Length-2];
+                result = parts[parts.Length-2]; // NamebookDTO<long>
+            else if (parts[parts.Length-1].IsBaseType())
+            {
+                result = GetAngularDataType(parts[parts.Length-1]); // List<long>
+            }
             else
-                result = parts[parts.Length-1];
+            {
+                result = parts[parts.Length-1]; // List<UserDTO>
+            }
 
             return result.Replace(DTONamespaceEnding, "").Replace("[]", "");
+        }
+
+        /// <summary>
+        /// DeSerializes an object from JSON
+        /// </summary>
+        public static T DeserializeJson<T>(string json) where T : class
+        {
+            using (var stream = new MemoryStream(Encoding.Default.GetBytes(json)))
+            {
+                var serializer = new DataContractJsonSerializer(typeof(T));
+                return serializer.ReadObject(stream) as T;
+            }
         }
 
         public static void WriteToTheFile(string data, string path)
@@ -922,12 +1056,13 @@ public class Prop
     public string IdentifierText { get; set; }
 
     public List<SoftAttribute> Attributes = new List<SoftAttribute>();
+
+    public string Project { get; set; } // FT: Used only for ng controllers generator when we need to import classes from the different assebmlies
 }
 
 public class SoftAttribute
 {
     public string Name { get; set; }
-    public string PropNameInsideBrackets { get; set; }
 
     /// <summary>
     /// Doesn't handle if more values are in the prenteces, eg. [Attribute("First", "Second")]

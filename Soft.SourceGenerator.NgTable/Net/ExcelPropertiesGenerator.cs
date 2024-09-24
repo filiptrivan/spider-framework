@@ -33,7 +33,7 @@ namespace Soft.SourceGenerator.NgTable.Net
                 static (spc, source) => Execute(source, spc));
         }
 
-        private static void Execute(ImmutableArray<ClassDeclarationSyntax> classes, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
             if (classes.Count() == 0) return;
             List<ClassDeclarationSyntax> DTOClasses = Helper.GetDTOClasses(classes);

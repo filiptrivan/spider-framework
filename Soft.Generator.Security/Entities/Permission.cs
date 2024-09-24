@@ -1,4 +1,5 @@
-﻿using Soft.Generator.Shared.Attributes;
+﻿using Soft.Generator.Security.Interface;
+using Soft.Generator.Shared.Attributes;
 using Soft.Generator.Shared.BaseEntities;
 using System;
 using System.Collections.Generic;
@@ -14,11 +15,22 @@ namespace Soft.Generator.Security.Entities
     {
         [SoftDisplayName]
         [Required]
-        [StringLength(255)]
+        [StringLength(100)]
         public string Name { get; set; }
 
-        [StringLength(1000)]
+        [Required]
+        [StringLength(100)]
+        public string NameLatin { get; set; }
+
+        [StringLength(400)]
         public string Description { get; set; }
+
+        [StringLength(400)]
+        public string DescriptionLatin { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public string Code { get; set; }
 
         public virtual List<Role> Roles { get; set; }
     }

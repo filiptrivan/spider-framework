@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace Soft.Generator.Shared.Services
 {
@@ -21,7 +22,7 @@ namespace Soft.Generator.Shared.Services
             _context=context;
         }
 
-        protected internal async Task<T> LoadInstanceAsync<T, ID>(ID id, int? version) where T : BusinessObject<ID>
+        protected internal async Task<T> LoadInstanceAsync<T, ID>(ID id, int? version) where T : class, IBusinessObject<ID>
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -37,7 +38,20 @@ namespace Soft.Generator.Shared.Services
             });
         }
 
-        public async Task DeleteEntity<T, ID>(ID id) where T : BusinessObject<ID> where ID : struct // https://www.c-sharpcorner.com/article/equality-operator-with-inheritance-and-generics-in-c-sharp/
+        protected internal async Task<T> LoadInstanceAsync<T, ID>(ID id) where T : class, IReadonlyObject<ID>
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                T poco = await _context.DbSet<T>().FindAsync(id);
+
+                if (poco == null)
+                    throw new BusinessException(SharedTerms.EntityDoesNotExistInDatabase);
+
+                return poco;
+            });
+        }
+
+        public async Task DeleteEntity<T, ID>(ID id) where T : class, IBusinessObject<ID> where ID : struct // https://www.c-sharpcorner.com/article/equality-operator-with-inheritance-and-generics-in-c-sharp/
         {
             await _context.WithTransactionAsync(async () =>
             {
@@ -46,5 +60,28 @@ namespace Soft.Generator.Shared.Services
                     throw new BusinessException(SharedTerms.EntityDoesNotExistInDatabaseForDeleteRequest);
             });
         }
+
+        //public async Task UpdateManyToManyAssociation<T1, T2>(IQueryable<TUser> query, Enum permissionCode)
+        //{
+        //    return await _context.WithTransactionAsync(async () =>
+        //    {
+        //        List<Role> roles = await LoadRoleListForUserExtended(userExtendedSaveBodyDTO.UserExtendedDTO.Id);
+        //        foreach (Role role in roles)
+        //        {
+        //            if (userExtendedSaveBodyDTO.RoleIds.Contains(role.Id))
+        //                userExtendedSaveBodyDTO.RoleIds.Remove(role.Id);
+        //            else
+        //                _context.DbSet<Role>().Remove(role); // TODO FT: Benchmark which is better for performance in this case, Remove, or ExecuteDelete
+        //        }
+
+        //        List<Role> rolesToInsert = await _context.DbSet<Role>()
+        //                                    .Where(x => userExtendedSaveBodyDTO.RoleIds.Contains(x.Id))
+        //                                    .ToListAsync();
+
+        //        await _context.DbSet<Role>().AddRangeAsync(rolesToInsert);
+        //    });
+
+        //}
+
     }
 }

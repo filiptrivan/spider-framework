@@ -34,14 +34,15 @@ namespace Soft.SourceGenerator.NgTable.Angular
             static (spc, source) => Execute(source, spc));
 
         }
-        private static void Execute(IList<ClassDeclarationSyntax> validationClasses, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
-            if (validationClasses.Count == 0) return;
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(validationClasses[0]);
-            string[] namespacePartsWithoutTwoLastElements = namespacePartsWithoutLastElement.Take(namespacePartsWithoutLastElement.Length - 1).ToArray();
+            if (classes.Count <= 1) return;
 
+            string outputPath = Helper.GetGeneratorOutputPath(nameof(NgValidatorsGenerator), classes);
+            List<ClassDeclarationSyntax> validationClasses = Helper.GetValidationClasses(classes);
+
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(validationClasses[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
-            string wholeProjectBasePartOfNamespace = string.Join(".", namespacePartsWithoutTwoLastElements); // eg. Soft.Generator
 
             StringBuilder sb = new StringBuilder();
             StringBuilder sbMethods = new StringBuilder();
@@ -67,7 +68,7 @@ export function getValidator{{projectName}}(formControl: SoftFormControl, classN
 """);
             sb.AppendLine(sbMethods.ToString());
 
-            Helper.WriteToTheFile(sb.ToString(), $@"E:\Projects\{wholeProjectBasePartOfNamespace}\Source\{wholeProjectBasePartOfNamespace}.SPA\src\app\business\services\validation\generated\{projectName.FromPascalToKebabCase()}-validation-rules.generated.ts");
+            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-validation-rules.generated.ts");
         }
 
         public static string GenerateAngularValidationMethods(ClassDeclarationSyntax validationClass)
@@ -109,7 +110,7 @@ export function getValidator{{projectName}}(formControl: SoftFormControl, classN
             string result = $@"
 export function {parameterFirstLower}{classNameForValidation}Validator(control: SoftFormControl): SoftValidatorFn {{
     const validator: SoftValidatorFn = (): ValidationErrors | null => {{
-        const value = control.value;
+        const value = control.value ?? """";
 
 {string.Join("\n", ruleStatements)}
 
@@ -166,6 +167,42 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must be ${{length}} character long");
                     translationTags.Add("SingleLength");
+                }
+            }
+
+            if (rules.Contains("LessThanOrEqualTo"))
+            {
+                Match rangeMatch = Regex.Match(rules, @"LessThanOrEqualTo\((\d+)\)");
+
+                if (rangeMatch.Success)
+                {
+                    string ruleName = "numberMaxRangeRule";
+                    string max = rangeMatch.Groups[1].Value;
+                    ruleStatements.Add($$"""
+        const max = {{max}};
+        const {{ruleName}} = value <= max;
+""");
+                    ruleNames.Add(ruleName);
+                    validationMessages.Add($"must be less or equal ${{max}}");
+                    translationTags.Add("NumberRangeMax");
+                }
+            }
+
+            if (rules.Contains("GreaterThanOrEqualTo"))
+            {
+                Match rangeMatch = Regex.Match(rules, @"GreaterThanOrEqualTo\((\d+)\)");
+
+                if (rangeMatch.Success)
+                {
+                    string ruleName = "numberMinRangeRule";
+                    string min = rangeMatch.Groups[1].Value;
+                    ruleStatements.Add($$"""
+        const min = {{min}};
+        const {{ruleName}} = value >= min;
+""");
+                    ruleNames.Add(ruleName);
+                    validationMessages.Add($"must be greater or equal ${{min}}");
+                    translationTags.Add("NumberRangeMin");
                 }
             }
 

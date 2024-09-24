@@ -2079,14 +2079,6 @@
           "System.Xml.XPath": "4.0.1"
         }
       },
-      "Soft.Generator.Business/1.0.0": {
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore.SqlServer": "8.0.2"
-        },
-        "runtime": {
-          "Soft.Generator.Business.dll": {}
-        }
-      },
       "Soft.Generator.Security/1.0.0": {
         "dependencies": {
           "BCrypt.Net-Next": "4.0.3",
@@ -2094,7 +2086,6 @@
           "LinqKit.Core": "1.2.5",
           "Microsoft.EntityFrameworkCore.SqlServer": "8.0.2",
           "Riok.Mapperly": "3.5.1",
-          "Soft.Generator.Business": "1.0.0",
           "Soft.Generator.Shared": "1.0.0",
           "Soft.NgTable": "1.0.0",
           "System.IdentityModel.Tokens.Jwt": "7.3.1"
@@ -3371,11 +3362,6 @@
       "sha512": "sha512-FLhdYJx4331oGovQypQ8JIw2kEmNzCsjVOVYY/16kZTUoquZG85oVn7yUhBE2OZt1yGPSXAL0HTEfzjlbNpM7Q==",
       "path": "system.xml.xpath.xdocument/4.0.1",
       "hashPath": "system.xml.xpath.xdocument.4.0.1.nupkg.sha512"
-    },
-    "Soft.Generator.Business/1.0.0": {
-      "type": "project",
-      "serviceable": false,
-      "sha512": ""
     },
     "Soft.Generator.Security/1.0.0": {
       "type": "project",

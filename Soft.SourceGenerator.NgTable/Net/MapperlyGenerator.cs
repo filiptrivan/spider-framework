@@ -39,9 +39,13 @@ namespace Soft.SourceGenerator.NgTable.Net
         /// </summary>
         /// <param name="classes">Only EF classes</param>
         /// <param name="context"></param>
-        private static void Execute(ImmutableArray<ClassDeclarationSyntax> classes, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
-            if (classes.Count() == 0) return;
+            if (classes.Count <= 1) return;
+
+            string outputPath = Helper.GetGeneratorOutputPath(nameof(MapperlyGenerator), classes);
+            if (outputPath == null) return;
+
             List<ClassDeclarationSyntax> entityClassesHelper = Helper.GetEntityClasses(classes);
             List<ClassDeclarationSyntax> entityClasses = Helper.GetUninheritedClasses(entityClassesHelper);
 
@@ -53,6 +57,8 @@ namespace Soft.SourceGenerator.NgTable.Net
 
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
+            string[] namespacePartsWithoutTwoLastElements = namespacePartsWithoutLastElement.Take(namespacePartsWithoutLastElement.Length - 1).ToArray();
+            string wholeProjectBasePartOfNamespace = string.Join(".", namespacePartsWithoutTwoLastElements); // eg. Soft.Generator
 
             sb.AppendLine($$"""
 using Riok.Mapperly.Abstractions;
@@ -61,17 +67,21 @@ using {{basePartOfNamespace}}.Entities;
 
 namespace {{basePartOfNamespace}}.DataMappers
 {
-    [Mapper]
+    [Mapper(EnabledConversions = MappingConversionType.All)]
     public static partial class Mapper
     {
 """);
             foreach (ClassDeclarationSyntax c in entityClasses)
             {
+                string baseClass = c.GetBaseType();
+                if (baseClass == null)
+                    continue;
+
                 sb.AppendLine($$"""
 
         #region {{c.Identifier.Text}}
 
-        {{GetMapper($"public static partial {c.Identifier.Text} Map({c.Identifier.Text}DTO dto);", mapperClass)}}
+        {{(c.IsAbstract() ? "" : GetMapper($"public static partial {c.Identifier.Text} Map({c.Identifier.Text}DTO dto);", mapperClass))}}
 
         {{GetMapperDTO($"public static partial {c.Identifier.Text}DTO Map({c.Identifier.Text} poco);", mapperClass, c, entityClasses)}}
 
@@ -93,13 +103,15 @@ namespace {{basePartOfNamespace}}.DataMappers
 }
 """);
 
-            Helper.WriteToTheFile(sb.ToString(), $@"E:\Projects\Soft.Generator\Source\Soft.Generator.Security\DataMappers\{projectName}Mapper.generated.cs");
+            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
             // FT: does not generating because we make file on the disk
             //context.AddSource($"{projectName}Mapper.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
         public static string GetMapper(string input, ClassDeclarationSyntax mapperClass)
         {
+            if (mapperClass == null)
+                return "You didn't define DataMappers";
             List<MethodDeclarationSyntax> methods = mapperClass?.Members.OfType<MethodDeclarationSyntax>().ToList();
             foreach (MethodDeclarationSyntax method in methods)
             {
@@ -135,34 +147,22 @@ namespace {{basePartOfNamespace}}.DataMappers
             foreach (PropertyDeclarationSyntax prop in properties)
             {
                 string propType = prop.Type.ToString(); // User
+                string propName = prop.Identifier.Text;
+
                 if (propType.PropTypeIsManyToOne())
                 {
-                    // [MapProperty("User.Id", "UserId")]
-                    manyToOneAttributeMappers.Add($"[MapProperty(\"{propType}.Id\", \"{propType}Id\")]");
-
-                    string displayNamePropOfManyToOne = "Id";
-                    List<PropertyDeclarationSyntax> manyToOneProperties = entityClasses
+                    ClassDeclarationSyntax entityClass = entityClasses
                         .Where(x => x.Identifier.Text == propType)
-                        .Single().Members.OfType<PropertyDeclarationSyntax>()
-                        .ToList();
+                        .SingleOrDefault();
 
-                    foreach (PropertyDeclarationSyntax m2oProp in manyToOneProperties)
-                    {
-                        foreach (AttributeListSyntax item in prop.AttributeLists)
-                        {
-                            foreach (AttributeSyntax attribute in item.Attributes)
-                            {
-                                string attributeName = attribute.Name.ToString();
-                                if (attributeName != null && attributeName == "SoftDisplayName")
-                                {
-                                    displayNamePropOfManyToOne = m2oProp.Type.ToString(); // eg. Name
-                                }
-                            }
-                        }
-                    }
+                    if (entityClass == null)
+                        continue;
 
-                    // [MapProperty("User.Name", "UserDisplayName")]
-                    manyToOneAttributeMappers.Add($"[MapProperty(\"{propType}.{displayNamePropOfManyToOne}\", \"{propType}DisplayName\")]");
+                    string displayNamePropOfManyToOne = Helper.GetDisplayNamePropForClass(entityClass, entityClasses);
+                    displayNamePropOfManyToOne = displayNamePropOfManyToOne.Replace(".ToString()", "");
+
+                    manyToOneAttributeMappers.Add($"[MapProperty(\"{propName}.Id\", \"{propName}Id\")]"); // [MapProperty("User.Id", "UserId")]
+                    manyToOneAttributeMappers.Add($"[MapProperty(\"{propName}.{displayNamePropOfManyToOne}\", \"{propName}DisplayName\")]"); // [MapProperty("User.Name", "UserDisplayName")]
                 }
             }
 

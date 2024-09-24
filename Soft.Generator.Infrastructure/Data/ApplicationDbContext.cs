@@ -1,36 +1,76 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Soft.Generator.Shared.BaseEntities;
-using Soft.Generator.Security.Entities;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Soft.Generator.Shared.Interfaces;
 using System.Reflection;
 using OfficeOpenXml.FormulaParsing.Excel.Functions.DateTime;
 using Soft.Generator.Shared.Helpers;
 using Soft.Generator.Shared.Enums;
+using Soft.Generator.Security.Interface;
+using Soft.Generator.Security.Entities;
 
 namespace Soft.Generator.Infrastructure.Data
 {
-    public class ApplicationDbContext : DbContext, IApplicationDbContext
+    public class ApplicationDbContext<TUser> : DbContext, IApplicationDbContext 
+        where TUser : class, IUser, new() 
     {
-        private readonly SoftSecuritySettings _softSecuritySettings;
 
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, SoftSecuritySettings softSecuritySettings)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext<TUser>> options)
                 : base(options)
         {
-            _softSecuritySettings = softSecuritySettings;
         }
 
-        public DbSet<User> Users { get; set; }
+        protected ApplicationDbContext(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public DbSet<TUser> Users { get; set; }
         public DbSet<Role> Roles { get; set; }
+        public DbSet<RoleUser> RoleUser { get; set; }
         public DbSet<Permission> Permissions { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<NotificationUser> NotificationUser { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            if(_softSecuritySettings.UseGoogleAsExternalProvider == false)
+            modelBuilder.Entity<RoleUser>()
+                .HasKey(ru => new { ru.RolesId, ru.UsersId });
+
+            modelBuilder.Entity<TUser>()
+                .HasMany(e => e.Roles)
+                .WithMany()
+                .UsingEntity<RoleUser>(
+                    j => j.HasOne<Role>().WithMany().HasForeignKey(ru => ru.RolesId),
+                    j => j.HasOne<TUser>().WithMany().HasForeignKey(ru => ru.UsersId)
+                );
+
+            modelBuilder.Entity<NotificationUser>()
+                .HasKey(ru => new { ru.NotificationsId, ru.UsersId });
+
+            modelBuilder.Entity<TUser>()
+                .HasMany(e => e.Notifications)
+                .WithMany()
+                .UsingEntity<NotificationUser>(
+                    j => j.HasOne<Notification>()
+                          .WithMany()
+                          .HasForeignKey(ru => ru.NotificationsId),
+                    j => j.HasOne<TUser>()
+                          .WithMany()
+                          .HasForeignKey(ru => ru.UsersId)
+                );
+
+            if (SettingsProvider.Current.UseGoogleAsExternalProvider == false)
             {
-                modelBuilder.Entity<User>().Ignore(u => u.HasLoggedInWithExternalProvider);
+                modelBuilder.Entity<TUser>().Ignore(x => x.HasLoggedInWithExternalProvider);
+            }
+
+            if (SettingsProvider.Current.AppHasLatinTranslation == false)
+            {
+                modelBuilder.Entity<Permission>().Ignore(x => x.NameLatin);
+                modelBuilder.Entity<Permission>().Ignore(x => x.DescriptionLatin);
             }
         }
 
@@ -49,14 +89,14 @@ namespace Soft.Generator.Infrastructure.Data
             return base.SaveChanges();
         }
 
-        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             foreach (EntityEntry changedEntity in ChangeTracker.Entries())
             {
                 HandleObjectChanges(changedEntity);
             }
 
-            return base.SaveChangesAsync(cancellationToken);
+            return await base.SaveChangesAsync(cancellationToken);
         }
 
         void HandleObjectChanges(EntityEntry changedEntity)

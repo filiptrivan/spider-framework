@@ -20,6 +20,8 @@ namespace Soft.Generator.Security
         public int AccessTokenExpiration { get; set; }
         public int RefreshTokenExpiration { get; set; }
 
+        public string GoogleClientId { get; set; }
+
         /// <summary>
         /// It can be bigger, it has the same chance of being hit as the refresh token, but there is no reason why we would give it longer
         /// It is actually a modified refresh token
@@ -28,5 +30,7 @@ namespace Soft.Generator.Security
         public int NumberOfFailedLoginAttemptsInARowToDisableUser { get; set; }
         public bool AllowTheUseOfAppWithDifferentIpAddresses { get; set; }
         public int AllowedBrowsersForTheSingleUser { get; set; }
+
+        public string ExcelContentType { get; set; }
     }
 }

@@ -31,22 +31,32 @@ namespace Soft.SourceGenerator.NgTable.Angular
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEnums(ctx))
                 .Where(static c => c is not null);
 
-            context.RegisterImplementationSourceOutput(enumDeclarations.Collect(),
-            static (spc, source) => Execute(source, spc));
+            IncrementalValuesProvider<ClassDeclarationSyntax> settingsDeclaration = context.SyntaxProvider
+               .CreateSyntaxProvider(
+                   predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationSettings(s),
+                   transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationSettings(ctx))
+               .Where(static c => c is not null);
+
+            var combinedDeclarations = enumDeclarations.Collect().Combine(settingsDeclaration.Collect());
+
+            context.RegisterImplementationSourceOutput(combinedDeclarations,
+            static (spc, source) => Execute(source.Left, source.Right, spc));
 
         }
-        private static void Execute(IList<EnumDeclarationSyntax> enums, SourceProductionContext context)
+        private static void Execute(IList<EnumDeclarationSyntax> enums, IList<ClassDeclarationSyntax> settings, SourceProductionContext context)
         {
             if (enums.Count == 0) return;
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(enums[0]);
-            string[] namespacePartsWithoutTwoLastElements = namespacePartsWithoutLastElement.Take(namespacePartsWithoutLastElement.Length - 1).ToArray();
 
-            //string projectBasePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
-            string wholeProjectBasePartOfNamespace = string.Join(".", namespacePartsWithoutTwoLastElements); // eg. Soft.Generator
+            string outputPath = Helper.GetGeneratorOutputPath(nameof(NgEnumsGenerator), settings);
+            if (outputPath == null) return;
+
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(enums[0]);
+            string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
+
+            StringBuilder sb = new StringBuilder();
 
             foreach (EnumDeclarationSyntax enume in enums)
             {
-                StringBuilder sb = new StringBuilder();
                 string enumName = enume.Identifier.Text;
                 List<EnumMember> enumMembers = Helper.GetEnumMembers(enume);
                 List<string> angularEnumMemberValuePairs = GetAngularEnumMemberValuePairs(enumMembers);
@@ -56,10 +66,11 @@ export enum {{enumName}}
 {
     {{string.Join("\n\t", angularEnumMemberValuePairs)}}
 }
+
 """);
-                
-                Helper.WriteToTheFile(sb.ToString(), $@"E:\Projects\{wholeProjectBasePartOfNamespace}\Source\{wholeProjectBasePartOfNamespace}.SPA\src\app\business\enums\generated\{enumName.FromPascalToKebabCase()}.generated.ts");
             }
+
+            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-enums.generated.ts");
         }
 
         private static List<string> GetAngularEnumMemberValuePairs(List<EnumMember> enumMembers)

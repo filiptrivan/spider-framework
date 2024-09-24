@@ -24,10 +24,8 @@ E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Excel
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.Generator.Security.deps.json
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.Generator.Security.dll
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.Generator.Security.pdb
-E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.Generator.Business.dll
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.Generator.Shared.dll
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.NgTable.dll
-E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.Generator.Business.pdb
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.Generator.Shared.pdb
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.NgTable.pdb
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\sr-Latn-RS\Soft.Generator.Shared.resources.dll

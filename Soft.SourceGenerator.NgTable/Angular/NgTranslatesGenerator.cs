@@ -36,14 +36,15 @@ namespace Soft.SourceGenerator.NgTable.Angular
             static (spc, source) => Execute(source, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> DTOClasses, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
-            if (DTOClasses.Count == 0) return;
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(DTOClasses[0]);
-            string[] namespacePartsWithoutTwoLastElements = namespacePartsWithoutLastElement.Take(namespacePartsWithoutLastElement.Length - 1).ToArray();
+            if (classes.Count <= 1) return;
 
+            string outputPath = Helper.GetGeneratorOutputPath(nameof(NgTranslatesGenerator), classes);
+            List<ClassDeclarationSyntax> DTOClasses = Helper.GetDTOClasses(classes);
+
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(DTOClasses[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
-            string wholeProjectBasePartOfNamespace = string.Join(".", namespacePartsWithoutTwoLastElements); // eg. Soft.Generator
 
             StringBuilder sbClassNames = new StringBuilder();
             StringBuilder sbLabels = new StringBuilder();
@@ -75,8 +76,8 @@ export function getTranslatedLabel{{projectName}}(name: string): string
 }
 """);
             
-            Helper.WriteToTheFile(sbClassNames.ToString(), $@"E:\Projects\{wholeProjectBasePartOfNamespace}\Source\{wholeProjectBasePartOfNamespace}.SPA\src\app\business\services\translates\generated\{projectName.FromPascalToKebabCase()}-class-names.generated.ts");
-            Helper.WriteToTheFile(sbLabels.ToString(), $@"E:\Projects\{wholeProjectBasePartOfNamespace}\Source\{wholeProjectBasePartOfNamespace}.SPA\src\app\business\services\translates\generated\{projectName.FromPascalToKebabCase()}-labels.generated.ts");
+            Helper.WriteToTheFile(sbClassNames.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-class-names.generated.ts");
+            Helper.WriteToTheFile(sbLabels.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-labels.generated.ts");
         }
 
         private static List<string> GetCasesForLabelTranslate(List<Prop> DTOProperties)

@@ -3345,19 +3345,6 @@
           "lib/netstandard1.3/System.Xml.XPath.XDocument.dll": {}
         }
       },
-      "Soft.Generator.Business/1.0.0": {
-        "type": "project",
-        "framework": ".NETCoreApp,Version=v8.0",
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore.SqlServer": "8.0.2"
-        },
-        "compile": {
-          "bin/placeholder/Soft.Generator.Business.dll": {}
-        },
-        "runtime": {
-          "bin/placeholder/Soft.Generator.Business.dll": {}
-        }
-      },
       "Soft.Generator.Security/1.0.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
@@ -3367,7 +3354,6 @@
           "LinqKit.Core": "1.2.5",
           "Microsoft.EntityFrameworkCore.SqlServer": "8.0.2",
           "Riok.Mapperly": "3.5.1",
-          "Soft.Generator.Business": "1.0.0",
           "Soft.Generator.Shared": "1.0.0",
           "Soft.NgTable": "1.0.0",
           "System.IdentityModel.Tokens.Jwt": "7.3.1"
@@ -9813,11 +9799,6 @@
         "system.xml.xpath.xdocument.4.0.1.nupkg.sha512",
         "system.xml.xpath.xdocument.nuspec"
       ]
-    },
-    "Soft.Generator.Business/1.0.0": {
-      "type": "project",
-      "path": "../Soft.Generator.Business/Soft.Generator.Business.csproj",
-      "msbuildProject": "../Soft.Generator.Business/Soft.Generator.Business.csproj"
     },
     "Soft.Generator.Security/1.0.0": {
       "type": "project",
