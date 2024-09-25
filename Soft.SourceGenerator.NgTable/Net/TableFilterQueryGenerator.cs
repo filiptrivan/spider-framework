@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Helpers;
 using Soft.SourceGenerators.Helpers;
+using Soft.SourceGenerators.Models;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -84,10 +85,10 @@ namespace Soft.SourceGenerator.NgTable
 """);
                 // FT: idem po svim DTO propertijima, ako naletim na neki koji ne postoji u ef klasi, trazim resenje u maperima, ako ne postoji upisujem odgovarajucu gresku
                 List<ClassDeclarationSyntax> pairDTOClasses = classes.Where(x => x.Identifier.Text == $"{entityClass.Identifier.Text}DTO").DistinctBy(x => x.Identifier.Text).ToList(); // FT: Getting the pair DTO classes of entity class
-                List<Prop> efClassProps = Helper.GetAllPropertiesOfTheClass(entityClass, classes);
+                List<SoftProperty> efClassProps = Helper.GetAllPropertiesOfTheClass(entityClass, classes);
                 foreach (ClassDeclarationSyntax pairDTOClass in pairDTOClasses)
                 {
-                    foreach (Prop DTOprop in Helper.GetAllPropertiesOfTheClass(pairDTOClass, classes))
+                    foreach (SoftProperty DTOprop in Helper.GetAllPropertiesOfTheClass(pairDTOClass, classes))
                     {
                         string entityDotNotation = DTOprop.IdentifierText; // RoleDisplayName
                         string propType = DTOprop.Type;
@@ -315,8 +316,8 @@ using {{item}};
             // Role.Permission.Id
             // Role.Id
             string propName = entityDotNotation.Split('.')[0]; // Role
-            List<Prop> entityClassProperties = Helper.GetAllPropertiesOfTheClass(entityClass, allClasses);
-            Prop prop = entityClassProperties.Where(x => x.IdentifierText == propName).Single(); // Role
+            List<SoftProperty> entityClassProperties = Helper.GetAllPropertiesOfTheClass(entityClass, allClasses);
+            SoftProperty prop = entityClassProperties.Where(x => x.IdentifierText == propName).Single(); // Role
 
             int i = 1;
             while (prop.Type.IsBaseType() == false)
@@ -324,7 +325,7 @@ using {{item}};
                 ClassDeclarationSyntax helperClass = allClasses.Where(x => x.Identifier.Text == propName).SingleOrDefault(); // Role
                 if (helperClass == null)
                     break;
-                List<Prop> helperProps = Helper.GetAllPropertiesOfTheClass(helperClass, allClasses);
+                List<SoftProperty> helperProps = Helper.GetAllPropertiesOfTheClass(helperClass, allClasses);
                 propName = entityDotNotation.Split('.')[i]; // Id
                 prop = helperProps.Where(x => x.IdentifierText == propName).Single(); // Id
                 i++;

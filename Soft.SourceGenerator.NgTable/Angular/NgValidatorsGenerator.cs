@@ -9,6 +9,8 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Soft.SourceGenerators.Helpers;
+using Soft.SourceGenerators.Models;
+using Soft.SourceGenerator.NgTable.Net;
 
 namespace Soft.SourceGenerator.NgTable.Angular
 {
@@ -26,8 +28,8 @@ namespace Soft.SourceGenerator.NgTable.Angular
 //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
-                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationValidationRules(s),
-                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationValidationRules(ctx))
+                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntitiesAndDTO(s),
+                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEntitiesAndDTO(ctx))
                 .Where(static c => c is not null);
 
             context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
@@ -38,10 +40,12 @@ namespace Soft.SourceGenerator.NgTable.Angular
         {
             if (classes.Count <= 1) return;
 
-            string outputPath = Helper.GetGeneratorOutputPath(nameof(NgValidatorsGenerator), classes);
-            List<ClassDeclarationSyntax> validationClasses = Helper.GetValidationClasses(classes);
+            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(validationClasses[0]);
+            string outputPath = Helper.GetGeneratorOutputPath(nameof(NgValidatorsGenerator), classes);
+
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
 
             StringBuilder sb = new StringBuilder();
@@ -55,10 +59,26 @@ import { validatePrecisionScale } from '../../../../core/services/helper-functio
 export function getValidator{{projectName}}(formControl: SoftFormControl, className: string): SoftValidatorFn {
     switch(formControl.label + className){
 """);
-            foreach (ClassDeclarationSyntax validationClass in validationClasses)
+            foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
             {
-                sb.AppendLine(GetAngularValidationCases(validationClass));
-                sbMethods.AppendLine(GenerateAngularValidationMethods(validationClass));
+                List<SoftProperty> DTOProperties = new List<SoftProperty>();
+                List<SoftAttribute> DTOAttributes = new List<SoftAttribute>();
+
+                ClassDeclarationSyntax nonGeneratedDTOClass = classes.Where(x => x.Identifier.Text == DTOClassGroup.Key).SingleOrDefault();
+                List<SoftAttribute> softAttributes = Helper.GetAllAttributesOfTheClass(nonGeneratedDTOClass, classes);
+                if (softAttributes != null)
+                    DTOAttributes.AddRange(softAttributes); // FT: Its okay to add only for non generated because we will not have any attributes on the generated DTOs
+
+
+                foreach (SoftClass DTOClass in DTOClassGroup)
+                    DTOProperties.AddRange(DTOClass.Properties);
+
+                ClassDeclarationSyntax entityClass = entityClasses.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Identifier.Text).SingleOrDefault(); // If it is null then we only made DTO, without entity class
+
+                string validationClassConstructorBody = GetValidationClassConstructorBody(DTOProperties, DTOAttributes, entityClass, entityClasses);
+
+                sb.AppendLine(GetAngularValidationCases(DTOClassGroup.Key, validationClassConstructorBody));
+                sbMethods.AppendLine(GenerateAngularValidationMethods(DTOClassGroup.Key, validationClassConstructorBody));
             }
             sb.AppendLine($$"""
         default:
@@ -71,16 +91,16 @@ export function getValidator{{projectName}}(formControl: SoftFormControl, classN
             Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-validation-rules.generated.ts");
         }
 
-        public static string GenerateAngularValidationMethods(ClassDeclarationSyntax validationClass)
+        public static string GenerateAngularValidationMethods(string DTOClassName, string validationClassConstructorBody)
         {
-            string validationClassConstructorBody = GetValidationClassConstructorBody(validationClass);
+            string validationClassName = DTOClassName.Replace("DTO", "");
+
             List<string> validationRulePropNames = ParseValidationParameters(validationClassConstructorBody);
+
             StringBuilder sb = new StringBuilder();
 
             foreach (string validationRulePropName in validationRulePropNames)
-            {
-                sb.AppendLine(GenerateAngularValidationMethod(validationRulePropName, GetClassNameForValidation(validationClass), validationClassConstructorBody));
-            }
+                sb.AppendLine(GenerateAngularValidationMethod(validationRulePropName, validationClassName, validationClassConstructorBody));
 
             return sb.ToString();
         }
@@ -251,44 +271,28 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
             }
         }
 
-        public static string GetAngularValidationCases(ClassDeclarationSyntax validationClass)
+        public static string GetAngularValidationCases(string DTOClassName, string validationClassConstructorBody)
         {
-            string validationClassName = GetClassNameForValidation(validationClass);
+            string validationClassName = DTOClassName.Replace("DTO", "");
+
+            List<string> validationRulePropNames = ParseValidationParameters(validationClassConstructorBody);
+
             StringBuilder validationCases = new StringBuilder();
 
-            List<string> validationRulePropNames = ParseValidationParameters(GetValidationClassConstructorBody(validationClass));
-
-            foreach (string propName in validationRulePropNames)
+            foreach (string validationRulePropName in validationRulePropNames)
             {
                 validationCases.AppendLine($$"""
-        case '{{propName.FirstCharToLower()}}{{validationClassName}}':
-            return {{propName.FirstCharToLower()}}{{validationClassName}}Validator(formControl);
+        case '{{validationRulePropName.FirstCharToLower()}}{{validationClassName}}':
+            return {{validationRulePropName.FirstCharToLower()}}{{validationClassName}}Validator(formControl);
 """);
             }
 
             return validationCases.ToString();
         }
 
-        /// <summary>
-        /// eg. UserDTOValidationRules -> User
-        /// </summary>
-        private static string GetClassNameForValidation(ClassDeclarationSyntax validationClass)
+        private static string GetValidationClassConstructorBody(List<SoftProperty> DTOProperties, List<SoftAttribute> DTOAttributes, ClassDeclarationSyntax entityClass, List<ClassDeclarationSyntax> entityClasses)
         {
-            string validationClassName = validationClass.Identifier.Text;
-            int index = validationClassName.IndexOf("DTO");
-
-            if (index >= 0)
-            {
-                return validationClassName.Substring(0, index);
-            }
-
-            return validationClassName; // FT: If "DTO" is not found, return the original input
-        }
-
-        private static string GetValidationClassConstructorBody(ClassDeclarationSyntax validationClass)
-        {
-            ConstructorDeclarationSyntax validationConstructor = validationClass.Members.OfType<ConstructorDeclarationSyntax>().Single();
-            return validationConstructor.Body.ToString();
+            return $"{string.Join("\n\t\t\t", FluentValidationGenerator.GetValidationRules(DTOProperties, DTOAttributes, entityClass, entityClasses))}";
         }
 
         /// <summary>

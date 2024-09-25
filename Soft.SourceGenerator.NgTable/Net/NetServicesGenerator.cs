@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Helpers;
 using Soft.SourceGenerators.Helpers;
+using Soft.SourceGenerators.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -64,11 +65,11 @@ using {{basePartOfNamespace}}.DataMappers;
 using {{basePartOfNamespace}}.DTO;
 using {{basePartOfNamespace}}.Entities;
 using {{basePartOfNamespace}}.Enums;
+using {{basePartOfNamespace}}.ExcelProperties;
 using Microsoft.EntityFrameworkCore;
 using Soft.NgTable.Models;
 using System.Data;
 using Soft.SourceGenerator.NgTable;
-using Soft.SourceGenerator.ExcelProperties;
 using FluentValidation;
 using Soft.Generator.Security.Services;
 using Soft.Generator.Shared.Excel;
@@ -76,6 +77,7 @@ using Soft.Generator.Shared.Interfaces;
 using Soft.Generator.Shared.Services;
 using Soft.Generator.Shared.DTO;
 using Soft.Generator.Shared.Extensions;
+using Mapster;
 
 namespace {{basePartOfNamespace}}.Services
 {
@@ -108,7 +110,7 @@ namespace {{basePartOfNamespace}}.Services
             return await _context.WithTransactionAsync(async () =>
             {
                 {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
-                return await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectTo().FirstOrDefaultAsync();
+                return await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{nameOfTheEntityClass}}DTO>().FirstOrDefaultAsync();
             });
         }
 
@@ -134,7 +136,7 @@ namespace {{basePartOfNamespace}}.Services
                 data = await paginationResult.Query
                     .Skip(tableFilterPayload.First)
                     .Take(tableFilterPayload.Rows)
-                    .ProjectTo()
+                    .ProjectToType<{{nameOfTheEntityClass}}DTO>()
                     .ToListAsync();
             });
 
@@ -151,7 +153,7 @@ namespace {{basePartOfNamespace}}.Services
                 {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
                 paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload);
 
-                data = await paginationResult.Query.ExcelProjectTo().ToListAsync();
+                data = await paginationResult.Query.ProjectToType<{{nameOfTheEntityClass}}DTO>().ToListAsync();
             });
 
             string[] excelPropertiesToExclude = ExcelPropertiesToExclude.GetHeadersToExclude(new {{nameOfTheEntityClass}}DTO());
@@ -226,8 +228,8 @@ namespace {{basePartOfNamespace}}.Services
         static List<string> GetManyToOneInstancesForSave(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
         {
             List<string> result = new List<string>();
-            List<Prop> properties = c.Members.OfType<PropertyDeclarationSyntax>()
-                .Select(prop => new Prop()
+            List<SoftProperty> properties = c.Members.OfType<PropertyDeclarationSyntax>()
+                .Select(prop => new SoftProperty()
                 {
                     Type = prop.Type.ToString(),
                     IdentifierText = prop.Identifier.Text
@@ -235,7 +237,7 @@ namespace {{basePartOfNamespace}}.Services
                 .Where(prop => prop.Type.PropTypeIsManyToOne())
                 .ToList();
 
-            foreach (Prop prop in properties)
+            foreach (SoftProperty prop in properties)
             {
                 result.Add($$"""
             if (dto.{{prop.IdentifierText}}Id > 0)
@@ -253,8 +255,8 @@ namespace {{basePartOfNamespace}}.Services
             string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, classes); // long
 
             List<string> result = new List<string>();
-            List<Prop> propertiesEntityClass = entityClass.Members.OfType<PropertyDeclarationSyntax>()
-                .Select(prop => new Prop()
+            List<SoftProperty> propertiesEntityClass = entityClass.Members.OfType<PropertyDeclarationSyntax>()
+                .Select(prop => new SoftProperty()
                 {
                     Type = prop.Type.ToString(),
                     IdentifierText = prop.Identifier.Text
@@ -262,7 +264,7 @@ namespace {{basePartOfNamespace}}.Services
                 .Where(prop => prop.Type.IsEnumerable())
                 .ToList();
 
-            foreach (Prop prop in propertiesEntityClass) // List<Role> Roles
+            foreach (SoftProperty prop in propertiesEntityClass) // List<Role> Roles
             {
                 string classNameFromTheList = GetClassNameFromTheList(prop.Type); // Role
                 string classNameFromTheListFirstLower = classNameFromTheList.FirstCharToLower(); // role
@@ -277,16 +279,16 @@ namespace {{basePartOfNamespace}}.Services
                 string idTypeOfTheClassFromTheList = Helper.GetGenericIdType(classFromTheList, classes); // int
                 string classNameFromTheListDisplayNameProp = Helper.GetDisplayNamePropForClass(classFromTheList, classes); // Name
                 //classNameFromTheListDisplayNameProp = classNameFromTheListDisplayNameProp ?? classFromTheListFromTheReferencedProjects.Att.Where(x => ).FirstOrDefault() // TODO FT: Continue to do this...
-                List<Prop> classFromTheListProperties = classFromTheList.Members.OfType<PropertyDeclarationSyntax>()
-                    .Select(prop => new Prop()
+                List<SoftProperty> classFromTheListProperties = classFromTheList.Members.OfType<PropertyDeclarationSyntax>()
+                    .Select(prop => new SoftProperty()
                     {
                         Type = prop.Type.ToString(),
                         IdentifierText = prop.Identifier.Text
                     })
                     .ToList();
 
-                Prop manyToManyPropFromTheListProperties = classFromTheListProperties.Where(x => x.Type.IsEnumerable() && GetClassNameFromTheList(x.Type) == nameOfTheEntityClass).SingleOrDefault(); // List<User> Users
-                Prop manyToOneProp = classFromTheListProperties.Where(x => x.Type.PropTypeIsManyToOne() && prop.Type == nameOfTheEntityClass).SingleOrDefault(); // User / Userando
+                SoftProperty manyToManyPropFromTheListProperties = classFromTheListProperties.Where(x => x.Type.IsEnumerable() && GetClassNameFromTheList(x.Type) == nameOfTheEntityClass).SingleOrDefault(); // List<User> Users
+                SoftProperty manyToOneProp = classFromTheListProperties.Where(x => x.Type.PropTypeIsManyToOne() && prop.Type == nameOfTheEntityClass).SingleOrDefault(); // User / Userando
 
                 if (manyToOneProp != null)
                 {
@@ -433,7 +435,7 @@ namespace {{basePartOfNamespace}}.Services
             if (c.IsEntityBusinessObject() == false)
             {
                 sb.AppendLine($$"""
-                poco = Mapper.Map(dto);
+                poco = dto.Adapt<{{nameOfTheEntityClass}}>();
                 await dbSet.AddAsync(poco);
 """);
             }
@@ -445,13 +447,13 @@ namespace {{basePartOfNamespace}}.Services
                 {
                     {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Edit{nameOfTheEntityClass});" : "")}}
                     poco = await LoadInstanceAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>(dto.Id, dto.Version);
-                    Mapper.MergeMap(dto, poco);
+                    dto.Adapt(poco);
                     dbSet.Update(poco);
                 }
                 else
                 {
                     {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Insert{nameOfTheEntityClass});" : "")}}
-                    poco = Mapper.Map(dto);
+                    poco = dto.Adapt<{{nameOfTheEntityClass}}>();
                     await dbSet.AddAsync(poco);
                 }
 """);
@@ -471,7 +473,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 {{nameOfTheEntityClass}} poco = await Save{{nameOfTheEntityClass}}AndReturnDomainAsync(dto);
 
-                return Mapper.Map(poco);
+                return poco.Adapt<{{nameOfTheEntityClass}}DTO>();
             });
         }
 """);

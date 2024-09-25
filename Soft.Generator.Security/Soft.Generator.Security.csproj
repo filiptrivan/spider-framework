@@ -9,6 +9,7 @@
 		<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
 		<PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
 		<PackageReference Include="LinqKit.Core" Version="1.2.5" />
+		<PackageReference Include="Mapster" Version="7.4.0" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.2" />
 		<PackageReference Include="Riok.Mapperly" Version="3.5.1" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.3.1" />

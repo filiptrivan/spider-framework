@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.IO;
 using System.Diagnostics;
 using Soft.SourceGenerators.Helpers;
+using Soft.SourceGenerators.Models;
 
 namespace Soft.SourceGenerator.NgTable.Angular
 {
@@ -40,9 +41,9 @@ namespace Soft.SourceGenerator.NgTable.Angular
             if (classes.Count <= 1) return; // FT: one because of config settings
 
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgEntitiesGenerator), classes);
-            List<ClassDeclarationSyntax> DTOClasses = Helper.GetDTOClasses(classes);
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(DTOClasses[0]);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
 
             StringBuilder sb = new StringBuilder();
@@ -54,17 +55,13 @@ import { TableFilterSortMeta } from "src/app/core/entities/table-filter-sort-met
 
 """);
 
-            foreach (IGrouping<string, ClassDeclarationSyntax> DTOClassGroup in DTOClasses.GroupBy(x => x.Identifier.Text)) // Grouping because UserDTO.generated and UserDTO
+            foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
             {
-                List<Prop> DTOProperties = new List<Prop>();
-                foreach (ClassDeclarationSyntax DTOClass in DTOClassGroup)
-                {
-                    DTOProperties.AddRange(Helper.GetAllPropertiesOfTheClass(DTOClass, DTOClasses, true));
-                }
-                if (DTOProperties.Count == 12)
-                {
+                List<SoftProperty> DTOProperties = new List<SoftProperty>();
 
-                }
+                foreach (SoftClass DTOClass in DTOClassGroup) // It can only be 2 here
+                    DTOProperties.AddRange(DTOClass.Properties);
+
                 List<string> angularPropertyDefinitions = GetAllAngularPropertyDefinitions(DTOProperties, true); // FT: If, in some moment, we want to make another aproach set this to false, now it doesn't matter
                 List<string> nullableAngularPropertyDefinitions = GetAllAngularPropertyDefinitions(DTOProperties, true);
                 string angularClassIdentifier = DTOClassGroup.Key.Replace("DTO", "");
@@ -101,10 +98,10 @@ export class {{angularClassIdentifier}} extends BaseEntity
             Helper.WriteToTheFile(sbImports.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-entities.generated.ts");
         }
 
-        private static List<string> GetAllAngularPropertyDefinitions(List<Prop> DTOProperties, bool alwaysNullable = false)
+        private static List<string> GetAllAngularPropertyDefinitions(List<SoftProperty> DTOProperties, bool alwaysNullable = false)
         {
             List<string> result = new List<string>();
-            foreach (Prop DTOProp in DTOProperties.Distinct()) // FT: Trying to solve constant generating duplicate properties in angular with distinct
+            foreach (SoftProperty DTOProp in DTOProperties) // FT: Trying to solve constant generating duplicate properties in angular with distinct
             {
                 string DTOPropLowerCase = DTOProp.IdentifierText.FirstCharToLower();
                 string angularIdentifierText;
@@ -120,10 +117,10 @@ export class {{angularClassIdentifier}} extends BaseEntity
             return result;
         }
 
-        private static List<string> GetAngularPropertyAssignments(List<Prop> DTOProperties)
+        private static List<string> GetAngularPropertyAssignments(List<SoftProperty> DTOProperties)
         {
             List<string> result = new List<string>();
-            foreach (Prop DTOProp in DTOProperties)
+            foreach (SoftProperty DTOProp in DTOProperties)
             {
                 string DTOPropLowerCase = DTOProp.IdentifierText.FirstCharToLower();
                 result.Add($"this.{DTOPropLowerCase} = {DTOPropLowerCase};");

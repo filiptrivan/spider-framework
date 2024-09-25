@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Soft.Generator.Shared")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1897413f77843747b41f585597dd01313ba9e7a3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8dcf6671b4088024853dea333b99ba4fe927c397")]
 [assembly: System.Reflection.AssemblyProductAttribute("Soft.Generator.Shared")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Soft.Generator.Shared")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

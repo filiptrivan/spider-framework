@@ -12,6 +12,7 @@ using System.IO;
 using System.Diagnostics;
 using CodegenCS;
 using Soft.SourceGenerators.Helpers;
+using Soft.SourceGenerators.Models;
 
 namespace Soft.SourceGenerator.NgTable.Angular
 {
@@ -41,16 +42,17 @@ namespace Soft.SourceGenerator.NgTable.Angular
             if (classes.Count <= 1) return;
 
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgTranslatesGenerator), classes);
-            List<ClassDeclarationSyntax> DTOClasses = Helper.GetDTOClasses(classes);
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(DTOClasses[0]);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
 
             StringBuilder sbClassNames = new StringBuilder();
             StringBuilder sbLabels = new StringBuilder();
-            List<Prop> DTOProperties = new List<Prop>();
-            foreach (ClassDeclarationSyntax DTOClass in DTOClasses)
-                DTOProperties.AddRange(Helper.GetAllPropertiesOfTheClass(DTOClass, DTOClasses, true));
+            List<SoftProperty> DTOProperties = new List<SoftProperty>();
+
+            foreach (SoftClass DTOClass in DTOClasses)
+                DTOProperties.AddRange(DTOClass.Properties);
 
             sbClassNames.AppendLine($$"""
 export function getTranslatedClassName{{projectName}}(name: string): string
@@ -80,11 +82,11 @@ export function getTranslatedLabel{{projectName}}(name: string): string
             Helper.WriteToTheFile(sbLabels.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-labels.generated.ts");
         }
 
-        private static List<string> GetCasesForLabelTranslate(List<Prop> DTOProperties)
+        private static List<string> GetCasesForLabelTranslate(List<SoftProperty> DTOProperties)
         {
             List<string> result = new List<string>();
             
-            foreach (Prop DTOProperty in DTOProperties.DistinctBy(x => x.IdentifierText))
+            foreach (SoftProperty DTOProperty in DTOProperties.DistinctBy(x => x.IdentifierText))
             {
                 if (DTOProperty.IdentifierText.EndsWith("Id") && DTOProperty.IdentifierText != "Id")
                     DTOProperty.IdentifierText = DTOProperty.IdentifierText.Substring(0, DTOProperty.IdentifierText.Length - 2);
@@ -101,11 +103,11 @@ export function getTranslatedLabel{{projectName}}(name: string): string
             return result;
         }
 
-        private static List<string> GetCasesForClassNameTranslate(IList<ClassDeclarationSyntax> DTOclasses)
+        private static List<string> GetCasesForClassNameTranslate(IList<SoftClass> DTOclasses)
         {
             List<string> result = new List<string>();
 
-            foreach (string className in DTOclasses.DistinctBy(x => x.Identifier.Text).Select(x => x.Identifier.Text.Replace("DTO", "")))
+            foreach (string className in DTOclasses.DistinctBy(x => x.Name).Select(x => x.Name.Replace("DTO", "")))
             {
                 result.Add($$""""
         case '{{className}}':

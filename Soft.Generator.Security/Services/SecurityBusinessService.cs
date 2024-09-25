@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Authorization;
 using Soft.Generator.Security.Entities;
 using Soft.Generator.Shared.DTO;
 using Soft.NgTable.Models;
+using Mapster;
 
 namespace Soft.Generator.Security.Services
 {

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "JDQrrgZ44ad3pp2WUBXRPI6WWbdxXYf0hPZT/Uhkl7ln7wdlyNKm1Uy1yrTJttYRU8+Ihxj2eF2o1Ndpu1jr4Q==",
+  "dgSpecHash": "qA4WwxtXmKdPN7pDx4kdRcsRnys8wjJB9qSTCYklkcL67exHFzjKD3pObBnunUcFjlXEVgbJYWNwEz2LJBXtnw==",
   "success": true,
   "projectFilePath": "E:\\Projects\\Soft.Generator\\Source\\Soft.Generator.Security\\Soft.Generator.Security.csproj",
   "expectedPackageFiles": [
@@ -16,6 +16,8 @@
     "C:\\Users\\user\\.nuget\\packages\\google.apis.core\\1.68.0\\google.apis.core.1.68.0.nupkg.sha512",
     "C:\\Users\\user\\.nuget\\packages\\linqkit.core\\1.2.5\\linqkit.core.1.2.5.nupkg.sha512",
     "C:\\Users\\user\\.nuget\\packages\\log4net\\2.0.10\\log4net.2.0.10.nupkg.sha512",
+    "C:\\Users\\user\\.nuget\\packages\\mapster\\7.4.0\\mapster.7.4.0.nupkg.sha512",
+    "C:\\Users\\user\\.nuget\\packages\\mapster.core\\1.2.1\\mapster.core.1.2.1.nupkg.sha512",
     "C:\\Users\\user\\.nuget\\packages\\microsoft.aspnetcore.authentication.abstractions\\2.2.0\\microsoft.aspnetcore.authentication.abstractions.2.2.0.nupkg.sha512",
     "C:\\Users\\user\\.nuget\\packages\\microsoft.aspnetcore.authentication.core\\2.2.0\\microsoft.aspnetcore.authentication.core.2.2.0.nupkg.sha512",
     "C:\\Users\\user\\.nuget\\packages\\microsoft.aspnetcore.authorization\\2.2.0\\microsoft.aspnetcore.authorization.2.2.0.nupkg.sha512",

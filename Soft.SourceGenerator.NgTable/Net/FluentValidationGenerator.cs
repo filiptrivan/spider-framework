@@ -3,8 +3,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Angular;
 using Soft.SourceGenerator.NgTable.Helpers;
-using Soft.SourceGenerator.NgTable.Models;
 using Soft.SourceGenerators.Helpers;
+using Soft.SourceGenerators.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -21,12 +21,12 @@ namespace Soft.SourceGenerator.NgTable.Net
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntitiesAndDTO(s),
@@ -41,8 +41,8 @@ namespace Soft.SourceGenerator.NgTable.Net
         {
             if (classes.Count <= 1) return;
 
-            List<ClassDeclarationSyntax> entityClasses = classes.Where(x => x.Identifier.Text.EndsWith("DTO") == false).ToList();
-            List<ClassDeclarationSyntax> DTOClasses = classes.Where(x => x.Identifier.Text.EndsWith("DTO") == true).ToList();
+            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
 
             string outputPath = Helper.GetGeneratorOutputPath(nameof(FluentValidationGenerator), classes);
 
@@ -60,15 +60,19 @@ using Soft.Generator.Shared.SoftFluentValidation;
 namespace {{basePartOfNamespace}}.ValidationRules
 {
 """);
-            foreach (IGrouping<string, ClassDeclarationSyntax> DTOClassGroup in DTOClasses.GroupBy(x => x.Identifier.Text)) // Grouping because UserDTO.generated and UserDTO
+            foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
             {
-                List<Prop> DTOProperties = new List<Prop>();
+                List<SoftProperty> DTOProperties = new List<SoftProperty>();
                 List<SoftAttribute> DTOAttributes = new List<SoftAttribute>();
-                foreach (ClassDeclarationSyntax DTOClass in DTOClassGroup)
-                {
-                    DTOProperties.AddRange(Helper.GetAllPropertiesOfTheClass(DTOClass, DTOClasses, true));
-                    DTOAttributes.AddRange(Helper.GetAllAttributesOfTheClass(DTOClass, DTOClasses));
-                }
+
+                ClassDeclarationSyntax nonGeneratedDTOClass = classes.Where(x => x.Identifier.Text == DTOClassGroup.Key).SingleOrDefault();
+                List<SoftAttribute> softAttributes = Helper.GetAllAttributesOfTheClass(nonGeneratedDTOClass, classes);
+                if (softAttributes != null)
+                    DTOAttributes.AddRange(softAttributes); // FT: Its okay to add only for non generated because we will not have any attributes on the generated DTOs
+
+
+                foreach (SoftClass DTOClass in DTOClassGroup)
+                    DTOProperties.AddRange(DTOClass.Properties);
 
                 ClassDeclarationSyntax entityClass = entityClasses.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Identifier.Text).SingleOrDefault(); // If it is null then we only made DTO, without entity class
 
@@ -87,8 +91,8 @@ namespace {{basePartOfNamespace}}.ValidationRules
 }
 """);
 
-            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
-            //context.AddSource($"{projectName}ValidationRules.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
+            //Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
+            context.AddSource($"{projectName}ValidationRules.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
         /// <summary>
@@ -97,7 +101,7 @@ namespace {{basePartOfNamespace}}.ValidationRules
         /// <param name="DTOProperties">Including the attributes</param>
         /// <param name="entityClass">User</param>
         /// <returns>List of rules: eg. [RuleFor(x => x.Username).Length(0, 70), RuleFor(x => x.Email).Length(0, 70)]</returns>
-        static List<string> GetValidationRules(List<Prop> DTOProperties, List<SoftAttribute> DTOAttributes, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        public static List<string> GetValidationRules(List<SoftProperty> DTOProperties, List<SoftAttribute> DTOAttributes, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
         {
             // [RuleFor(x => x.Username).Length(0, 70);, RuleFor(x => x.Email).Length(0, 70);]
             List<string> validationRulesOnDTO = new List<string>(); // priority - 1.
@@ -122,8 +126,8 @@ namespace {{basePartOfNamespace}}.ValidationRules
             {
                 validationRulesOnEntity.AddRange(GetRulesOnEntity(entityClass, entityClasses));
 
-                List<Prop> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses);
-                foreach (Prop prop in entityProperties)
+                List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses);
+                foreach (SoftProperty prop in entityProperties)
                 {
                     string rule = GetRuleForProp(prop);
                     if (rule != null)
@@ -136,7 +140,7 @@ namespace {{basePartOfNamespace}}.ValidationRules
             return mergedValidationRules;
         }
 
-        static string GetRuleForProp(Prop prop)
+        static string GetRuleForProp(SoftProperty prop)
         {
             List<string> singleRulesOnProperty;
             string propType = prop.Type;
@@ -157,7 +161,7 @@ namespace {{basePartOfNamespace}}.ValidationRules
             return $"RuleFor(x => x.{propName}).{string.Join(".", singleRulesOnProperty)};";
         }
 
-        static List<string> GetSingleRulesForProp(Prop prop)
+        static List<string> GetSingleRulesForProp(SoftProperty prop)
         {
             List<string> singleRules = new List<string>();
 

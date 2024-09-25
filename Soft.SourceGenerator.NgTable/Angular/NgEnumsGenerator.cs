@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.IO;
 using System.Diagnostics;
 using Soft.SourceGenerators.Helpers;
+using Soft.SourceGenerators.Models;
 
 namespace Soft.SourceGenerator.NgTable.Angular
 {
@@ -58,7 +59,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
             foreach (EnumDeclarationSyntax enume in enums)
             {
                 string enumName = enume.Identifier.Text;
-                List<EnumMember> enumMembers = Helper.GetEnumMembers(enume);
+                List<SoftEnum> enumMembers = Helper.GetEnumMembers(enume);
                 List<string> angularEnumMemberValuePairs = GetAngularEnumMemberValuePairs(enumMembers);
 
                 sb.AppendLine($$"""
@@ -73,11 +74,11 @@ export enum {{enumName}}
             Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-enums.generated.ts");
         }
 
-        private static List<string> GetAngularEnumMemberValuePairs(List<EnumMember> enumMembers)
+        private static List<string> GetAngularEnumMemberValuePairs(List<SoftEnum> enumMembers)
         {
             List<string> result = new List<string>();
 
-            foreach (EnumMember enume in enumMembers)
+            foreach (SoftEnum enume in enumMembers)
                 result.Add($"{enume.Name} = {enume.Value},");
 
             return result;

@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Soft.SourceGenerator.NgTable.Models
+namespace Soft.SourceGenerators.Models
 {
-    public class Property
+    public class SoftClass
     {
         public string Name { get; set; }
-        public string Type { get; set; }
+        public List<SoftProperty> Properties { get; set; } = new List<SoftProperty>();
     }
 }

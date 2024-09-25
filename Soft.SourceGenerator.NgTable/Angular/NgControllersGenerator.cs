@@ -44,10 +44,11 @@ namespace Soft.SourceGenerator.NgTable.Angular
         {
             if (classes.Count <= 1) return; // FT: one because of config settings
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgControllersGenerator), classes);
+
             List<ClassDeclarationSyntax> controllerClasses = Helper.GetControllerClasses(classes);
 
             StringBuilder sb = new StringBuilder();
-            List<Prop> properties = new List<Prop>();
+            List<SoftProperty> properties = new List<SoftProperty>();
             List<string> angularHttpMethods = new List<string>();
             foreach (ClassDeclarationSyntax controllerClass in controllerClasses) // FT: Big part of this method is not user because we changed the way of importing ng classes
             {
@@ -55,15 +56,15 @@ namespace Soft.SourceGenerator.NgTable.Angular
 
                 foreach (MethodDeclarationSyntax endpointMethod in controllerClass.Members.OfType<MethodDeclarationSyntax>().ToList())
                 {
-                    List<Prop> parameterProperties = endpointMethod.ParameterList.Parameters
-                        .Select(x => new Prop
+                    List<SoftProperty> parameterProperties = endpointMethod.ParameterList.Parameters
+                        .Select(x => new SoftProperty
                         {
                             Type = x.Type.ToString(),
                         })
                         .ToList();
                     properties.AddRange(parameterProperties);
                     string returnType = endpointMethod.ReturnType.ToString();
-                    properties.Add(new Prop { Type = returnType });
+                    properties.Add(new SoftProperty { Type = returnType });
                     angularHttpMethods.Add(GetAngularHttpMethod(endpointMethod, Helper.GetAngularDataType(returnType), controllerName));
                 }
             }
@@ -74,7 +75,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
                 string projectName = projectNameHelper[projectNameHelper.Length - 2];
                 string ngType = symbol.Name.Replace("DTO", "");
 
-                if (ngType == "TableFilter" || ngType == "Namebook" || ngType == "BusinessObject" || ngType == "ReadonlyObject" || ngType == "ExcelReportOptions")
+                if (Helper.BaseClassNames.Contains(ngType))
                     continue;
 
                 importLines.Add($"import {{ {ngType} }} from '../../entities/generated/{projectName.FromPascalToKebabCase()}-entities.generated';");

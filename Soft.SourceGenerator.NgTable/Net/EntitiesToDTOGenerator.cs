@@ -59,13 +59,11 @@ namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator
             foreach (ClassDeclarationSyntax c in entityClasses)
             {
                 string baseClass = c.GetDTOBaseType();
-                if (baseClass == null)
-                    continue;
 
                 sb.AppendLine($$"""
-    public partial class {{c.Identifier.Text}}DTO : {{baseClass}}
+    public partial class {{c.Identifier.Text}}DTO {{(baseClass == null ? "" : $": {baseClass}")}}
     {
-        {{string.Join("\n\t\t", GetDTOProps(c, entityClasses))}}
+        {{string.Join("\n\t\t", Helper.GetDTOWithoutBaseProps(c, entityClasses))}}
     }
 """);
             }
@@ -74,53 +72,10 @@ namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator
 }
 """);
 
-            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
+            //Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
 
             // FT: does not generating because we make file on the disk, because mapping can't figure out something inside analyzers
-            //context.AddSource($"{projectName}DTOList.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="c"></param>
-        /// <param name="classes">Passing this just to pass it further to the GetGenericIdType method</param>
-        /// <returns></returns>
-        static List<string> GetDTOProps(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
-        {
-            List<string> props = new List<string>(); // public string Email { get; set; }
-            List<PropertyDeclarationSyntax> properties = c.Members.OfType<PropertyDeclarationSyntax>().Distinct().ToList(); // FT: Trying to solve constant generating duplicate properties in angular with distinct
-
-            foreach (PropertyDeclarationSyntax prop in properties)
-            {
-                string propType = prop.Type.ToString();
-                string propName = prop.Identifier.Text;
-
-                if (propType.PropTypeIsManyToOne())
-                {
-                    props.Add($"public string {propName}DisplayName {{ get; set; }}");
-                    ClassDeclarationSyntax manyToOneClass = classes.Where(x => x.Identifier.Text == propType).Single();
-                    props.Add($"public {Helper.GetGenericIdType(manyToOneClass, classes)}? {propName}Id {{ get; set; }}");
-                    continue;
-                }
-                else if (propType.IsEnumerable())
-                {
-                    continue;
-                }
-                else if (propType.IsBaseType() && propType != "string")
-                {
-                    propType = $"{prop.Type}?";
-                }
-                else if (propType != "string")
-                {
-                    propType = "UNSUPPORTED TYPE";
-                }
-
-
-                props.Add($"public {propType} {prop.Identifier.Text} {{ get; set; }}");
-            }
-
-            return props;
+            context.AddSource($"{projectName}DTOList.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
     }

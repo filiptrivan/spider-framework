@@ -103,7 +103,7 @@ namespace {{basePartOfNamespace}}.DataMappers
 }
 """);
 
-            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
+            //Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
             // FT: does not generating because we make file on the disk
             //context.AddSource($"{projectName}Mapper.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }

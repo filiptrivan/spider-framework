@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Helpers;
+using Soft.SourceGenerators.Models;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -17,12 +18,12 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationDTOAndDataMappers(s),
@@ -35,38 +36,38 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
-            if (classes.Count() == 0) return;
-            List<ClassDeclarationSyntax> DTOClasses = Helper.GetDTOClasses(classes);
+            if (classes.Count == 0) return;
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
 
             ClassDeclarationSyntax mapperClass = Helper.GetManualyWrittenMapperClass(classes);
 
             StringBuilder sb = new StringBuilder();
-            List<string> usings = new List<string>();
+            //List<string> usings = new List<string>(); // FT: Obsolete, we can just use the one namespace for all DTOs
             StringBuilder sbUsings = new StringBuilder();
+
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
+
+            string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
+            string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
             sb.AppendLine($$"""
 using Soft.Generator.Shared.Excel.DTO;
+using {{basePartOfNamespace}}.DTO;
 
-namespace Soft.SourceGenerator.ExcelProperties
+namespace {{basePartOfNamespace}}.ExcelProperties
 {
     public static class ExcelPropertiesToExclude
     {
 """);
-            foreach (IGrouping<string, ClassDeclarationSyntax> DTOClassGroup in DTOClasses.GroupBy(x => x.Identifier.Text))
+            foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name))
             {
-                usings.Add(DTOClassGroup.FirstOrDefault().
-                    Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault());
-
                 sb.AppendLine($$"""
         public static string[] GetHeadersToExclude({{DTOClassGroup.Key}} _)
         {
 """);
                 IList<string> propertyNames = new List<string>();
 
-                foreach (Prop prop in Helper.GetPropsToExcludeFromExcelExport(DTOClassGroup.Key, DTOClasses, mapperClass))
+                foreach (SoftProperty prop in Helper.GetPropsToExcludeFromExcelExport(DTOClassGroup.Key, DTOClasses, mapperClass))
                 {
                     //propertyNames.Add($"new ExcelHeader {{ Name=\"{prop.IdentifierText}\", DataType=typeof({prop.Type}) }}"); // FT: if you need prop.Type also, you need to make method like earlyer, look at the commits on GitHub
                     propertyNames.Add($"\"{prop.IdentifierText}\"");
@@ -80,12 +81,7 @@ namespace Soft.SourceGenerator.ExcelProperties
     }
 }
 """);
-            foreach (string item in usings.Distinct())
-            {
-                sbUsings.AppendLine($$"""
-using {{item}};
-""");
-            }
+
             sbUsings.AppendLine(sb.ToString());
             context.AddSource("ExcelPropertiesToExclude.generated", SourceText.From(sbUsings.ToString(), Encoding.UTF8));
         }
