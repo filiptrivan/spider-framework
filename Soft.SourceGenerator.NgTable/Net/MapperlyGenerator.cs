@@ -9,6 +9,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace Soft.SourceGenerator.NgTable.Net
@@ -61,37 +62,33 @@ namespace Soft.SourceGenerator.NgTable.Net
             string wholeProjectBasePartOfNamespace = string.Join(".", namespacePartsWithoutTwoLastElements); // eg. Soft.Generator
 
             sb.AppendLine($$"""
-using Riok.Mapperly.Abstractions;
+using Mapster;
 using {{basePartOfNamespace}}.DTO;
 using {{basePartOfNamespace}}.Entities;
 
 namespace {{basePartOfNamespace}}.DataMappers
 {
-    [Mapper(EnabledConversions = MappingConversionType.All)]
     public static partial class Mapper
     {
 """);
             foreach (ClassDeclarationSyntax c in entityClasses)
             {
-                string baseClass = c.GetBaseType();
-                if (baseClass == null)
-                    continue;
+                //string baseClass = c.GetBaseType();
+                //if (baseClass == null)
+                //    continue;
+
+        //{{(c.IsAbstract() ? "" : GetMapper("ToEntityConfig", c.Identifier.Text, mapperClass))}} // FT: I think we don't need this anymore
+        //{{GetMapperDTO($"ExcelProjectToConfig", mapperClass, c, entityClasses)}} // FT: Excel map or project to, you don't need both
 
                 sb.AppendLine($$"""
 
         #region {{c.Identifier.Text}}
 
-        {{(c.IsAbstract() ? "" : GetMapper($"public static partial {c.Identifier.Text} Map({c.Identifier.Text}DTO dto);", mapperClass))}}
+        {{GetMapperDTO($"{c.Identifier.Text}ToDTOConfig", mapperClass, c, entityClasses)}}
 
-        {{GetMapperDTO($"public static partial {c.Identifier.Text}DTO Map({c.Identifier.Text} poco);", mapperClass, c, entityClasses)}}
+        {{GetMapperDTO($"{c.Identifier.Text}ProjectToConfig", mapperClass, c, entityClasses)}}
 
-        {{GetMapperDTO($"public static partial {c.Identifier.Text}DTO ExcelMap({c.Identifier.Text} poco);", mapperClass, c, entityClasses)}}
-
-        {{GetMapperDTO($"public static partial IQueryable<{c.Identifier.Text}DTO> ProjectTo(this IQueryable<{c.Identifier.Text}> poco);", mapperClass, c, entityClasses)}}
-
-        {{GetMapperDTO($"public static partial IQueryable<{c.Identifier.Text}DTO> ExcelProjectTo(this IQueryable<{c.Identifier.Text}> poco);", mapperClass, c, entityClasses)}}
-
-        {{GetMapper($"public static partial void MergeMap({c.Identifier.Text}DTO dto, {c.Identifier.Text} poco);", mapperClass)}}
+        {{GetMapperDTO($"{c.Identifier.Text}ExcelProjectToConfig", mapperClass, c, entityClasses)}}
 
         #endregion
 
@@ -103,39 +100,57 @@ namespace {{basePartOfNamespace}}.DataMappers
 }
 """);
 
-            //Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
-            // FT: does not generating because we make file on the disk
-            //context.AddSource($"{projectName}Mapper.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
+            context.AddSource($"{projectName}Mapper.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
-        public static string GetMapper(string input, ClassDeclarationSyntax mapperClass)
+        [Obsolete]
+        public static string GetMapper(string methodName, string entityClassName, ClassDeclarationSyntax mapperClass)
         {
             if (mapperClass == null)
                 return "You didn't define DataMappers";
-            List<MethodDeclarationSyntax> methods = mapperClass?.Members.OfType<MethodDeclarationSyntax>().ToList();
-            foreach (MethodDeclarationSyntax method in methods)
-            {
-                string uniquePartOfTheMethod = $"public static partial {method.ReturnType} {method.Identifier}";
-                if (input.StartsWith(uniquePartOfTheMethod))
-                {
-                    return "";
-                }
-            }
 
-            return input;
+            if (HasNonGeneratedPair(mapperClass, methodName))
+                return "";
+
+            string result = $$"""
+.
+""";
+
+            return result;
         }
 
-        public static string GetMapperDTO(string input, ClassDeclarationSyntax mapperClass, ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> entityClasses)
+        private static bool HasNonGeneratedPair(ClassDeclarationSyntax mapperClass, string methodName)
         {
-            string mapper = GetMapper(input, mapperClass);
-            if (mapper == "")
+            List<MethodDeclarationSyntax> nonGeneratedMethods = mapperClass?.Members.OfType<MethodDeclarationSyntax>().ToList();
+
+            if (nonGeneratedMethods.Any(x => x.Identifier.Text == methodName))
+                return true;
+
+            return false;
+        }
+
+        public static string GetMapperDTO(string methodName, ClassDeclarationSyntax mapperClass, ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> entityClasses)
+        {
+            if (mapperClass == null)
+                return "You didn't define DataMappers";
+
+            if (HasNonGeneratedPair(mapperClass, methodName))
                 return "";
 
             List<string> manyToOneAttributeMappers = GetAttributesForManyToOneClass(c, entityClasses);
 
             return $$"""
-        {{string.Join("\n", manyToOneAttributeMappers)}}
-        {{input}}
+        public static TypeAdapterConfig {{methodName}}()
+        {
+            TypeAdapterConfig config = new TypeAdapterConfig();
+
+            config
+                .NewConfig<{{c.Identifier.Text}}, {{c.Identifier.Text}}DTO>()
+{{string.Join("\t\t\t\t\n", manyToOneAttributeMappers)}}
+                ;
+
+            return config;
+        }
 """;
         }
 
@@ -161,8 +176,8 @@ namespace {{basePartOfNamespace}}.DataMappers
                     string displayNamePropOfManyToOne = Helper.GetDisplayNamePropForClass(entityClass, entityClasses);
                     displayNamePropOfManyToOne = displayNamePropOfManyToOne.Replace(".ToString()", "");
 
-                    manyToOneAttributeMappers.Add($"[MapProperty(\"{propName}.Id\", \"{propName}Id\")]"); // [MapProperty("User.Id", "UserId")]
-                    manyToOneAttributeMappers.Add($"[MapProperty(\"{propName}.{displayNamePropOfManyToOne}\", \"{propName}DisplayName\")]"); // [MapProperty("User.Name", "UserDisplayName")]
+                    manyToOneAttributeMappers.Add($".Map(dest => dest.{propName}Id, src => src.{propName}.Id)"); // "dest.TierId", "src.Tier.Id"
+                    manyToOneAttributeMappers.Add($".Map(dest => dest.{propName}DisplayName, src => src.{propName}.{displayNamePropOfManyToOne})"); // "dest.TierDisplayName", "src.Tier.Name"
                 }
             }
 

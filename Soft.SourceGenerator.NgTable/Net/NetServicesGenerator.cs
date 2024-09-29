@@ -105,12 +105,16 @@ namespace {{basePartOfNamespace}}.Services
                 string displayNameProperty = Helper.GetDisplayNamePropForClass(c, entityClasses);
 
                 sb.AppendLine($$"""
-        public async Task<{{nameOfTheEntityClass}}DTO> Get{{nameOfTheEntityClass}}DTOAsync({{idTypeOfTheEntityClass}} id)
+        public async Task<{{nameOfTheEntityClass}}DTO> Get{{nameOfTheEntityClass}}DTOAsync({{idTypeOfTheEntityClass}} id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
-                return await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{nameOfTheEntityClass}}DTO>().FirstOrDefaultAsync();
+                if (authorize) 
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                }
+
+                return await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{c.Identifier.Text}}ProjectToConfig()).FirstOrDefaultAsync();
             });
         }
 
@@ -123,37 +127,45 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        public async Task<BaseTableResponseEntity<{{nameOfTheEntityClass}}DTO>> Load{{nameOfTheEntityClass}}ListForTable(TableFilterDTO tableFilterPayload)
+        public async Task<BaseTableResponseEntity<{{nameOfTheEntityClass}}DTO>> Load{{nameOfTheEntityClass}}ListForTable(TableFilterDTO tableFilterPayload, bool authorize = true)
         {
             BasePaginationResult<{{nameOfTheEntityClass}}> paginationResult = new BasePaginationResult<{{nameOfTheEntityClass}}>();
             List<{{nameOfTheEntityClass}}DTO> data = null;
 
             await _context.WithTransactionAsync(async () =>
             {
-                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                if (authorize) 
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                }
+
                 paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload);
 
                 data = await paginationResult.Query
                     .Skip(tableFilterPayload.First)
                     .Take(tableFilterPayload.Rows)
-                    .ProjectToType<{{nameOfTheEntityClass}}DTO>()
+                    .ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{c.Identifier.Text}}ProjectToConfig())
                     .ToListAsync();
             });
 
             return new BaseTableResponseEntity<{{nameOfTheEntityClass}}DTO> { Data = data, TotalRecords = paginationResult.TotalRecords };
         }
 
-        public async Task<byte[]> Export{{nameOfTheEntityClass}}ListToExcel(TableFilterDTO tableFilterPayload)
+        public async Task<byte[]> Export{{nameOfTheEntityClass}}ListToExcel(TableFilterDTO tableFilterPayload, bool authorize = true)
         {
             BasePaginationResult<{{nameOfTheEntityClass}}> paginationResult = new BasePaginationResult<{{nameOfTheEntityClass}}>();
             List<{{nameOfTheEntityClass}}DTO> data = null;
 
             await _context.WithTransactionAsync(async () =>
             {
-                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                if (authorize)
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                }
+
                 paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload);
 
-                data = await paginationResult.Query.ProjectToType<{{nameOfTheEntityClass}}DTO>().ToListAsync();
+                data = await paginationResult.Query.ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{c.Identifier.Text}}ExcelProjectToConfig()).ToListAsync();
             });
 
             string[] excelPropertiesToExclude = ExcelPropertiesToExclude.GetHeadersToExclude(new {{nameOfTheEntityClass}}DTO());
@@ -162,11 +174,15 @@ namespace {{basePartOfNamespace}}.Services
 
         {{(c.IsAbstract() ? "" : GetSavingData(nameOfTheEntityClass, idTypeOfTheEntityClass, c, entityClasses, generateAuthorizationMethods))}}
         
-        public async Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForAutocomplete(int limit, string query, IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query)
+        public async Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForAutocomplete(int limit, string query, IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                if (authorize)
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                }
+
                 if (!string.IsNullOrEmpty(query))
                     {{nameOfTheEntityClassFirstLower}}Query = {{nameOfTheEntityClassFirstLower}}Query.Where(x => x.{{displayNameProperty}}.Contains(query));
 
@@ -181,11 +197,15 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        public async Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForDropdown(IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query)
+        public async Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForDropdown(IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                if (authorize)
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                }
+
                 return await {{nameOfTheEntityClassFirstLower}}Query
                     .Select(x => new NamebookDTO<{{idTypeOfTheEntityClass}}>
                     {
@@ -196,11 +216,15 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        public async Task<List<{{nameOfTheEntityClass}}>> Load{{nameOfTheEntityClass}}List(IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query)
+        public async Task<List<{{nameOfTheEntityClass}}>> Load{{nameOfTheEntityClass}}List(IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                if (authorize)
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                }
+
                 return await {{nameOfTheEntityClassFirstLower}}Query
                     .ToListAsync();
             });
@@ -293,11 +317,15 @@ namespace {{basePartOfNamespace}}.Services
                 if (manyToOneProp != null)
                 {
                     result.Add($$"""
-        public async Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Load{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
+        public async Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Load{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                if (authorize)
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                }
+
                 return await _context.DbSet<{{classNameFromTheList}}>()
                     .AsNoTracking()
                     .Where(x => x.{{manyToOneProp.IdentifierText}} == {{nameOfTheEntityClassFirstLower}}Id)
@@ -310,11 +338,15 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        public async Task<List<{{classNameFromTheList}}>> Load{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
+        public async Task<List<{{classNameFromTheList}}>> Load{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                if (authorize)
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                }
+
                 return await _context.DbSet<{{classNameFromTheList}}>()
                     .Where(x => x.{{manyToOneProp.IdentifierText}} == {{nameOfTheEntityClassFirstLower}}Id)
                     .ToListAsync();
@@ -325,11 +357,15 @@ namespace {{basePartOfNamespace}}.Services
                 else if (manyToManyPropFromTheListProperties != null)
                 {
                     result.Add($$"""
-        public async Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Load{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
+        public async Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Load{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                if (authorize)
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                }
+
                 return await _context.DbSet<{{classNameFromTheList}}>()
                     .AsNoTracking()
                     .Where(x => x.{{manyToManyPropFromTheListProperties.IdentifierText}}.Any(x => x.Id == {{nameOfTheEntityClassFirstLower}}Id))
@@ -342,11 +378,15 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        public async Task<List<{{classNameFromTheList}}>> Load{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
+        public async Task<List<{{classNameFromTheList}}>> Load{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                if (authorize)
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                }
+
                 return await _context.DbSet<{{classNameFromTheList}}>()
                     .Where(x => x.{{manyToManyPropFromTheListProperties.IdentifierText}}.Any(x => x.Id == {{nameOfTheEntityClassFirstLower}}Id))
                     .ToListAsync();
@@ -421,7 +461,7 @@ namespace {{basePartOfNamespace}}.Services
             sb.Append($$"""
         protected virtual void OnBefore{{nameOfTheEntityClass}}IsMapped({{nameOfTheEntityClass}}DTO dto) { }
 
-        public async Task<{{nameOfTheEntityClass}}> Save{{nameOfTheEntityClass}}AndReturnDomainAsync({{nameOfTheEntityClass}}DTO dto)
+        public async Task<{{nameOfTheEntityClass}}> Save{{nameOfTheEntityClass}}AndReturnDomainAsync({{nameOfTheEntityClass}}DTO dto, bool authorizeUpdate = true, bool authorizeInsert = true)
         {
             {{nameOfTheEntityClass}}DTOValidationRules validationRules = new {{nameOfTheEntityClass}}DTOValidationRules();
             validationRules.ValidateAndThrow(dto);
@@ -445,14 +485,22 @@ namespace {{basePartOfNamespace}}.Services
 
                 if (dto.Id > 0)
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Edit{nameOfTheEntityClass});" : "")}}
+                    if (authorizeUpdate)
+                    {
+                        {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Edit{nameOfTheEntityClass});" : "")}}
+                    }
+
                     poco = await LoadInstanceAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>(dto.Id, dto.Version);
                     dto.Adapt(poco);
                     dbSet.Update(poco);
                 }
                 else
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Insert{nameOfTheEntityClass});" : "")}}
+                    if (authorizeInsert)
+                    {
+                        {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Insert{nameOfTheEntityClass});" : "")}}
+                    }
+
                     poco = dto.Adapt<{{nameOfTheEntityClass}}>();
                     await dbSet.AddAsync(poco);
                 }
@@ -473,7 +521,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 {{nameOfTheEntityClass}} poco = await Save{{nameOfTheEntityClass}}AndReturnDomainAsync(dto);
 
-                return poco.Adapt<{{nameOfTheEntityClass}}DTO>();
+                return poco.Adapt<{{nameOfTheEntityClass}}DTO>(Mapper.{{c.Identifier.Text}}ToDTOConfig());
             });
         }
 """);

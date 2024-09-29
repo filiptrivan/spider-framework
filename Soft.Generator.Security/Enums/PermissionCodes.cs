@@ -8,9 +8,6 @@ namespace Soft.Generator.Security.Hack.Enums
 {
     public enum PermissionCodes
     {
-        ReadUserExtended,
-        EditUserExtended,
-        InsertUserExtended,
-        DeleteUserExtended,
+
     }
 }

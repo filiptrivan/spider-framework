@@ -47,17 +47,9 @@ namespace Soft.SourceGenerator.NgTable.Net
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
-            List<string> enumHelper = new List<string>();
-            foreach (ClassDeclarationSyntax c in entityClasses)
-            {
-                string className = c.Identifier.Text;
-                enumHelper.Add($"Read{className}");
-                enumHelper.Add($"Edit{className}");
-                enumHelper.Add($"Insert{className}");
-                enumHelper.Add($"Delete{className}");
-            }
+            List<string> enumHelper = Helper.GetPermissionCodesForEntites(entityClasses);
 
-                sb.AppendLine($$"""
+            sb.AppendLine($$"""
 using System;
 using System.Collections.Generic;
 using System.Linq;

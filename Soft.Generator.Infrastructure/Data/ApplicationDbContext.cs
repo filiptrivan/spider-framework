@@ -36,6 +36,14 @@ namespace Soft.Generator.Infrastructure.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            modelBuilder.Entity<TUser>()
+                .HasIndex(u => u.Email)
+                .IsUnique();
+
+            modelBuilder.Entity<Permission>()
+                .HasIndex(u => u.Code)
+                .IsUnique();
+
             modelBuilder.Entity<RoleUser>()
                 .HasKey(ru => new { ru.RolesId, ru.UsersId });
 

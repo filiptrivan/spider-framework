@@ -32,7 +32,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static readonly string MapperNamespaceEnding = "DataMappers";
 
         public static readonly List<string> BaseTypePropertiies = new List<string> { "Id", "Version", "CreatedAt", "ModifiedAt" };
-        public static readonly List<string> BaseClassNames = new List<string> { "TableFilter", "Namebook", "BusinessObject", "ReadonlyObject", "ExcelReportOptions", "NotificationUser", "RoleUser" };
+        public static readonly List<string> BaseClassNames = new List<string> { "TableFilter", "Namebook", "Codebook", "BusinessObject", "ReadonlyObject", "ExcelReportOptions", "NotificationUser", "RoleUser" };
 
         #region Syntax and Semantic targets
 
@@ -760,12 +760,11 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         .Select(ns => ns.Name.ToString())
                         .FirstOrDefault(ns => ns.EndsWith($".{MapperNamespaceEnding}"));
 
-                    string mapperConfigurationMethodName = x.Members.OfType<MethodDeclarationSyntax>()
-                        .Where(x => x.Identifier.Text == $"{MethodNameForExcelExportMapping}")
-                        .Select(x => x.Identifier.Text)
-                        .SingleOrDefault();
+                    List<SoftAttribute> classAttributes = GetAllAttributesOfTheClass(x, classes);
 
-                    if (namespaceName != null && mapperConfigurationMethodName != null)
+                    bool hasCustomMapperAttribute = classAttributes.Any(x => x.Name == "CustomMapper");
+
+                    if (namespaceName != null && hasCustomMapperAttribute)
                     {
                         return true;
                     }
@@ -806,7 +805,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             foreach (EnumMemberDeclarationSyntax member in enume.Members)
             {
                 string name = member.Identifier.Text;
-                string value = member.EqualsValue != null ? member.EqualsValue.Value.ToString() : "Auto-Generated";
+                string value = member.EqualsValue != null ? member.EqualsValue.Value.ToString() : null;
                 enumMembers.Add(new SoftEnum { Name = name, Value = value });
             }
             return enumMembers;
@@ -838,6 +837,47 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             }
 
             return newProp;
+        }
+
+        public static List<string> GetPermissionCodesForEntites(List<ClassDeclarationSyntax> entityClasses)
+        {
+            List<string> result = new List<string>();
+
+            foreach (ClassDeclarationSyntax c in entityClasses)
+            {
+                // FT: Maybe continue on readonly properties
+                string className = c.Identifier.Text;
+                result.Add($"Read{className}");
+                result.Add($"Edit{className}");
+                result.Add($"Insert{className}");
+                result.Add($"Delete{className}");
+            }
+
+            if (entityClasses.Select(x => x.Identifier.Text).Contains("UserExtended") == false) // FT: Hack for security project
+            {
+                result.Add($"ReadUserExtended");
+                result.Add($"EditUserExtended");
+                result.Add($"InsertUserExtended");
+                result.Add($"DeleteUserExtended");
+            }
+
+            if (entityClasses.Select(x => x.Identifier.Text).Contains("Role") == false) // FT: Hack for other projects
+            {
+                result.Add($"ReadRole");
+                result.Add($"EditRole");
+                result.Add($"InsertRole");
+                result.Add($"DeleteRole");
+            }
+
+            if (entityClasses.Select(x => x.Identifier.Text).Contains("Notification") == false) // FT: Hack for other projects
+            {
+                result.Add($"ReadNotification");
+                result.Add($"EditNotification");
+                result.Add($"InsertNotification");
+                result.Add($"DeleteNotification");
+            }
+
+            return result;
         }
 
         public static List<SoftProperty> GetPropertiesForBaseClasses(TypeSyntax type, TypeSyntax typeGeneric)

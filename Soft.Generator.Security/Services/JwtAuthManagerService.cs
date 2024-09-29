@@ -78,6 +78,7 @@ namespace Soft.Generator.Security.Services
             return GenerateAccessAndRefreshTokens(dbUserEmail, principalClaims, existingRefreshToken.IpAddress, request.BrowserId, dbUserId); // need to recover the original claims
         }
 
+        // FT: REFRESH HACK
         public JwtAuthResultDTO RefreshDevHack(RefreshTokenRequestDTO request, long dbUserId, string dbUserEmail, List<Claim> principalClaims)
         {
             RefreshTokenDTO refreshTokenDTO = new RefreshTokenDTO
@@ -201,31 +202,26 @@ namespace Soft.Generator.Security.Services
         public void RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email)
         {
             // TODO FT: Log if the email is null
-            //KeyValuePair<string, RefreshTokenDTO> refreshToken = _usersRefreshTokens.Where(x => x.Value.BrowserId == browserId && x.Value.Email == email).SingleOrDefault(); // TODO FT: UNCOMMENT IN PRODUCTION
-            //if (!string.IsNullOrEmpty(refreshToken.Key))
-            //{
-            //    _usersRefreshTokens.TryRemove(refreshToken.Key, out _);
-            //}
+
+            KeyValuePair<string, RefreshTokenDTO> refreshToken = _usersRefreshTokens.Where(x => x.Value.BrowserId == browserId && x.Value.Email == email).SingleOrDefault(); // FT: REFRESH HACK
+            if (!string.IsNullOrEmpty(refreshToken.Key))
+                _usersRefreshTokens.TryRemove(refreshToken.Key, out _);
+            else
+                RemoveRefreshTokenByEmail(email); // FT: if someone deleted the browser id, he could't log out if we don't do this.
         }
 
-        // optional: clean up expired refresh tokens
         public void RemoveExpiredRefreshTokens()
         {
             var expiredTokens = _usersRefreshTokens.Where(x => x.Value.ExpireAt < DateTime.Now).ToList();
             foreach (var expiredToken in expiredTokens)
-            {
                 _usersRefreshTokens.TryRemove(expiredToken.Key, out _);
-            }
         }
 
-        // can be more specific to ip, user agent, device name, etc.
         public void RemoveRefreshTokenByEmail(string email)
         {
             var refreshTokens = _usersRefreshTokens.Where(x => x.Value.Email == email).ToList();
             foreach (var refreshToken in refreshTokens)
-            {
                 _usersRefreshTokens.TryRemove(refreshToken.Key, out _);
-            }
         }
 
         private static string GenerateRandomTokenString()

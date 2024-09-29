@@ -156,6 +156,27 @@ export class Namebook extends BaseEntity
     }
 }
 
+// FT HACK: Fake generated class, because of api imports
+export class Codebook extends BaseEntity
+{
+    code?: string;
+    displayName?: string;
+
+    constructor(
+    {
+        code,
+        displayName,
+    }:{
+        code?: string;
+        displayName?: string;
+    } = {}
+    ) {
+        super('Codebook');
+
+        this.code = code;
+        this.displayName = displayName;
+    }
+}
 
 // FT HACK: Fake generated class, because of api imports
 export class TableFilter extends BaseEntity

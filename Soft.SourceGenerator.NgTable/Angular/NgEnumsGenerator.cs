@@ -34,8 +34,8 @@ namespace Soft.SourceGenerator.NgTable.Angular
 
             IncrementalValuesProvider<ClassDeclarationSyntax> settingsDeclaration = context.SyntaxProvider
                .CreateSyntaxProvider(
-                   predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationSettings(s),
-                   transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationSettings(ctx))
+                   predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntities(s),
+                   transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEntities(ctx))
                .Where(static c => c is not null);
 
             var combinedDeclarations = enumDeclarations.Collect().Combine(settingsDeclaration.Collect());
@@ -44,17 +44,20 @@ namespace Soft.SourceGenerator.NgTable.Angular
             static (spc, source) => Execute(source.Left, source.Right, spc));
 
         }
-        private static void Execute(IList<EnumDeclarationSyntax> enums, IList<ClassDeclarationSyntax> settings, SourceProductionContext context)
+        private static void Execute(IList<EnumDeclarationSyntax> enums, IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
             if (enums.Count == 0) return;
 
-            string outputPath = Helper.GetGeneratorOutputPath(nameof(NgEnumsGenerator), settings);
+            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
+
+            string outputPath = Helper.GetGeneratorOutputPath(nameof(NgEnumsGenerator), classes);
             if (outputPath == null) return;
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(enums[0]);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
 
             StringBuilder sb = new StringBuilder();
+
 
             foreach (EnumDeclarationSyntax enume in enums)
             {
@@ -62,10 +65,15 @@ namespace Soft.SourceGenerator.NgTable.Angular
                 List<SoftEnum> enumMembers = Helper.GetEnumMembers(enume);
                 List<string> angularEnumMemberValuePairs = GetAngularEnumMemberValuePairs(enumMembers);
 
+                List<string> entityPermissionCodes = new List<string>();
+                if (enumName == "PermissionCodes")
+                    entityPermissionCodes = Helper.GetPermissionCodesForEntites(entityClasses);
+
                 sb.AppendLine($$"""
 export enum {{enumName}}
 {
     {{string.Join("\n\t", angularEnumMemberValuePairs)}}
+    {{string.Join(",\n\t", entityPermissionCodes)}}
 }
 
 """);
@@ -79,7 +87,12 @@ export enum {{enumName}}
             List<string> result = new List<string>();
 
             foreach (SoftEnum enume in enumMembers)
-                result.Add($"{enume.Name} = {enume.Value},");
+            {
+                if(enume.Value != null)
+                    result.Add($"{enume.Name} = {enume.Value},");
+                else
+                    result.Add($"{enume.Name},");
+            }
 
             return result;
         }

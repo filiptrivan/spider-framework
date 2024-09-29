@@ -87,8 +87,9 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { ApiSecurityService } from './api.service.security';
-import { Namebook } from '../../entities/generated/namebook.generated';
-import { TableFilter } from '../../entities/generated/table-filter.generated';
+import { Namebook } from '../../entities/namebook';
+import { Codebook } from '../../entities/codebook';
+import { TableFilter } from '../../entities/table-filter';
 {{string.Join("\n", importLines)}}
 
 @Injectable()
@@ -128,7 +129,7 @@ export class ApiGeneratedService extends ApiSecurityService {
                 {
                     result = @$"
     {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{
-        return this.http.get<{returnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}{getAndDeleteParameters}`, environment.httpDropdownOptions);
+        return this.http.get<{returnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}{getAndDeleteParameters}`, environment.httpSkipSpinnerOptions);
     }}";
                 }
                 else
@@ -146,7 +147,7 @@ export class ApiGeneratedService extends ApiSecurityService {
                 {
                     result = @$"
     {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{ 
-        return this.http.post<{returnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, environment.httpTableOptions);
+        return this.http.post<{returnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, environment.httpSkipSpinnerOptions);
     }}";
                 }
                 else

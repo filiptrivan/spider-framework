@@ -257,7 +257,8 @@ namespace Soft.Generator.Security.Services
             if (emailFromTheDb != accessTokenUserEmail) // The email from db changed, and the user is using the old one in access token
                 _jwtAuthManagerService.RemoveRefreshTokenByEmail(accessTokenUserEmail);
 
-            JwtAuthResultDTO jwtResult = _jwtAuthManagerService.RefreshDevHack(request, accesTokenUserId, emailFromTheDb, principalClaims);
+            //JwtAuthResultDTO jwtResult = _jwtAuthManagerService.RefreshDevHack(request, accesTokenUserId, emailFromTheDb, principalClaims); FT: REFRESH HACK
+            JwtAuthResultDTO jwtResult = _jwtAuthManagerService.Refresh(request, accesTokenUserId, emailFromTheDb, principalClaims);
 
             return new LoginResultDTO
             {
@@ -435,7 +436,7 @@ namespace Soft.Generator.Security.Services
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                await _authorizationService.AuthorizeAndThrowAsync<TUser>(Hack.Enums.PermissionCodes.ReadUserExtended);
+                await _authorizationService.AuthorizeAndThrowAsync<TUser>(PermissionCodes.ReadUserExtended);
 
                 return await _context.DbSet<TUser>()
                     .AsNoTracking()
@@ -504,7 +505,7 @@ namespace Soft.Generator.Security.Services
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                await _authorizationService.AuthorizeAndThrowAsync<TUser>(Hack.Enums.PermissionCodes.ReadUserExtended);
+                await _authorizationService.AuthorizeAndThrowAsync<TUser>(PermissionCodes.ReadUserExtended);
 
                 return await _context.DbSet<TUser>()
                     .AsNoTracking()
