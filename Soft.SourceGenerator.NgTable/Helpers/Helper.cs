@@ -548,13 +548,10 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static List<string> GetDTOWithoutBaseProps(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
         {
             List<string> props = new List<string>(); // public string Email { get; set; }
-            List<SoftProperty> properties = GetAllPropertiesOfTheClass(entityClass, entityClasses);
+            List<SoftProperty> properties = GetPropsOfCurrentClass(entityClass);
 
             foreach (SoftProperty prop in properties)
             {
-                if (BaseTypePropertiies.Contains(prop.IdentifierText))
-                    continue;
-
                 string propType = prop.Type;
                 string propName = prop.IdentifierText;
 
@@ -636,7 +633,23 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 if (baseType is GenericNameSyntax genericNameSyntax && baseClass == null)
                 {
                     typeGeneric = genericNameSyntax.TypeArgumentList.Arguments.FirstOrDefault(); // long
-                    properties.AddRange(GetPropertiesForBaseClasses(baseType, typeGeneric));
+                    properties.AddRange(GetPropertiesForBaseClasses(baseType.ToString(), typeGeneric.ToString()));
+                    break;
+                }
+                else if (baseClass == null)
+                {
+                    if (baseType.ToString() == "Role")
+                        properties.AddRange(GetRoleProperties());
+
+                    if (baseType.ToString() == "RoleDTO")
+                        properties.AddRange(GetRoleDTOProperties());
+
+                    if (baseType.ToString() == "Notification")
+                        properties.AddRange(GetNotificationProperties());
+
+                    if (baseType.ToString() == "NotificationDTO")
+                        properties.AddRange(GetNotificationDTOProperties());
+
                     break;
                 }
                 else
@@ -657,6 +670,133 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     .Where(prop => prop.Type.IsEnumerable() == false)
                     .ToList();
             }
+
+            return properties;
+        }
+
+        public static List<SoftProperty> GetRoleProperties()
+        {
+            List<SoftProperty> properties = new List<SoftProperty>
+            {
+                new SoftProperty
+                {
+                    IdentifierText="Name", Type="string", Attributes=new List<SoftAttribute>
+                    {
+                        new SoftAttribute { Name="SoftDisplayName" },
+                        new SoftAttribute { Name="Required" },
+                        new SoftAttribute { Name="StringLength", Value="100" },
+                    }
+                },
+                new SoftProperty 
+                {
+                    IdentifierText="Description", Type="string", Attributes=new List<SoftAttribute>
+                    {
+                        new SoftAttribute { Name="StringLength", Value="400" },
+                    }
+                },
+                new SoftProperty 
+                {
+                    IdentifierText="Permissions", Type="List<Permission>"
+                }
+            };
+
+            properties.AddRange(GetPropertiesForBaseClasses(BusinessObject, "int"));
+
+            return properties;
+        }
+
+        public static List<SoftProperty> GetRoleDTOProperties()
+        {
+            List<SoftProperty> properties = new List<SoftProperty>
+            {
+                new SoftProperty
+                {
+                    IdentifierText="Name", Type="string",
+                },
+                new SoftProperty
+                {
+                    IdentifierText="Description", Type="string"
+                },
+                new SoftProperty
+                {
+                    IdentifierText="Permissions", Type="List<PermissionDTO>"
+                }
+            };
+
+            properties.AddRange(GetPropertiesForBaseClasses($"{BusinessObject}DTO", "int"));
+
+            return properties;
+        }
+
+        public static List<SoftProperty> GetNotificationProperties()
+        {
+
+            List<SoftProperty> properties = new List<SoftProperty>
+            {
+                new SoftProperty
+                {
+                    IdentifierText="Title", Type="string", Attributes=new List<SoftAttribute>
+                    {
+                        new SoftAttribute { Name="SoftDisplayName" },
+                        new SoftAttribute { Name="Required" },
+                        new SoftAttribute { Name="StringLength", Value="100" },
+                    }
+                },
+                new SoftProperty
+                {
+                    IdentifierText="TitleLatin", Type="string", Attributes=new List<SoftAttribute>
+                    {
+                        new SoftAttribute { Name="Required" },
+                        new SoftAttribute { Name="StringLength", Value="100" },
+                    }
+                },
+                new SoftProperty
+                {
+                    IdentifierText="Description", Type="string", Attributes=new List<SoftAttribute>
+                    {
+                        new SoftAttribute { Name="StringLength", Value="400" },
+                        new SoftAttribute { Name="Required" },
+                    }
+                },
+                new SoftProperty
+                {
+                    IdentifierText="DescriptionLatin", Type="string", Attributes=new List<SoftAttribute>
+                    {
+                        new SoftAttribute { Name="StringLength", Value="400" },
+                        new SoftAttribute { Name="Required" },
+                    }
+                }
+            };
+
+            properties.AddRange(GetPropertiesForBaseClasses(BusinessObject, "long"));
+
+            return properties;
+        }
+
+        public static List<SoftProperty> GetNotificationDTOProperties()
+        {
+
+            List<SoftProperty> properties = new List<SoftProperty>
+            {
+                new SoftProperty
+                {
+                    IdentifierText="Title", Type="string"
+                },
+                new SoftProperty
+                {
+                    IdentifierText="TitleLatin", Type="string"
+                },
+                new SoftProperty
+                {
+                    IdentifierText="Description", Type="string"
+                },
+                new SoftProperty
+                {
+                    IdentifierText="DescriptionLatin", Type="string"
+                }
+            };
+
+            properties.AddRange(GetPropertiesForBaseClasses($"{BusinessObject}DTO", "long"));
 
             return properties;
         }
@@ -880,9 +1020,8 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return result;
         }
 
-        public static List<SoftProperty> GetPropertiesForBaseClasses(TypeSyntax type, TypeSyntax typeGeneric)
+        public static List<SoftProperty> GetPropertiesForBaseClasses(string typeName, string idType)
         {
-            string typeName = type.ToString();
             if (typeName.StartsWith($"{BusinessObject}"))
             {
                 if (typeName.Contains("DTO"))
@@ -890,7 +1029,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     return new List<SoftProperty>()
                     {
                         new SoftProperty{ Type = "int?", IdentifierText = "Version" },
-                        new SoftProperty{ Type = typeGeneric.ToString(), IdentifierText = "Id" },
+                        new SoftProperty{ Type = idType, IdentifierText = "Id" },
                         new SoftProperty{ Type = "DateTime?", IdentifierText = "CreatedAt" },
                         new SoftProperty{ Type = "DateTime?", IdentifierText = "ModifiedAt" },
                     };
@@ -900,7 +1039,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     return new List<SoftProperty>()
                     {
                         new SoftProperty{ Type = "int", IdentifierText = "Version" },
-                        new SoftProperty{ Type = typeGeneric.ToString(), IdentifierText = "Id" },
+                        new SoftProperty{ Type = idType, IdentifierText = "Id" },
                         new SoftProperty{ Type = "DateTime", IdentifierText = "CreatedAt" },
                         new SoftProperty{ Type = "DateTime", IdentifierText = "ModifiedAt" },
                     };
@@ -912,7 +1051,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 {
                     return new List<SoftProperty>()
                     {
-                        new SoftProperty { Type = $"{typeGeneric}", IdentifierText = "Id" },
+                        new SoftProperty { Type = idType, IdentifierText = "Id" },
                         new SoftProperty { Type = "DateTime?", IdentifierText = "CreatedAt" },
                     };
                 }
@@ -920,7 +1059,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 {
                     return new List<SoftProperty>()
                     {
-                        new SoftProperty { Type = typeGeneric.ToString(), IdentifierText = "Id" },
+                        new SoftProperty { Type = idType, IdentifierText = "Id" },
                         new SoftProperty { Type = "DateTime", IdentifierText = "CreatedAt" },
                     };
                 }
@@ -1016,7 +1155,17 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             while (baseType is not GenericNameSyntax && baseType != null)
             {
+                if (baseType.ToString() == "Role")
+                    return "int";
+
+                if (baseType.ToString() == "Notification")
+                    return "long";
+
                 ClassDeclarationSyntax baseC = classes.Where(x => x.Identifier.Text == baseType.ToString()).FirstOrDefault();
+
+                if (baseC == null)
+                    return null;
+
                 baseType = baseC.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
             }
 

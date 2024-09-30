@@ -263,10 +263,25 @@ namespace {{basePartOfNamespace}}.Services
 
             foreach (SoftProperty prop in properties)
             {
-                result.Add($$"""
+                ClassDeclarationSyntax classOfManyToOneProperty = GetClassOfManyToOneProperty(prop.Type, classes);
+
+                if (classOfManyToOneProperty == null)
+                    continue;
+
+                if (classOfManyToOneProperty.IsEntityBusinessObject() || classOfManyToOneProperty.IsEntityReadonlyObject() == false)
+                {
+                    result.Add($$"""
             if (dto.{{prop.IdentifierText}}Id > 0)
                 poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{GetIdTypeOfManyToOneProperty(prop.Type, classes)}}>(dto.{{prop.IdentifierText}}Id.Value, null);
 """);
+                }
+                else
+                {
+                    result.Add($$"""
+            if (dto.{{prop.IdentifierText}}Id > 0)
+                poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{GetIdTypeOfManyToOneProperty(prop.Type, classes)}}>(dto.{{prop.IdentifierText}}Id.Value);
+""");
+                }
             }
 
             return result;
@@ -402,7 +417,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
 
-                {{(entityClass.IsEntityBusinessObject()
+                {{((entityClass.IsEntityBusinessObject() || entityClass.IsEntityReadonlyObject() == false)
                 ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
                 : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
                 )}}
@@ -443,10 +458,21 @@ namespace {{basePartOfNamespace}}.Services
         static string GetIdTypeOfManyToOneProperty(string propType, IList<ClassDeclarationSyntax> classes)
         {
             ClassDeclarationSyntax manyToOneclass = classes.Where(x => x.Identifier.Text == propType).SingleOrDefault();
+
             if (manyToOneclass == null)
                 return "THERE IS NO MANY TO ONE CLASS FOR THE PROPERTY";
 
             return Helper.GetGenericIdType(manyToOneclass, classes);
+        }
+
+        static ClassDeclarationSyntax GetClassOfManyToOneProperty(string propType, IList<ClassDeclarationSyntax> classes)
+        {
+            ClassDeclarationSyntax manyToOneclass = classes.Where(x => x.Identifier.Text == propType).SingleOrDefault();
+
+            if (manyToOneclass == null)
+                return null;
+
+            return manyToOneclass;
         }
 
         static string GetClassNameFromTheList(string propType)

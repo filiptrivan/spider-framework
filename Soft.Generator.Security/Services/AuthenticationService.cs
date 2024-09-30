@@ -44,14 +44,12 @@ namespace Soft.Generator.Security.Services
 
         public string GetCurrentUserEmail()
         {
-            string email = _httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
-            return email;
+            return _httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
         }
 
         public async Task<string> GetAccessTokenAsync()
         {
-            string accessToken = await _httpContextAccessor.HttpContext.GetTokenAsync("Bearer", "access_token");
-            return accessToken;
+            return await _httpContextAccessor.HttpContext.GetTokenAsync("Bearer", "access_token");
         }
 
         public string GetIPAddress()
@@ -59,14 +57,10 @@ namespace Soft.Generator.Security.Services
             string ipAddress = GetRemoteHostIpAddressUsingXForwardedFor(_httpContextAccessor.HttpContext)?.ToString();
 
             if (string.IsNullOrEmpty(ipAddress) == true)
-            {
                 ipAddress = _httpContextAccessor.HttpContext.Connection.RemoteIpAddress?.ToString();
-            }
 
             if (string.IsNullOrEmpty(ipAddress) == true)
-            {
                 ipAddress = GetRemoteHostIpAddressUsingXRealIp(_httpContextAccessor.HttpContext)?.ToString();
-            }
 
             return ipAddress;
         }

@@ -65,6 +65,11 @@ namespace Soft.SourceGenerators.Helpers
             return c.BaseList?.Types.FirstOrDefault()?.Type?.ToString()?.Contains($"{Helper.BusinessObject}<") == true;
         }
 
+        public static bool IsEntityReadonlyObject(this ClassDeclarationSyntax c)
+        {
+            return c.BaseList?.Types.FirstOrDefault()?.Type?.ToString()?.Contains($"{Helper.ReadonlyObject}<") == true;
+        }
+
         public static bool IsEnumerable(this string propType)
         {
             return propType.Contains("List") || propType.Contains("IList") || propType.Contains("[]");

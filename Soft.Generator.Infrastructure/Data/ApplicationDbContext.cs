@@ -80,6 +80,7 @@ namespace Soft.Generator.Infrastructure.Data
                 modelBuilder.Entity<Permission>().Ignore(x => x.NameLatin);
                 modelBuilder.Entity<Permission>().Ignore(x => x.DescriptionLatin);
             }
+
         }
 
         public DbSet<TEntity> DbSet<TEntity>() where TEntity : class

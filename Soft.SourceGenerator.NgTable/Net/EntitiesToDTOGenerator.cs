@@ -52,6 +52,7 @@ namespace Soft.SourceGenerator.NgTable.Net
 
             sb.AppendLine($$"""
 using Soft.Generator.Shared.DTO;
+using Soft.Generator.Security.DTO;
 
 namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator, it's mandatory for partial classes
 {
