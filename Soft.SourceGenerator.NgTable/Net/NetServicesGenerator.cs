@@ -541,11 +541,11 @@ namespace {{basePartOfNamespace}}.Services
             return poco;
         }
 
-        public async Task<{{nameOfTheEntityClass}}DTO> Save{{nameOfTheEntityClass}}AndReturnDTOAsync({{nameOfTheEntityClass}}DTO dto)
+        public async Task<{{nameOfTheEntityClass}}DTO> Save{{nameOfTheEntityClass}}AndReturnDTOAsync({{nameOfTheEntityClass}}DTO dto, bool authorizeUpdate = true, bool authorizeInsert = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                {{nameOfTheEntityClass}} poco = await Save{{nameOfTheEntityClass}}AndReturnDomainAsync(dto);
+                {{nameOfTheEntityClass}} poco = await Save{{nameOfTheEntityClass}}AndReturnDomainAsync(dto, authorizeUpdate, authorizeInsert);
 
                 return poco.Adapt<{{nameOfTheEntityClass}}DTO>(Mapper.{{c.Identifier.Text}}ToDTOConfig());
             });

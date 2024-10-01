@@ -13,14 +13,14 @@ namespace Soft.Generator.Shared.BaseEntities
     {
         public T Id { get; protected set; }
 
-        public DateTime CreatedAt { get; protected set; }
+        //public DateTime CreatedAt { get; protected set; }
 
         /// <summary>
         /// Don't use the method ever, its made just for automatic change from application db context
         /// </summary>
-        public void SetCreatedAt(DateTime createdAt)
-        {
-            CreatedAt = createdAt;
-        }
+        //public void SetCreatedAt(DateTime createdAt)
+        //{
+        //    CreatedAt = createdAt;
+        //}
     }
 }

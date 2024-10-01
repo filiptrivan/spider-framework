@@ -10,6 +10,6 @@ namespace Soft.Generator.Shared.Interfaces
     public interface IReadonlyObjectDTO<T>
     {
         public T Id { get; }
-        public DateTime CreatedAt { get; }
+        //public DateTime CreatedAt { get; }
     }
 }

@@ -10,7 +10,7 @@ namespace Soft.Generator.Shared.Interfaces
     public interface IReadonlyObject<T>
     {
         public T Id { get; }
-        public DateTime CreatedAt { get; }
+        //public DateTime CreatedAt { get; }
 
     }
 }

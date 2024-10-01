@@ -39,6 +39,7 @@ namespace Soft.SourceGenerator.NgTable.NgTable
         {
             if (classes.Count() == 0) return;
             IList<ClassDeclarationSyntax> entityFrameworkClasses = Helper.GetEntityClasses(classes);
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
 
             StringBuilder sb = new StringBuilder();
             List<string> usings = new List<string>();
@@ -84,11 +85,11 @@ namespace Soft.SourceGenerator.NgTable
                         {
 """);
                 // FT: idem po svim DTO propertijima, ako naletim na neki koji ne postoji u ef klasi, trazim resenje u maperima, ako ne postoji upisujem odgovarajucu gresku
-                List<ClassDeclarationSyntax> pairDTOClasses = classes.Where(x => x.Identifier.Text == $"{entityClass.Identifier.Text}DTO").DistinctBy(x => x.Identifier.Text).ToList(); // FT: Getting the pair DTO classes of entity class
+                List<SoftClass> pairDTOClasses = DTOClasses.Where(x => x.Name == $"{entityClass.Identifier.Text}DTO").ToList(); // FT: Getting the pair DTO classes of entity class
                 List<SoftProperty> efClassProps = Helper.GetAllPropertiesOfTheClass(entityClass, classes);
-                foreach (ClassDeclarationSyntax pairDTOClass in pairDTOClasses)
+                foreach (SoftClass pairDTOClass in pairDTOClasses)
                 {
-                    foreach (SoftProperty DTOprop in Helper.GetAllPropertiesOfTheClass(pairDTOClass, classes))
+                    foreach (SoftProperty DTOprop in pairDTOClass.Properties)
                     {
                         string entityDotNotation = DTOprop.IdentifierText; // RoleDisplayName
                         string propType = DTOprop.Type;
@@ -268,14 +269,14 @@ using {{item}};
         /// <param name="DTOClass">UserDTO</param>
         /// <param name="DTOClassProp">RoleDisplayName</param>
         /// <returns>Role.Id</returns>
-        private static string GetDotNotatioOfEntityFromMappers(IList<ClassDeclarationSyntax> allClasses, ClassDeclarationSyntax DTOClass, string DTOClassProp)
+        private static string GetDotNotatioOfEntityFromMappers(IList<ClassDeclarationSyntax> allClasses, SoftClass DTOClass, string DTOClassProp)
         {
             List<ClassDeclarationSyntax> bothMapperClasses = Helper.GetMapperClasses(allClasses); // Generated and manualy written
 
             foreach (ClassDeclarationSyntax mapperClass in bothMapperClasses)
             {
                 MethodDeclarationSyntax mapMethod = mapperClass?.Members.OfType<MethodDeclarationSyntax>()
-                    .Where(x => x.ReturnType.ToString() == DTOClass.Identifier.Text && x.Identifier.ToString() == "Map") // TODO FT: put this into appsettings
+                    .Where(x => x.ReturnType.ToString() == DTOClass.Name && x.Identifier.ToString() == "Map") // TODO FT: put this into appsettings
                     .SingleOrDefault(); // It's single because if we added it manualy we don't generate it
 
                 if (mapMethod != null)

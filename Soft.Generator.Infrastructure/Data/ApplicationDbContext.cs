@@ -88,16 +88,6 @@ namespace Soft.Generator.Infrastructure.Data
             return Set<TEntity>();
         }
 
-        public override int SaveChanges()
-        {
-            foreach (EntityEntry changedEntity in ChangeTracker.Entries())
-            {
-                HandleObjectChanges(changedEntity);
-            }
-
-            return base.SaveChanges();
-        }
-
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             foreach (EntityEntry changedEntity in ChangeTracker.Entries())
@@ -124,17 +114,17 @@ namespace Soft.Generator.Infrastructure.Data
                     HandleBusinessObjectChanges(businessObjectByte, changedEntity);
                     break;
 
-                case ReadonlyObject<long> readonlyObjectLong:
-                    HandleReadonlyObjectChanges(readonlyObjectLong, changedEntity);
-                    break;
+                //case ReadonlyObject<long> readonlyObjectLong:
+                //    HandleReadonlyObjectChanges(readonlyObjectLong, changedEntity);
+                //    break;
 
-                case ReadonlyObject<int> readonlyObjectInt:
-                    HandleReadonlyObjectChanges(readonlyObjectInt, changedEntity);
-                    break;
+                //case ReadonlyObject<int> readonlyObjectInt:
+                //    HandleReadonlyObjectChanges(readonlyObjectInt, changedEntity);
+                //    break;
 
-                case ReadonlyObject<byte> readonlyObjectByte:
-                    HandleReadonlyObjectChanges(readonlyObjectByte, changedEntity);
-                    break;
+                //case ReadonlyObject<byte> readonlyObjectByte:
+                //    HandleReadonlyObjectChanges(readonlyObjectByte, changedEntity);
+                //    break;
             }
         }
 
@@ -158,21 +148,21 @@ namespace Soft.Generator.Infrastructure.Data
             }
         }
 
-        void HandleReadonlyObjectChanges<T>(ReadonlyObject<T> readOnlyObject, EntityEntry changedEntity)
-        {
-            DateTime now = DateTime.Now;
+        //void HandleReadonlyObjectChanges<T>(ReadonlyObject<T> readOnlyObject, EntityEntry changedEntity)
+        //{
+        //    DateTime now = DateTime.Now;
 
-            switch (changedEntity.State)
-            {
-                case EntityState.Added:
-                    readOnlyObject.SetCreatedAt(now);
-                    break;
+        //    switch (changedEntity.State)
+        //    {
+        //        case EntityState.Added:
+        //            readOnlyObject.SetCreatedAt(now);
+        //            break;
 
-                case EntityState.Modified:
-                    Entry(readOnlyObject).Property(x => x.CreatedAt).IsModified = false;
-                    break;
-            }
-        }
+        //        case EntityState.Modified:
+        //            Entry(readOnlyObject).Property(x => x.CreatedAt).IsModified = false;
+        //            break;
+        //    }
+        //}
 
     }
 

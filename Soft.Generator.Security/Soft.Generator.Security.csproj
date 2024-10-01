@@ -22,7 +22,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="DTO\Generated\" />
+	  <Folder Include="ValidationRules\" />
 	</ItemGroup>
 
 </Project>
