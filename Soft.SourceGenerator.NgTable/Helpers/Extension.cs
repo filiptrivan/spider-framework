@@ -1,10 +1,12 @@
 ﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Soft.SourceGenerator.NgTable.Helpers;
+using Soft.SourceGenerators.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace Soft.SourceGenerators.Helpers
 {
@@ -156,6 +158,15 @@ namespace Soft.SourceGenerators.Helpers
             else
                 return null; // FT: It doesn't, many to many doesn't
                              //return "Every entity class needs to have the base class";
+        }
+
+        public static SoftClass ToSoftClass(this ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
+        {
+            return new SoftClass
+            {
+                Name = c.Identifier.Text,
+                Properties = Helper.GetAllPropertiesOfTheClass(c, classes)
+            };
         }
     }
 }

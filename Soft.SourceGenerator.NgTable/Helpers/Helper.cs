@@ -481,7 +481,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         return new SoftClass
                         {
                             Name = x.Identifier.Text,
-                            Properties = GetAllPropertiesOfTheClass(x, classes)
+                            Properties = GetAllPropertiesOfTheClass(x, classes, true)
                         };
                     }
                     else // Entity
@@ -489,7 +489,8 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         return new SoftClass
                         {
                             Name = $"{x.Identifier.Text}DTO",
-                            Properties = GetDTOSoftProps(x, classes)
+                            Properties = GetDTOSoftProps(x, classes),
+                            IsGenerated = true
                         };
                     }
                 })
@@ -591,14 +592,14 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 .ToList();
         }
 
-        public static List<ClassDeclarationSyntax> GetMapperClasses(IList<ClassDeclarationSyntax> classes)
+        public static ClassDeclarationSyntax GetNonGeneratedMapperClass(IList<ClassDeclarationSyntax> classes)
         {
             return classes
                 .Where(x => x.Ancestors()
                     .OfType<NamespaceDeclarationSyntax>()
                     .Select(ns => ns.Name.ToString())
                     .Any(ns => ns.EndsWith($".{MapperNamespaceEnding}")))
-                .ToList();
+                .FirstOrDefault();
         }
 
         public static List<ClassDeclarationSyntax> GetControllerClasses(IList<ClassDeclarationSyntax> classes)
@@ -674,6 +675,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return properties;
         }
 
+        // FT HACK, FT TODO: Make this with all project references
         public static List<SoftProperty> GetRoleProperties()
         {
             List<SoftProperty> properties = new List<SoftProperty>
@@ -801,7 +803,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return properties;
         }
 
-        public static List<SoftAttribute> GetAllAttributesOfTheProperty(PropertyDeclarationSyntax prop)
+        public static List<SoftAttribute> GetAllAttributesOfTheMember(MemberDeclarationSyntax prop)
         {
             List<SoftAttribute> softAttributes = new List<SoftAttribute>();
             softAttributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
@@ -811,6 +813,27 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             .ToList();
             return softAttributes;
         }
+
+        // FT: Maybe ill need it in the future, for now im using only for the current class
+        //public static List<SoftMethod> GetAllMethodsOfTheClass(ClassDeclarationSyntax c, IEnumerable<ClassDeclarationSyntax> allClasses,)
+        //{
+        //    TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
+        //    ClassDeclarationSyntax baseClass = GetClass(baseType, allClasses);
+
+        //    string s = c.Identifier.Text;
+
+        //    List<SoftMethod> properties = GetMethodsOfCurrentClass(c);
+
+        //    TypeSyntax typeGeneric = null;
+
+        //    while (baseType != null)
+        //    {
+        //        baseType = baseClass.BaseList?.Types.FirstOrDefault()?.Type;
+        //        baseClass = GetClass(baseType, allClasses);
+        //    }
+
+        //    return properties;
+        //}
 
         public static SoftAttribute GetSoftAttribute(AttributeSyntax a)
         {
@@ -939,6 +962,26 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return properties;
         }
 
+        public static List<SoftMethod> GetMethodsOfCurrentClass(ClassDeclarationSyntax c)
+        {
+            List<SoftMethod> methods = c.Members.OfType<MethodDeclarationSyntax>()
+                .Select(method => new SoftMethod()
+                {
+                    Name = method.Identifier.Text,
+                    ReturnType = method.ReturnType.ToString(),
+                    Body = method.Body.ToString(),
+                    DescendantNodes = method.DescendantNodes(),
+                    Attributes = method.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
+                    {
+                        return GetSoftAttribute(x);
+                    })
+                    .ToList()
+                })
+                .ToList();
+
+            return methods;
+        }
+
         public static List<SoftEnum> GetEnumMembers(EnumDeclarationSyntax enume)
         {
             List<SoftEnum> enumMembers = new List<SoftEnum>();
@@ -962,12 +1005,17 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             {
                 typeName = nameSyntax.ToString();
             }
-            return classes.Where(x => x.Identifier.Text == typeName).FirstOrDefault();
+            return classes.Where(x => x.Identifier.Text == typeName).SingleOrDefault();
+        }
+
+        public static ClassDeclarationSyntax GetClass(string type, IEnumerable<ClassDeclarationSyntax> classes)
+        {
+            return classes.Where(x => x.Identifier.Text == type).SingleOrDefault();
         }
 
         public static SoftProperty GetPropWithModifiedT(PropertyDeclarationSyntax prop, TypeSyntax typeGeneric)
         {
-            List<SoftAttribute> attributes = GetAllAttributesOfTheProperty(prop);
+            List<SoftAttribute> attributes = GetAllAttributesOfTheMember(prop);
             SoftProperty newProp = new SoftProperty() { Type = prop.Type.ToString(), IdentifierText = prop.Identifier.Text, Attributes = attributes };
 
             if (prop.Type.ToString() == "T") // If some property has type of T, we change it to long for example
@@ -1052,7 +1100,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     return new List<SoftProperty>()
                     {
                         new SoftProperty { Type = idType, IdentifierText = "Id" },
-                        new SoftProperty { Type = "DateTime?", IdentifierText = "CreatedAt" },
+                        //new SoftProperty { Type = "DateTime?", IdentifierText = "CreatedAt" },
                     };
                 }
                 else
@@ -1060,7 +1108,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     return new List<SoftProperty>()
                     {
                         new SoftProperty { Type = idType, IdentifierText = "Id" },
-                        new SoftProperty { Type = "DateTime", IdentifierText = "CreatedAt" },
+                        //new SoftProperty { Type = "DateTime", IdentifierText = "CreatedAt" },
                     };
                 }
             }

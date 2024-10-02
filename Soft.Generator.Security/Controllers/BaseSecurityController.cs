@@ -133,14 +133,14 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [AuthGuard]
         public async Task<BaseTableResponseEntity<RoleDTO>> LoadRoleListForTable(TableFilterDTO dto)
         {
-            return await _securityBusinessService.LoadRoleListForTable(dto);
+            return await _securityBusinessService.LoadRoleListForTable(dto, _context.DbSet<Role>());
         }
 
         [HttpPost]
         [AuthGuard]
         public async Task<IActionResult> ExportRoleListToExcel(TableFilterDTO dto)
         {
-            byte[] fileContent = await _securityBusinessService.ExportRoleListToExcel(dto);
+            byte[] fileContent = await _securityBusinessService.ExportRoleListToExcel(dto, _context.DbSet<Role>());
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"Roles.xlsx"));
         }
 
@@ -200,14 +200,14 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [AuthGuard]
         public async Task<BaseTableResponseEntity<NotificationDTO>> LoadNotificationListForTable(TableFilterDTO dto)
         {
-            return await _securityBusinessService.LoadNotificationListForTable(dto);
+            return await _securityBusinessService.LoadNotificationListForTable(dto, _context.DbSet<Notification>());
         }
 
         [HttpPost]
         [AuthGuard]
         public async Task<IActionResult> ExportNotificationListToExcel(TableFilterDTO dto)
         {
-            byte[] fileContent = await _securityBusinessService.ExportNotificationListToExcel(dto);
+            byte[] fileContent = await _securityBusinessService.ExportNotificationListToExcel(dto, _context.DbSet<Notification>());
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"Notifications.xlsx"));
         }
 

@@ -20,6 +20,12 @@ D:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.
 D:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.Generator.Security.dll
 D:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.Generator.Security.pdb
 D:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\ref\Soft.Generator.Security.dll
+E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.csproj.AssemblyReference.cache
+E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.GeneratedMSBuildEditorConfig.editorconfig
+E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.AssemblyInfoInputs.cache
+E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.AssemblyInfo.cs
+E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.csproj.CoreCompileInputs.cache
+E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.sourcelink.json
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Excel\ExcelTemplates\TableTemplate.xlsx
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.Generator.Security.deps.json
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.Generator.Security.dll
@@ -29,12 +35,6 @@ E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.Generator.Shared.pdb
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\Soft.NgTable.pdb
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\bin\Debug\net8.0\sr-Latn-RS\Soft.Generator.Shared.resources.dll
-E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.csproj.AssemblyReference.cache
-E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.GeneratedMSBuildEditorConfig.editorconfig
-E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.AssemblyInfoInputs.cache
-E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.AssemblyInfo.cs
-E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.csproj.CoreCompileInputs.cache
-E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.sourcelink.json
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.csproj.CopyComplete
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\Soft.Generator.Security.dll
 E:\Projects\Soft.Generator\Source\Soft.Generator.Security\obj\Debug\net8.0\refint\Soft.Generator.Security.dll

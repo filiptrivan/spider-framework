@@ -118,16 +118,15 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        private async Task<BasePaginationResult<{{nameOfTheEntityClass}}>> Load{{nameOfTheEntityClass}}ListForPagination(TableFilterDTO tableFilterPayload)
+        private async Task<BasePaginationResult<{{nameOfTheEntityClass}}>> Load{{nameOfTheEntityClass}}ListForPagination(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                IQueryable<{{nameOfTheEntityClass}}> query = _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking();
-                return await TableFilterQueryable.Build(query, tableFilterPayload);
+                return await TableFilterQueryable.Build(query.AsNoTracking(), tableFilterPayload);
             });
         }
 
-        public async Task<BaseTableResponseEntity<{{nameOfTheEntityClass}}DTO>> Load{{nameOfTheEntityClass}}ListForTable(TableFilterDTO tableFilterPayload, bool authorize = true)
+        public async Task<BaseTableResponseEntity<{{nameOfTheEntityClass}}DTO>> Load{{nameOfTheEntityClass}}ListForTable(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query, bool authorize = true)
         {
             BasePaginationResult<{{nameOfTheEntityClass}}> paginationResult = new BasePaginationResult<{{nameOfTheEntityClass}}>();
             List<{{nameOfTheEntityClass}}DTO> data = null;
@@ -139,7 +138,7 @@ namespace {{basePartOfNamespace}}.Services
                     {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
                 }
 
-                paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload);
+                paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload, query);
 
                 data = await paginationResult.Query
                     .Skip(tableFilterPayload.First)
@@ -151,7 +150,7 @@ namespace {{basePartOfNamespace}}.Services
             return new BaseTableResponseEntity<{{nameOfTheEntityClass}}DTO> { Data = data, TotalRecords = paginationResult.TotalRecords };
         }
 
-        public async Task<byte[]> Export{{nameOfTheEntityClass}}ListToExcel(TableFilterDTO tableFilterPayload, bool authorize = true)
+        public async Task<byte[]> Export{{nameOfTheEntityClass}}ListToExcel(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query, bool authorize = true)
         {
             BasePaginationResult<{{nameOfTheEntityClass}}> paginationResult = new BasePaginationResult<{{nameOfTheEntityClass}}>();
             List<{{nameOfTheEntityClass}}DTO> data = null;
@@ -163,7 +162,7 @@ namespace {{basePartOfNamespace}}.Services
                     {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
                 }
 
-                paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload);
+                paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload, query);
 
                 data = await paginationResult.Query.ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{c.Identifier.Text}}ExcelProjectToConfig()).ToListAsync();
             });
@@ -174,7 +173,7 @@ namespace {{basePartOfNamespace}}.Services
 
         {{(c.IsAbstract() ? "" : GetSavingData(nameOfTheEntityClass, idTypeOfTheEntityClass, c, entityClasses, generateAuthorizationMethods))}}
         
-        public async Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForAutocomplete(int limit, string query, IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForAutocomplete(int limit, string query, IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -197,7 +196,7 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        public async Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForDropdown(IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForDropdown(IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -332,7 +331,7 @@ namespace {{basePartOfNamespace}}.Services
                 if (manyToOneProp != null)
                 {
                     result.Add($$"""
-        public async Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Load{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Load{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -372,7 +371,7 @@ namespace {{basePartOfNamespace}}.Services
                 else if (manyToManyPropFromTheListProperties != null)
                 {
                     result.Add($$"""
-        public async Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Load{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Load{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -498,9 +497,10 @@ namespace {{basePartOfNamespace}}.Services
                 OnBefore{{nameOfTheEntityClass}}IsMapped(dto);
                 DbSet<{{nameOfTheEntityClass}}> dbSet = _context.DbSet<{{nameOfTheEntityClass}}>();
 """);
-            if (c.IsEntityBusinessObject() == false)
+            if (c.IsEntityReadonlyObject())
             {
                 sb.AppendLine($$"""
+
                 poco = dto.Adapt<{{nameOfTheEntityClass}}>();
                 await dbSet.AddAsync(poco);
 """);

@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Helpers;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -35,7 +36,7 @@ namespace Soft.SourceGenerator.NgTable.NgTable
                 static (spc, source) => Execute(source, spc));
         }
 
-        private static void Execute(ImmutableArray<ClassDeclarationSyntax> classes, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
             if (classes.Count() == 0) return;
             IList<ClassDeclarationSyntax> entityFrameworkClasses = Helper.GetEntityClasses(classes);
@@ -58,10 +59,13 @@ namespace Soft.SourceGenerator.NgTable
 """);
             foreach (ClassDeclarationSyntax entityClass in entityFrameworkClasses)
             {
-                if (entityClass.BaseList?.Types == null) // FT: maybe don't need to do this because i don't make ManyToMany files anymore
+                if (entityClass.BaseList?.Types == null)
                 {
                     continue;
                 }
+
+                SoftClass entitySoftClass = entityClass.ToSoftClass(classes);
+
                 usings.Add(entityClass.
                     Ancestors()
                    .OfType<NamespaceDeclarationSyntax>()
@@ -96,7 +100,7 @@ namespace Soft.SourceGenerator.NgTable
 
                         if (efClassProps.Where(x => x.IdentifierText == DTOprop.IdentifierText).Any() == false) // FT: ako property u DTO ne postoji u ef klasi (RoleDisplayName ne postoji)
                         {
-                            entityDotNotation = GetDotNotatioOfEntityFromMappers(classes, pairDTOClass, entityDotNotation); // "Role.Id"
+                            entityDotNotation = GetDotNotatioOfEntityFromMappers(classes, entitySoftClass, pairDTOClass, entityDotNotation); // "Role.Id"
                             if (entityDotNotation == null)
                                 continue;
 
@@ -269,21 +273,32 @@ using {{item}};
         /// <param name="DTOClass">UserDTO</param>
         /// <param name="DTOClassProp">RoleDisplayName</param>
         /// <returns>Role.Id</returns>
-        private static string GetDotNotatioOfEntityFromMappers(IList<ClassDeclarationSyntax> allClasses, SoftClass DTOClass, string DTOClassProp)
+        private static string GetDotNotatioOfEntityFromMappers(IList<ClassDeclarationSyntax> allClasses, SoftClass entitySoftClass, SoftClass DTOClass, string DTOClassProp)
         {
-            List<ClassDeclarationSyntax> bothMapperClasses = Helper.GetMapperClasses(allClasses); // Generated and manualy written
-
-            foreach (ClassDeclarationSyntax mapperClass in bothMapperClasses)
+            if (DTOClassProp.EndsWith("DisplayName") && DTOClass.IsGenerated == true) // FT: Doing this thing with the IsGenerated so we can make prop in non generated DTO with "DisplayName" or "Id" sufix 
             {
-                MethodDeclarationSyntax mapMethod = mapperClass?.Members.OfType<MethodDeclarationSyntax>()
-                    .Where(x => x.ReturnType.ToString() == DTOClass.Name && x.Identifier.ToString() == "Map") // TODO FT: put this into appsettings
-                    .SingleOrDefault(); // It's single because if we added it manualy we don't generate it
-
-                if (mapMethod != null)
-                    return GetFirstAttributeParamFromMapper(mapMethod, DTOClassProp); // "Role.Id"
+                string baseClassInDotNotation = DTOClassProp.Replace("DisplayName", ""); // "Rolinho"
+                SoftProperty propertyInEntityClass = entitySoftClass.Properties.Where(x => x.IdentifierText == baseClassInDotNotation).Single();
+                string typeOfThePropertyInEntityClass = propertyInEntityClass.Type; // "Role"
+                ClassDeclarationSyntax entityClassWhichWeAreSearchingDisplayNameFor = Helper.GetClass(typeOfThePropertyInEntityClass, allClasses);
+                string displayName = Helper.GetDisplayNamePropForClass(entityClassWhichWeAreSearchingDisplayNameFor, allClasses); // Name
+                displayName = displayName.Replace(".ToString()", "");
+                return $"{baseClassInDotNotation}.{displayName}"; // FT: It's okay to do it like this, because when we generating DisplayNames for DTO, we are doing it just for the first level.
+            }
+            if (DTOClassProp.EndsWith("Id") && DTOClassProp.Length > 2 && DTOClass.IsGenerated == true)
+            {
+                string baseClassInDotNotation = DTOClassProp.Replace("Id", ""); // "Rolinho"
+                return $"{baseClassInDotNotation}.Id";
             }
 
-            return null;
+            ClassDeclarationSyntax nonGeneratedMapperClass = Helper.GetNonGeneratedMapperClass(allClasses);
+
+            List<SoftMethod> methodsOfTheNonGeneratedMapperClass = Helper.GetMethodsOfCurrentClass(nonGeneratedMapperClass);
+
+            return GetEntityDotNotationForDTO(methodsOfTheNonGeneratedMapperClass, DTOClass.Name, entitySoftClass.Name, DTOClassProp);
+
+            //if (mapMethod != null)
+            //    return GetFirstAttributeParamFromMapper(mapMethod, DTOClassProp); // "Role.Id"
         }
 
         /// <summary>
@@ -313,20 +328,21 @@ using {{item}};
 
         public static string GetPropTypeOfEntityDotNotationProperty(string entityDotNotation, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> allClasses)
         {
-            // User
-            // Role.Permission.Id
-            // Role.Id
-            string propName = entityDotNotation.Split('.')[0]; // Role
+            // Rolinho.Permission.Id
+            string propName = entityDotNotation.Split('.')[0]; // Rolinho
             List<SoftProperty> entityClassProperties = Helper.GetAllPropertiesOfTheClass(entityClass, allClasses);
             SoftProperty prop = entityClassProperties.Where(x => x.IdentifierText == propName).Single(); // Role
 
             int i = 1;
             while (prop.Type.IsBaseType() == false)
             {
-                ClassDeclarationSyntax helperClass = allClasses.Where(x => x.Identifier.Text == propName).SingleOrDefault(); // Role
+                ClassDeclarationSyntax helperClass = allClasses.Where(x => x.Identifier.Text == prop.Type).SingleOrDefault(); // Role
+
                 if (helperClass == null)
                     break;
+
                 List<SoftProperty> helperProps = Helper.GetAllPropertiesOfTheClass(helperClass, allClasses);
+
                 propName = entityDotNotation.Split('.')[i]; // Id
                 prop = helperProps.Where(x => x.IdentifierText == propName).Single(); // Id
                 i++;
@@ -334,6 +350,37 @@ using {{item}};
 
             return prop.Type;
         }
+
+        public static string GetEntityDotNotationForDTO(List<SoftMethod> methodsOfTheNonGeneratedMapperClass, string destinationDTOClass, string sourceEntityClass, string DTOProp)
+        {
+            List<SoftMethod> methodsWithTableFiltersAttribute = methodsOfTheNonGeneratedMapperClass.Where(x => x.Attributes.Any(x => x.Name == "TableFiltersListener")).ToList();
+
+            SoftMethod currentConfigMethod = methodsWithTableFiltersAttribute.Where(x => x.Body.Contains($".NewConfig<{sourceEntityClass}, {destinationDTOClass}>()")).SingleOrDefault();
+
+            if (currentConfigMethod == null)
+                return null;
+
+            IEnumerable<InvocationExpressionSyntax> newConfigCalls = currentConfigMethod.DescendantNodes
+                .OfType<InvocationExpressionSyntax>()
+                .Where(invocation => invocation.Expression.ToString().Contains("NewConfig"));
+
+            foreach (InvocationExpressionSyntax invocation in newConfigCalls)
+            {
+                List<string> linqRows = invocation.ArgumentList?.Arguments.Select(x => x.ToString()).ToList();
+
+                if(linqRows.Where(x => x.Split('.').LastOrDefault() == DTOProp).Count() == 1) // dest.TestDisplayName -> TestDisplayName
+                {
+                    string src = linqRows.Where(x => x.Split('.').LastOrDefault() != DTOProp).Single(); // src => src.Gender.Name
+                    List<string> parts = src.Split('.').ToList(); // src => src ; Gender ; Name
+                    List<string> partsToJoin = parts.GetRange(1, parts.Count - 1).ToList(); // Gender ; Name
+                    return string.Join(".", partsToJoin);
+                }
+            }
+
+            return null;
+        }
+
+
 
     }
 }
