@@ -12,21 +12,23 @@ namespace Soft.Generator.Security.Entities
     public class Notification : BusinessObject<long>
     {
         [SoftDisplayName]
-        [StringLength(60, MinimumLength = 1)]
+        [StringLength(100, MinimumLength = 1)]
         [Required]
         public string Title { get; set; }
 
-        [StringLength(60, MinimumLength = 1)]
+        [StringLength(100, MinimumLength = 1)]
         [Required]
         public string TitleLatin { get; set; }
 
-        [StringLength(255, MinimumLength = 1)]
+        [StringLength(400, MinimumLength = 1)]
         [Required]
         public string Description { get; set; }
 
-        [StringLength(255, MinimumLength = 1)]
+        [StringLength(400, MinimumLength = 1)]
         [Required]
         public string DescriptionLatin { get; set; }
 
+        [StringLength(1000, MinimumLength = 1)]
+        public string EmailBody { get; set; }
     }
 }

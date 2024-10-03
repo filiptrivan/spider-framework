@@ -767,6 +767,13 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         new SoftAttribute { Name="StringLength", Value="400" },
                         new SoftAttribute { Name="Required" },
                     }
+                },
+                new SoftProperty
+                {
+                    IdentifierText="EmailBody", Type="string", Attributes=new List<SoftAttribute>
+                    {
+                        new SoftAttribute { Name="StringLength", Value="1000" },
+                    }
                 }
             };
 
@@ -795,6 +802,10 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 new SoftProperty
                 {
                     IdentifierText="DescriptionLatin", Type="string"
+                },
+                new SoftProperty
+                {
+                    IdentifierText="EmailBody", Type="string"
                 }
             };
 

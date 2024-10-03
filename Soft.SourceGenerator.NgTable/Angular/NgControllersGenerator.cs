@@ -123,9 +123,11 @@ export class ApiGeneratedService extends ApiSecurityService {
             if (string.IsNullOrEmpty(postAndPutParameters) == false)
                 postAndPutParameters = $", {postAndPutParameters}";
 
+            bool skipSpinner = endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "SkipSpinner"));
+
             if (endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "HttpGet")))
             {
-                if (returnType.Contains("Namebook") || methodName.Contains("Autocomplete") || methodName.Contains("Dropdown"))
+                if (returnType.Contains("Namebook") || methodName.Contains("Autocomplete") || methodName.Contains("Dropdown") || skipSpinner)
                 {
                     result = @$"
     {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{
@@ -143,7 +145,7 @@ export class ApiGeneratedService extends ApiSecurityService {
             }
             if (endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "HttpPost")))
             {
-                if (methodName.Contains("ForTable")) // FT HACK: Be carefull with method name
+                if (methodName.Contains("ForTable") || skipSpinner) // FT HACK: Be carefull with method name
                 {
                     result = @$"
     {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{ 
