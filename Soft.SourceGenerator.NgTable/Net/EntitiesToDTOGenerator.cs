@@ -73,9 +73,6 @@ namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator
 }
 """);
 
-            //Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
-
-            // FT: does not generating because we make file on the disk, because mapping can't figure out something inside analyzers
             context.AddSource($"{projectName}DTOList.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 

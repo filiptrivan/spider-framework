@@ -130,7 +130,7 @@ export function getValidator{{projectName}}(formControl: SoftFormControl, classN
             string result = $@"
 export function {parameterFirstLower}{classNameForValidation}Validator(control: SoftFormControl): SoftValidatorFn {{
     const validator: SoftValidatorFn = (): ValidationErrors | null => {{
-        const value = control.value ?? """";
+        const value = control.value;
 
 {string.Join("\n", ruleStatements)}
 
@@ -151,7 +151,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
             {
                 string ruleName = "notEmptyRule";
                 ruleStatements.Add($$"""
-        const {{ruleName}} = typeof value !== 'undefined' && value !== '';
+        const {{ruleName}} = typeof value !== 'undefined' && value !== null && value !== '';
 """);
                 ruleNames.Add(ruleName);
                 validationMessages.Add("is mandatory");
@@ -170,7 +170,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
                     ruleStatements.Add($$"""
         const min = {{min}};
         const max = {{max}};
-        const {{ruleName}} = value?.length >= min && value?.length <= max;
+        const {{ruleName}} = (value?.length >= min && value?.length <= max) || (typeof value === 'undefined' || value === null || value === '');
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must have a minimum of ${{min}} and a maximum of ${{max}} characters");
@@ -182,7 +182,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
                     string length = singleLengthMatch.Groups[1].Value;
                     ruleStatements.Add($$"""
         const length = {{length}};
-        const {{ruleName}} = value?.length == length;
+        const {{ruleName}} = (value?.length == length) || (typeof value === 'undefined' || value === null || value === '');
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must be ${{length}} character long");
@@ -203,7 +203,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
         const {{ruleName}} = value <= max;
 """);
                     ruleNames.Add(ruleName);
-                    validationMessages.Add($"must be less or equal ${{max}}");
+                    validationMessages.Add($"must be less or equal to ${{max}}");
                     translationTags.Add("NumberRangeMax");
                 }
             }
@@ -221,7 +221,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
         const {{ruleName}} = value >= min;
 """);
                     ruleNames.Add(ruleName);
-                    validationMessages.Add($"must be greater or equal ${{min}}");
+                    validationMessages.Add($"must be greater or equal to ${{min}}");
                     translationTags.Add("NumberRangeMin");
                 }
             }
