@@ -1,0 +1,12 @@
+E:\Projects\Soft.Generator\Source\NSwag.Core\obj\Debug\netstandard2.0\NSwag.Core.csproj.AssemblyReference.cache
+E:\Projects\Soft.Generator\Source\NSwag.Core\obj\Debug\netstandard2.0\NSwag.Core.GeneratedMSBuildEditorConfig.editorconfig
+E:\Projects\Soft.Generator\Source\NSwag.Core\obj\Debug\netstandard2.0\NSwag.Core.AssemblyInfoInputs.cache
+E:\Projects\Soft.Generator\Source\NSwag.Core\obj\Debug\netstandard2.0\NSwag.Core.AssemblyInfo.cs
+E:\Projects\Soft.Generator\Source\NSwag.Core\obj\Debug\netstandard2.0\NSwag.Core.csproj.CoreCompileInputs.cache
+E:\Projects\Soft.Generator\Source\NSwag.Core\bin\Debug\netstandard2.0\NSwag.Core.deps.json
+E:\Projects\Soft.Generator\Source\NSwag.Core\bin\Debug\netstandard2.0\NSwag.Core.dll
+E:\Projects\Soft.Generator\Source\NSwag.Core\bin\Debug\netstandard2.0\NSwag.Core.pdb
+E:\Projects\Soft.Generator\Source\NSwag.Core\bin\Debug\netstandard2.0\NSwag.Core.xml
+E:\Projects\Soft.Generator\Source\NSwag.Core\obj\Debug\netstandard2.0\NSwag.Core.dll
+E:\Projects\Soft.Generator\Source\NSwag.Core\obj\Debug\netstandard2.0\NSwag.Core.xml
+E:\Projects\Soft.Generator\Source\NSwag.Core\obj\Debug\netstandard2.0\NSwag.Core.pdb
