@@ -8,14 +8,15 @@ using Soft.Generator.Shared.Attributes;
 using Soft.Generator.Shared.DTO;
 using Soft.Generator.Shared.Helpers;
 using Soft.Generator.Shared.Interfaces;
+using Soft.Generator.Shared.Extensions;
 using Soft.Generator.Shared.SoftExceptions;
-using Soft.NgTable.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace Soft.Generator.Security.SecurityControllers // Needs to be other namespace because of source generator
 {
@@ -105,20 +106,6 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> LoadRoleListForAutocomplete(int limit, string query)
-        {
-            return await _securityBusinessService.LoadRoleListForAutocomplete(limit, query, _context.DbSet<Role>());
-        }
-
-        [HttpGet]
-        [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> LoadRoleListForDropdown()
-        {
-            return await _securityBusinessService.LoadRoleListForDropdown(_context.DbSet<Role>());
-        }
-
-        [HttpGet]
-        [AuthGuard]
         public async Task<List<NamebookDTO<int>>> LoadRoleNamebookListForUserExtended(long userId)
         {
             return await _securityBusinessService.LoadRoleNamebookListForUserExtended<TUser>(userId);
@@ -131,16 +118,16 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         [HttpPost]
         [AuthGuard]
-        public async Task<BaseTableResponseEntity<RoleDTO>> LoadRoleListForTable(TableFilterDTO dto)
+        public async Task<TableResponseDTO<RoleDTO>> LoadRoleListForTable(TableFilterDTO dto)
         {
-            return await _securityBusinessService.LoadRoleListForTable(dto, _context.DbSet<Role>());
+            return await _securityBusinessService.LoadRoleListForTable(dto, _context.DbSet<Role>().Where(a => EF.Property<string>(a, "Discriminator") == nameof(Role)));
         }
 
         [HttpPost]
         [AuthGuard]
         public async Task<IActionResult> ExportRoleListToExcel(TableFilterDTO dto)
         {
-            byte[] fileContent = await _securityBusinessService.ExportRoleListToExcel(dto, _context.DbSet<Role>());
+            byte[] fileContent = await _securityBusinessService.ExportRoleListToExcel(dto, _context.DbSet<Role>().Where(a => EF.Property<string>(a, "Discriminator") == nameof(Role)));
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"Roles.xlsx"));
         }
 
@@ -148,7 +135,7 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [AuthGuard]
         public async Task DeleteRole(int id)
         {
-            await _securityBusinessService.DeleteEntity<Role, int>(id);
+            await _securityBusinessService.DeleteEntityAsync<Role, int>(id);
         }
 
         [HttpGet]
@@ -170,6 +157,20 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         public async Task<List<NamebookDTO<long>>> LoadUserListForRole(int roleId)
         {
             return await _securityBusinessService.LoadUserExtendedNamebookListForRole<TUser>(roleId);
+        }
+
+        [HttpGet]
+        [AuthGuard]
+        public async Task<List<NamebookDTO<int>>> LoadRoleListForAutocomplete(int limit, string query)
+        {
+            return await _securityBusinessService.LoadRoleListForAutocomplete(limit, query, _context.DbSet<Role>().Where(a => EF.Property<string>(a, "Discriminator") == nameof(Role)));
+        }
+
+        [HttpGet]
+        [AuthGuard]
+        public async Task<List<NamebookDTO<int>>> LoadRoleListForDropdown()
+        {
+            return await _securityBusinessService.LoadRoleListForDropdown(_context.DbSet<Role>().Where(a => EF.Property<string>(a, "Discriminator") == nameof(Role)));
         }
 
         #endregion
@@ -198,16 +199,16 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         [HttpPost]
         [AuthGuard]
-        public async Task<BaseTableResponseEntity<NotificationDTO>> LoadNotificationListForTable(TableFilterDTO dto)
+        public async Task<TableResponseDTO<NotificationDTO>> LoadNotificationListForTable(TableFilterDTO dto)
         {
-            return await _securityBusinessService.LoadNotificationListForTable(dto, _context.DbSet<Notification>());
+            return await _securityBusinessService.LoadNotificationListForTable(dto, _context.DbSet<Notification>().Where(a => EF.Property<string>(a, "Discriminator") == nameof(Notification)));
         }
 
         [HttpPost]
         [AuthGuard]
         public async Task<IActionResult> ExportNotificationListToExcel(TableFilterDTO dto)
         {
-            byte[] fileContent = await _securityBusinessService.ExportNotificationListToExcel(dto, _context.DbSet<Notification>());
+            byte[] fileContent = await _securityBusinessService.ExportNotificationListToExcel(dto, _context.DbSet<Notification>().Where(a => EF.Property<string>(a, "Discriminator") == nameof(Notification)));
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"Notifications.xlsx"));
         }
 
@@ -215,7 +216,7 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [AuthGuard]
         public async Task DeleteNotification(long id)
         {
-            await _securityBusinessService.DeleteEntity<Notification, long>(id);
+            await _securityBusinessService.DeleteEntityAsync<Notification, long>(id);
         }
 
         [HttpGet]
@@ -241,7 +242,7 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         [HttpPost]
         [AuthGuard]
-        public async Task<BaseTableResponseEntity<NotificationDTO>> LoadNotificationListForTheCurrentUser(TableFilterDTO tableFilterDTO)
+        public async Task<TableResponseDTO<NotificationDTO>> LoadNotificationListForTheCurrentUser(TableFilterDTO tableFilterDTO)
         {
             return await _securityBusinessService.LoadNotificationListForTheCurrentUser<TUser>(tableFilterDTO);
         }

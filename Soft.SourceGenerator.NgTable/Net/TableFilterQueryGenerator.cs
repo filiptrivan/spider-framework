@@ -39,25 +39,30 @@ namespace Soft.SourceGenerator.NgTable.NgTable
         private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
             if (classes.Count() == 0) return;
-            IList<ClassDeclarationSyntax> entityFrameworkClasses = Helper.GetEntityClasses(classes);
+            IList<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
             List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
 
             StringBuilder sb = new StringBuilder();
             List<string> usings = new List<string>();
             StringBuilder sbUsings = new StringBuilder();
 
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0]);
+
+            string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
+            string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
+
             sb.AppendLine($$"""
-using Soft.NgTable.Models;
 using LinqKit;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Soft.Generator.Shared.DTO;
 
-namespace Soft.SourceGenerator.NgTable
+namespace {{basePartOfNamespace}}.TableFiltering
 {
     public static class TableFilterQueryable
     {
 """);
-            foreach (ClassDeclarationSyntax entityClass in entityFrameworkClasses)
+            foreach (ClassDeclarationSyntax entityClass in entityClasses)
             {
                 if (entityClass.BaseList?.Types == null)
                 {
@@ -73,7 +78,7 @@ namespace Soft.SourceGenerator.NgTable
                    .FirstOrDefault());
 
                 sb.AppendLine($$"""
-        public static async Task<BasePaginationResult<{{entityClass.Identifier.Text}}>> Build(IQueryable<{{entityClass.Identifier.Text}}> query, TableFilterDTO tableFilterPayload)
+        public static async Task<PaginationResult<{{entityClass.Identifier.Text}}>> Build(IQueryable<{{entityClass.Identifier.Text}}> query, TableFilterDTO tableFilterPayload)
         {
             Expression<Func<{{entityClass.Identifier.Text}}, bool>> predicate = PredicateBuilder.New<{{entityClass.Identifier.Text}}>(true);
 
@@ -149,7 +154,7 @@ namespace Soft.SourceGenerator.NgTable
                 }
             }
             query = query.Where(predicate).OrderBy(x => x.Id);
-            return new BasePaginationResult<{{entityClass.Identifier.Text}}>()
+            return new PaginationResult<{{entityClass.Identifier.Text}}>()
             {
                 TotalRecords = await query.CountAsync(),
                 Query = query

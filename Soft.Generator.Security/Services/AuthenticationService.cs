@@ -30,8 +30,7 @@ namespace Soft.Generator.Security.Services
 
         public long GetCurrentUserId()
         {
-            long id = long.Parse(_httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.PrimarySid)?.Value);
-            return id;
+            return long.Parse(_httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.PrimarySid)?.Value);
         }
 
         public async Task<TUser> GetCurrentUser<TUser>() where TUser : class, IUser, new()

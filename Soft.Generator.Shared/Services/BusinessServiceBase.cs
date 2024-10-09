@@ -51,7 +51,7 @@ namespace Soft.Generator.Shared.Services
             });
         }
 
-        public async Task DeleteEntity<T, ID>(ID id) where T : class, IBusinessObject<ID> where ID : struct // https://www.c-sharpcorner.com/article/equality-operator-with-inheritance-and-generics-in-c-sharp/
+        public async Task DeleteEntityAsync<T, ID>(ID id) where T : class, IBusinessObject<ID> where ID : struct // https://www.c-sharpcorner.com/article/equality-operator-with-inheritance-and-generics-in-c-sharp/
         {
             await _context.WithTransactionAsync(async () =>
             {

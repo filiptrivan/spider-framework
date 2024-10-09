@@ -19,7 +19,6 @@ using Soft.Generator.Shared.Services;
 using Microsoft.AspNetCore.Authorization;
 using Soft.Generator.Security.Entities;
 using Soft.Generator.Shared.DTO;
-using Soft.NgTable.Models;
 using Mapster;
 
 namespace Soft.Generator.Security.Services
@@ -365,6 +364,7 @@ namespace Soft.Generator.Security.Services
                     .AsNoTracking()
                     .Where(x => x.Id == userId)
                     .SelectMany(x => x.Roles)
+                    .OfType<Role>()
                     .Select(role => new NamebookDTO<int>
                     {
                         Id = role.Id,
@@ -531,9 +531,9 @@ namespace Soft.Generator.Security.Services
             });
         }
 
-        public async Task<BaseTableResponseEntity<NotificationDTO>> LoadNotificationListForTheCurrentUser<TUser>(TableFilterDTO tableFilterDTO) where TUser : class, IUser, new()
+        public async Task<TableResponseDTO<NotificationDTO>> LoadNotificationListForTheCurrentUser<TUser>(TableFilterDTO tableFilterDTO) where TUser : class, IUser, new()
         {
-            BaseTableResponseEntity<NotificationDTO> result = new BaseTableResponseEntity<NotificationDTO>();
+            TableResponseDTO<NotificationDTO> result = new TableResponseDTO<NotificationDTO>();
             long currentUserId = _authenticationService.GetCurrentUserId(); // FT: Not doing user.Notifications, because he could have a lot of them.
 
             await _context.WithTransactionAsync(async () =>

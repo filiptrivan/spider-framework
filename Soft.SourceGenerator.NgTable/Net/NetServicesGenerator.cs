@@ -66,10 +66,9 @@ using {{basePartOfNamespace}}.DTO;
 using {{basePartOfNamespace}}.Entities;
 using {{basePartOfNamespace}}.Enums;
 using {{basePartOfNamespace}}.ExcelProperties;
+using {{basePartOfNamespace}}.TableFiltering;
 using Microsoft.EntityFrameworkCore;
-using Soft.NgTable.Models;
 using System.Data;
-using Soft.SourceGenerator.NgTable;
 using FluentValidation;
 using Soft.Generator.Security.Services;
 using Soft.Generator.Shared.Excel;
@@ -118,7 +117,7 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        private async Task<BasePaginationResult<{{nameOfTheEntityClass}}>> Load{{nameOfTheEntityClass}}ListForPagination(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query)
+        private async Task<PaginationResult<{{nameOfTheEntityClass}}>> Load{{nameOfTheEntityClass}}ListForPagination(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -126,9 +125,9 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        public async Task<BaseTableResponseEntity<{{nameOfTheEntityClass}}DTO>> Load{{nameOfTheEntityClass}}ListForTable(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query, bool authorize = true)
+        public async virtual Task<TableResponseDTO<{{nameOfTheEntityClass}}DTO>> Load{{nameOfTheEntityClass}}ListForTable(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query, bool authorize = true)
         {
-            BasePaginationResult<{{nameOfTheEntityClass}}> paginationResult = new BasePaginationResult<{{nameOfTheEntityClass}}>();
+            PaginationResult<{{nameOfTheEntityClass}}> paginationResult = new PaginationResult<{{nameOfTheEntityClass}}>();
             List<{{nameOfTheEntityClass}}DTO> data = null;
 
             await _context.WithTransactionAsync(async () =>
@@ -147,12 +146,12 @@ namespace {{basePartOfNamespace}}.Services
                     .ToListAsync();
             });
 
-            return new BaseTableResponseEntity<{{nameOfTheEntityClass}}DTO> { Data = data, TotalRecords = paginationResult.TotalRecords };
+            return new TableResponseDTO<{{nameOfTheEntityClass}}DTO> { Data = data, TotalRecords = paginationResult.TotalRecords };
         }
 
         public async Task<byte[]> Export{{nameOfTheEntityClass}}ListToExcel(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query, bool authorize = true)
         {
-            BasePaginationResult<{{nameOfTheEntityClass}}> paginationResult = new BasePaginationResult<{{nameOfTheEntityClass}}>();
+            PaginationResult<{{nameOfTheEntityClass}}> paginationResult = new PaginationResult<{{nameOfTheEntityClass}}>();
             List<{{nameOfTheEntityClass}}DTO> data = null;
 
             await _context.WithTransactionAsync(async () =>
@@ -412,6 +411,8 @@ namespace {{basePartOfNamespace}}.Services
             if (selected{{classNameFromTheList}}Ids == null)
                 return;
 
+            List<{{idTypeOfTheClassFromTheList}}> selectedIdsHelper = selected{{classNameFromTheList}}Ids.ToList();
+
             await _context.WithTransactionAsync(async () =>
             {
                 // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
@@ -425,8 +426,8 @@ namespace {{basePartOfNamespace}}.Services
                 {
                     foreach ({{classNameFromTheList}} {{classNameFromTheListFirstLower}} in {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.ToList())
                     {
-                        if (selected{{classNameFromTheList}}Ids.Contains({{classNameFromTheListFirstLower}}.Id))
-                            selected{{classNameFromTheList}}Ids.Remove({{classNameFromTheListFirstLower}}.Id);
+                        if (selectedIdsHelper.Contains({{classNameFromTheListFirstLower}}.Id))
+                            selectedIdsHelper.Remove({{classNameFromTheListFirstLower}}.Id);
                         else
                             {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.Remove({{classNameFromTheListFirstLower}});
                     }
@@ -436,7 +437,7 @@ namespace {{basePartOfNamespace}}.Services
                     {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}} = new {{prop.Type}}();
                 }
 
-                List<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}ListToInsert = await _context.DbSet<{{classNameFromTheList}}>().Where(x => selected{{classNameFromTheList}}Ids.Contains(x.Id)).ToListAsync();
+                List<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}ListToInsert = await _context.DbSet<{{classNameFromTheList}}>().Where(x => selectedIdsHelper.Contains(x.Id)).ToListAsync();
 
                 {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.AddRange({{classNameFromTheListFirstLower}}ListToInsert);
                 await _context.SaveChangesAsync();

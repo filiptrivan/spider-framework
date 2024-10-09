@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -46,6 +47,17 @@ namespace Soft.Generator.Shared.Extensions
             kebabCaseString = kebabCaseString.ToLower();
 
             return kebabCaseString;
+        }
+
+        /// <summary>
+        /// Searching for the base type in TPH inheritance
+        /// </summary>
+        public static IQueryable<T> OfType<T>(this IQueryable<T> source, Type type)
+        {
+            var parameter = Expression.Parameter(typeof(T), "e");
+            var body = Expression.TypeIs(parameter, type);
+            var predicate = Expression.Lambda<Func<T, bool>>(body, parameter);
+            return source.Where(predicate);
         }
     }
 }
