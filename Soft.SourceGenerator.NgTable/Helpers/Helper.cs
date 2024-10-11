@@ -32,7 +32,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static readonly string MapperNamespaceEnding = "DataMappers";
 
         public static readonly List<string> BaseTypePropertiies = new List<string> { "Id", "Version", "CreatedAt", "ModifiedAt" };
-        public static readonly List<string> BaseClassNames = new List<string> { "TableFilter", "TableResponse", "Namebook", "Codebook", "BusinessObject", "ReadonlyObject", "ExcelReportOptions", "NotificationUser", "RoleUser" };
+        public static readonly List<string> BaseClassNames = new List<string> { "TableFilter", "TableResponse", "TableSelection", "Namebook", "Codebook", "BusinessObject", "ReadonlyObject", "ExcelReportOptions", "NotificationUser", "RoleUser" };
 
         #region Syntax and Semantic targets
 
@@ -1122,6 +1122,15 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         //new SoftProperty { Type = "DateTime", IdentifierText = "CreatedAt" },
                     };
                 }
+            }
+            else if (typeName.StartsWith($"TableSelectionDTO")) // TODO FT: Put inside variable
+            {
+                return new List<SoftProperty>()
+                {
+                    new SoftProperty { Type = $"List<{idType}>", IdentifierText = "SelectedIds" },
+                    new SoftProperty { Type = $"List<{idType}>", IdentifierText = "UnselectedIds" },
+                    new SoftProperty { Type = "bool?", IdentifierText = "IsAllSelected" },
+                };
             }
             else
             {

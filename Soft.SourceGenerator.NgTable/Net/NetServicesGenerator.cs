@@ -443,6 +443,39 @@ namespace {{basePartOfNamespace}}.Services
                 await _context.SaveChangesAsync();
             });
         }
+
+        public async Task Update{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}TableSelection(IQueryable<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}Query, {{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, TableSelectionDTO<{{idTypeOfTheClassFromTheList}}> tableSelectionDTO)
+        {
+            await _context.WithTransactionAsync(async () =>
+            {
+                List<{{idTypeOfTheClassFromTheList}}> {{classNameFromTheListFirstLower}}ListToInsert = null;
+
+                if (tableSelectionDTO.IsAllSelected == true)
+                {
+                    {{classNameFromTheListFirstLower}}ListToInsert = await {{classNameFromTheListFirstLower}}Query.Where(x => tableSelectionDTO.UnselectedIds.Contains(x.Id) == false).Select(x => x.Id).ToListAsync();
+                }
+                else if (tableSelectionDTO.IsAllSelected == false)
+                {
+                    {{classNameFromTheListFirstLower}}ListToInsert = await {{classNameFromTheListFirstLower}}Query.Where(x => tableSelectionDTO.SelectedIds.Contains(x.Id) == true).Select(x => x.Id).ToListAsync();
+                }
+                else if (tableSelectionDTO.IsAllSelected == null)
+                {
+                    {{((entityClass.IsEntityBusinessObject() || entityClass.IsEntityReadonlyObject() == false)
+                    ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
+                    : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
+                    )}}
+
+                    List<{{idTypeOfTheClassFromTheList}}> alreadySelected = {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}} == null ? new List<{{idTypeOfTheClassFromTheList}}>() : {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.Select(x => x.Id).ToList();
+
+                    {{classNameFromTheListFirstLower}}ListToInsert = alreadySelected
+                        .Union(tableSelectionDTO.SelectedIds)
+                        .Except(tableSelectionDTO.UnselectedIds)
+                        .ToList();
+                }
+
+                await Update{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{nameOfTheEntityClassFirstLower}}Id, {{classNameFromTheListFirstLower}}ListToInsert);
+            });
+        }
 """);
                 }
                 else if (classFromTheList == null)
