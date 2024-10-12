@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Helpers;
 using Soft.SourceGenerators.Helpers;
+using Soft.SourceGenerators.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -71,7 +72,7 @@ namespace {{basePartOfNamespace}}.DataMappers
     public static partial class Mapper
     {
 """);
-            foreach (ClassDeclarationSyntax c in entityClasses)
+            foreach (ClassDeclarationSyntax entityClass in entityClasses)
             {
                 //string baseClass = c.GetBaseType();
                 //if (baseClass == null)
@@ -82,13 +83,13 @@ namespace {{basePartOfNamespace}}.DataMappers
 
                 sb.AppendLine($$"""
 
-        #region {{c.Identifier.Text}}
+        #region {{entityClass.Identifier.Text}}
 
-        {{GetMapperDTO($"{c.Identifier.Text}ToDTOConfig", mapperClass, c, entityClasses)}}
+        {{GetMapperDTO($"{entityClass.Identifier.Text}ToDTOConfig", mapperClass, entityClass, entityClasses)}}
 
-        {{GetMapperDTO($"{c.Identifier.Text}ProjectToConfig", mapperClass, c, entityClasses)}}
+        {{GetMapperDTO($"{entityClass.Identifier.Text}ProjectToConfig", mapperClass, entityClass, entityClasses)}}
 
-        {{GetMapperDTO($"{c.Identifier.Text}ExcelProjectToConfig", mapperClass, c, entityClasses)}}
+        {{GetMapperDTO($"{entityClass.Identifier.Text}ExcelProjectToConfig", mapperClass, entityClass, entityClasses)}}
 
         #endregion
 
@@ -129,7 +130,7 @@ namespace {{basePartOfNamespace}}.DataMappers
             return false;
         }
 
-        public static string GetMapperDTO(string methodName, ClassDeclarationSyntax mapperClass, ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> entityClasses)
+        public static string GetMapperDTO(string methodName, ClassDeclarationSyntax mapperClass, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
         {
             if (mapperClass == null)
                 return "You didn't define DataMappers";
@@ -137,7 +138,7 @@ namespace {{basePartOfNamespace}}.DataMappers
             if (HasNonGeneratedPair(mapperClass, methodName))
                 return "";
 
-            List<string> manyToOneAttributeMappers = GetAttributesForManyToOneClass(c, entityClasses);
+            List<string> manyToOneAttributeMappers = GetAttributesForManyToOneClass(entityClass, entityClasses);
 
             return $$"""
         public static TypeAdapterConfig {{methodName}}()
@@ -145,7 +146,7 @@ namespace {{basePartOfNamespace}}.DataMappers
             TypeAdapterConfig config = new TypeAdapterConfig();
 
             config
-                .NewConfig<{{c.Identifier.Text}}, {{c.Identifier.Text}}DTO>()
+                .NewConfig<{{entityClass.Identifier.Text}}, {{entityClass.Identifier.Text}}DTO>()
 {{string.Join("\t\t\t\t\n", manyToOneAttributeMappers)}}
                 ;
 
@@ -154,30 +155,49 @@ namespace {{basePartOfNamespace}}.DataMappers
 """;
         }
 
-        public static List<string> GetAttributesForManyToOneClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> entityClasses)
+        public static List<string> GetAttributesForManyToOneClass(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
         {
-            // po svakom propertiju iz currentClass idem, ako je ManyToOne objekat onda mu postavljam DisplayName iz Entiteta
-            List<PropertyDeclarationSyntax> properties = c.Members.OfType<PropertyDeclarationSyntax>().ToList();
-            List<string> manyToOneAttributeMappers = new List<string>();
-            foreach (PropertyDeclarationSyntax prop in properties)
-            {
-                string propType = prop.Type.ToString(); // User
-                string propName = prop.Identifier.Text;
+            List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
 
-                if (propType.PropTypeIsManyToOne())
+            List<string> manyToOneAttributeMappers = new List<string>();
+
+            foreach (SoftProperty entityProp in entityProperties)
+            {
+                string entityPropType = entityProp.Type;
+                string entityPropName = entityProp.IdentifierText;
+
+                if (entityPropType.PropTypeIsManyToOne())
                 {
-                    ClassDeclarationSyntax entityClass = entityClasses
-                        .Where(x => x.Identifier.Text == propType)
+                    ClassDeclarationSyntax manyToOneEntityClass = entityClasses
+                        .Where(x => x.Identifier.Text == entityPropType)
                         .SingleOrDefault();
 
-                    if (entityClass == null)
+                    if (manyToOneEntityClass == null)
                         continue;
 
-                    string displayNamePropOfManyToOne = Helper.GetDisplayNamePropForClass(entityClass, entityClasses);
+                    string displayNamePropOfManyToOne = Helper.GetDisplayNamePropForClass(manyToOneEntityClass, entityClasses);
                     displayNamePropOfManyToOne = displayNamePropOfManyToOne.Replace(".ToString()", "");
 
-                    manyToOneAttributeMappers.Add($".Map(dest => dest.{propName}Id, src => src.{propName}.Id)"); // "dest.TierId", "src.Tier.Id"
-                    manyToOneAttributeMappers.Add($".Map(dest => dest.{propName}DisplayName, src => src.{propName}.{displayNamePropOfManyToOne})"); // "dest.TierDisplayName", "src.Tier.Name"
+                    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}Id, src => src.{entityPropName}.Id)"); // "dest.TierId", "src.Tier.Id"
+                    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}DisplayName, src => src.{entityPropName}.{displayNamePropOfManyToOne})"); // "dest.TierDisplayName", "src.Tier.Name"
+                }
+
+                if (entityPropType.IsEnumerable() && entityProp.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
+                {
+                    string entityPropTypeInsideListBrackets = Helper.ExtractTypeFromGenericType(entityPropType);
+
+                    ClassDeclarationSyntax enumerableEntityClass = entityClasses
+                        .Where(x => x.Identifier.Text == entityPropTypeInsideListBrackets)
+                        .SingleOrDefault();
+
+                    if (enumerableEntityClass == null)
+                        continue;
+
+                    string displayNamePropOEnumerable = Helper.GetDisplayNamePropForClass(enumerableEntityClass, entityClasses);
+                    displayNamePropOEnumerable = displayNamePropOEnumerable.Replace(".ToString()", "");
+
+                    // FT: eg.                      ".Map(dest => dest.SegmentationItemsCommaSeparated, src => string.Join(", ", src.CheckedSegmentationItems.Select(x => x.Name)))"
+                    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}CommaSeparated, src => string.Join(\", \", src.{entityPropName}.Select(x => x.{displayNamePropOEnumerable})))");
                 }
             }
 

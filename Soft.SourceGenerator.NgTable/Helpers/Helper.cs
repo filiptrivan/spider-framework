@@ -505,10 +505,15 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             //    .ToList();
         }
 
+        public static string GetTypeForTheClassAndPropName(SoftClass c, string propName)
+        {
+            return c.Properties.Where(x => x.IdentifierText == propName).Select(x => x.Type).Single();
+        }
+
         public static List<SoftProperty> GetDTOSoftProps(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
         {
             List<SoftProperty> props = new List<SoftProperty>(); // public string Email { get; set; }
-            List<SoftProperty> properties = GetAllPropertiesOfTheClass(entityClass, entityClasses);
+            List<SoftProperty> properties = GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
 
             foreach (SoftProperty prop in properties)
             {
@@ -520,6 +525,11 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     props.Add(new SoftProperty { IdentifierText = $"{propName}DisplayName", Type = "string" });
                     ClassDeclarationSyntax manyToOneClass = entityClasses.Where(x => x.Identifier.Text == propType).Single();
                     props.Add(new SoftProperty { IdentifierText = $"{propName}Id", Type = $"{Helper.GetGenericIdType(manyToOneClass, entityClasses)}?" });
+                    continue;
+                }
+                else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
+                {
+                    props.Add(new SoftProperty { IdentifierText = $"{propName}CommaSeparated", Type = "string" });
                     continue;
                 }
                 else if (propType.IsEnumerable())
@@ -561,6 +571,11 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     props.Add($"public string {propName}DisplayName {{ get; set; }}");
                     ClassDeclarationSyntax manyToOneClass = entityClasses.Where(x => x.Identifier.Text == propType).Single();
                     props.Add($"public {Helper.GetGenericIdType(manyToOneClass, entityClasses)}? {propName}Id {{ get; set; }}");
+                    continue;
+                }
+                else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
+                {
+                    props.Add($"public string {propName}CommaSeparated {{ get; set; }}");
                     continue;
                 }
                 else if (propType.IsEnumerable())
@@ -1127,6 +1142,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             {
                 return new List<SoftProperty>()
                 {
+                    new SoftProperty { Type = $"TableFilterDTO", IdentifierText = "TableFilter" },
                     new SoftProperty { Type = $"List<{idType}>", IdentifierText = "SelectedIds" },
                     new SoftProperty { Type = $"List<{idType}>", IdentifierText = "UnselectedIds" },
                     new SoftProperty { Type = "bool?", IdentifierText = "IsAllSelected" },
@@ -1330,6 +1346,17 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             }
 
             return result.Replace(DTONamespaceEnding, "").Replace("[]", "");
+        }
+
+        /// <summary>
+        /// List<long> -> long
+        /// </summary>
+        public static string ExtractTypeFromGenericType(string input)
+        {
+            string[] parts = input.Split('<'); // List, long>
+            string result = parts[1].Replace(">", "");
+
+            return result;
         }
 
         /// <summary>

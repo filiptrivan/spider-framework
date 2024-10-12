@@ -20,12 +20,12 @@ namespace Soft.SourceGenerator.NgTable.NgTable
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//#if DEBUG
-//            if (!Debugger.IsAttached)
-//            {
-//                Debugger.Launch();
-//            }
-//#endif
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationDTODataMappersAndEntities(s),
@@ -56,6 +56,7 @@ using LinqKit;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Soft.Generator.Shared.DTO;
+using System.Text.Json;
 
 namespace {{basePartOfNamespace}}.TableFiltering
 {
@@ -101,18 +102,31 @@ namespace {{basePartOfNamespace}}.TableFiltering
                     foreach (SoftProperty DTOprop in pairDTOClass.Properties)
                     {
                         string entityDotNotation = DTOprop.IdentifierText; // RoleDisplayName
-                        string propType = DTOprop.Type;
+                        string DTOpropType = DTOprop.Type;
 
                         if (efClassProps.Where(x => x.IdentifierText == DTOprop.IdentifierText).Any() == false) // FT: ako property u DTO ne postoji u ef klasi (RoleDisplayName ne postoji)
                         {
-                            entityDotNotation = GetDotNotatioOfEntityFromMappers(classes, entitySoftClass, pairDTOClass, entityDotNotation); // "Role.Id"
-                            if (entityDotNotation == null)
-                                continue;
+                            if (entityDotNotation.EndsWith("CommaSeparated") && pairDTOClass.IsGenerated == true)
+                            {
+                                string entityPropName = entityDotNotation.Replace("CommaSeparated", ""); // "SegmentationItems"
+                                string idType = Helper.GetGenericIdType(entityClass, entityClasses); // FT: Id type of SegmentationItem class
 
-                            propType = GetPropTypeOfEntityDotNotationProperty(entityDotNotation, entityClass, classes);
+                                sb.AppendLine(GetCaseForEnumerable(DTOprop.IdentifierText, entityPropName, idType));
+
+                                continue;
+                            }
+                            else
+                            {
+                                entityDotNotation = GetDotNotatioOfEntityFromMappers(classes, entitySoftClass, pairDTOClass, entityDotNotation); // "Role.Id"
+
+                                if (entityDotNotation == null)
+                                    continue;
+
+                                DTOpropType = GetPropTypeOfEntityDotNotationProperty(entityDotNotation, entityClass, classes);
+                            }
                         }
 
-                        switch (propType)
+                        switch (DTOpropType)
                         {
                             case "string":
                                 sb.AppendLine(GetCaseForString(DTOprop.IdentifierText, entityDotNotation));
@@ -137,12 +151,14 @@ namespace {{basePartOfNamespace}}.TableFiltering
                             case "double?":
                             case "byte":
                             case "byte?":
-                                sb.AppendLine(GetCaseForNumber(DTOprop.IdentifierText, entityDotNotation, propType));
+                                sb.AppendLine(GetCaseForNumber(DTOprop.IdentifierText, entityDotNotation, DTOpropType));
                                 break;
                             default:
                                 //sb.AppendLine(GetCaseForManyToOneFromMapping(prop, c, classes)); // FT: it's already done in other cases
                                 break;
                         }
+
+
 
                     }
                 }
@@ -264,6 +280,30 @@ using {{item}};
                                 case "gte":
                                     condition = x => x.{{entityDotNotation}} <= {{numberTypeWithoutQuestion}}.Parse(filter.Value.ToString());
                                     break;
+
+                                case "in":
+                                    {{numberTypeWithoutQuestion}}[] values = JsonSerializer.Deserialize<{{numberTypeWithoutQuestion}}[]>(filter.Value.ToString());
+                                    condition = x => values.Contains(x.{{entityDotNotation}});
+                                    break;
+                
+                                default:
+                                    throw new ArgumentException("Invalid Match mode!");
+                            }
+                            predicate = predicate.And(condition);
+                            break;
+""";
+        }
+
+        private static string GetCaseForEnumerable(string DTOIdentifier, string entityDotNotation, string idType)
+        {
+            return $$"""
+                        case "{{DTOIdentifier.FirstCharToLower()}}":
+                            switch (filter.MatchMode)
+                            {
+                                case "in":
+                                    {{idType}}[] values = JsonSerializer.Deserialize<{{idType}}[]>(filter.Value.ToString());
+                                    condition = x => x.{{entityDotNotation}}.Any(x => values.Contains(x.Id));
+                                    break;
                 
                                 default:
                                     throw new ArgumentException("Invalid Match mode!");
@@ -373,7 +413,7 @@ using {{item}};
             {
                 List<string> linqRows = invocation.ArgumentList?.Arguments.Select(x => x.ToString()).ToList();
 
-                if(linqRows.Where(x => x.Split('.').LastOrDefault() == DTOProp).Count() == 1) // dest.TestDisplayName -> TestDisplayName
+                if (linqRows.Where(x => x.Split('.').LastOrDefault() == DTOProp).Count() == 1) // dest.TestDisplayName -> TestDisplayName
                 {
                     string src = linqRows.Where(x => x.Split('.').LastOrDefault() != DTOProp).Single(); // src => src.Gender.Name
                     List<string> parts = src.Split('.').ToList(); // src => src ; Gender ; Name

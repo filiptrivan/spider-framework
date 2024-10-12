@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Soft.Generator.Shared.BaseEntities
 {
-    public class BusinessObject<T> : IBusinessObject<T>
+    public class BusinessObject<T> : IBusinessObject<T> where T : struct
     {
         public T Id { get; protected set; }
 

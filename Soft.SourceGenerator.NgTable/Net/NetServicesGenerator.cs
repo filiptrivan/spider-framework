@@ -117,7 +117,7 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        private async Task<PaginationResult<{{nameOfTheEntityClass}}>> Load{{nameOfTheEntityClass}}ListForPagination(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query)
+        public async Task<PaginationResult<{{nameOfTheEntityClass}}>> Load{{nameOfTheEntityClass}}ListForPagination(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query)
         {
             return await _context.WithTransactionAsync(async () =>
             {

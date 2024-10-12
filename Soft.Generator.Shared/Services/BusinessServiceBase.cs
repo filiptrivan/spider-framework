@@ -22,7 +22,9 @@ namespace Soft.Generator.Shared.Services
             _context=context;
         }
 
-        protected internal async Task<T> LoadInstanceAsync<T, ID>(ID id, int? version) where T : class, IBusinessObject<ID>
+        protected internal async Task<T> LoadInstanceAsync<T, ID>(ID id, int? version) 
+            where T : class, IBusinessObject<ID>
+            where ID : struct
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -38,7 +40,9 @@ namespace Soft.Generator.Shared.Services
             });
         }
 
-        protected internal async Task<T> LoadInstanceAsync<T, ID>(ID id) where T : class, IReadonlyObject<ID>
+        protected internal async Task<T> LoadInstanceAsync<T, ID>(ID id) 
+            where T : class, IReadonlyObject<ID>
+            where ID : struct
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -48,6 +52,19 @@ namespace Soft.Generator.Shared.Services
                     throw new BusinessException(SharedTerms.EntityDoesNotExistInDatabase);
 
                 return poco;
+            });
+        }
+
+        protected internal async Task CheckVersionAsync<T, ID>(ID id, int version) 
+            where T : class, IBusinessObject<ID> 
+            where ID : struct
+        {
+            await _context.WithTransactionAsync(async () =>
+            {
+                int dbVersion = await _context.DbSet<T>().Where(x => x.Id.Equals(id)).Select(x => x.Version).SingleOrDefaultAsync();
+
+                if (dbVersion != version)
+                    throw new BusinessException(SharedTerms.ConcurrencyException);
             });
         }
 

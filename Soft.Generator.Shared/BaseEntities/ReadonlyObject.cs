@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Soft.Generator.Shared.BaseEntities
 {
-    public class ReadonlyObject<T> : IReadonlyObject<T>
+    public class ReadonlyObject<T> : IReadonlyObject<T> where T : struct
     {
         public T Id { get; protected set; }
 

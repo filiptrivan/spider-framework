@@ -128,7 +128,7 @@ namespace Soft.Generator.Infrastructure.Data
             }
         }
 
-        void HandleBusinessObjectChanges<T>(BusinessObject<T> businessObject, EntityEntry changedEntity)
+        void HandleBusinessObjectChanges<T>(BusinessObject<T> businessObject, EntityEntry changedEntity) where T : struct
         {
             DateTime now = DateTime.Now;
 

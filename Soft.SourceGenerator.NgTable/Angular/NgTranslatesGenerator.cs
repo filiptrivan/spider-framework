@@ -88,15 +88,20 @@ export function getTranslatedLabel{{projectName}}(name: string): string
             
             foreach (SoftProperty DTOProperty in DTOProperties.DistinctBy(x => x.IdentifierText))
             {
-                if (DTOProperty.IdentifierText.EndsWith("Id") && DTOProperty.IdentifierText != "Id")
-                    DTOProperty.IdentifierText = DTOProperty.IdentifierText.Substring(0, DTOProperty.IdentifierText.Length - 2);
+                string propName = DTOProperty.IdentifierText;
 
-                if (DTOProperty.IdentifierText.EndsWith("DisplayName") && DTOProperty.IdentifierText != "DisplayName")
+                if (propName.EndsWith("Id") && propName != "Id")
+                    propName = propName.Substring(0, propName.Length - 2);
+
+                if (propName.EndsWith("DisplayName") && propName != "DisplayName")
                     continue;
 
+                if (propName.EndsWith("CommaSeparated") && propName != "CommaSeparated")
+                    propName = propName.Replace("CommaSeparated", "");
+
                 result.Add($$""""
-        case '{{DTOProperty.IdentifierText.FirstCharToLower()}}':
-            return $localize`:@@{{DTOProperty.IdentifierText}}:{{DTOProperty.IdentifierText}}`;
+        case '{{propName.FirstCharToLower()}}':
+            return $localize`:@@{{propName}}:{{propName}}`;
 """");
             }
 

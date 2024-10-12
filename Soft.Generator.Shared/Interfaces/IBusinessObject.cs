@@ -2,7 +2,7 @@
 
 namespace Soft.Generator.Shared.Interfaces
 {
-    public interface IBusinessObject<T>
+    public interface IBusinessObject<T> where T : struct
     {
         public T Id { get; }
         public int Version { get; }
