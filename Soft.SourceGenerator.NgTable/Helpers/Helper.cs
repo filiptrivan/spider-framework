@@ -666,6 +666,12 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     if (baseType.ToString() == "NotificationDTO")
                         properties.AddRange(GetNotificationDTOProperties());
 
+                    if (baseType.ToString() == "NotificationUser")
+                        properties.AddRange(GetNotificationUserProperties());
+
+                    if (baseType.ToString() == "NotificationUserDTO")
+                        properties.AddRange(GetNotificationUserDTOProperties());
+
                     break;
                 }
                 else
@@ -825,6 +831,50 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             };
 
             properties.AddRange(GetPropertiesForBaseClasses($"{BusinessObject}DTO", "long"));
+
+            return properties;
+        }
+
+        public static List<SoftProperty> GetNotificationUserProperties()
+        {
+
+            List<SoftProperty> properties = new List<SoftProperty>
+            {
+                new SoftProperty
+                {
+                    IdentifierText="IsMarkedAsRead", Type="bool?"
+                },
+                new SoftProperty
+                {
+                    IdentifierText="NotificationsId", Type="long"
+                },
+                new SoftProperty
+                {
+                    IdentifierText="UsersId", Type="long"
+                },
+            };
+
+            return properties;
+        }
+
+        public static List<SoftProperty> GetNotificationUserDTOProperties()
+        {
+
+            List<SoftProperty> properties = new List<SoftProperty>
+            {
+                new SoftProperty
+                {
+                    IdentifierText="IsMarkedAsRead", Type="bool?"
+                },
+                new SoftProperty
+                {
+                    IdentifierText="NotificationsId", Type="long?"
+                },
+                new SoftProperty
+                {
+                    IdentifierText="UsersId", Type="long?"
+                },
+            };
 
             return properties;
         }
@@ -1214,7 +1264,9 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 return $"{ExtractAngularClassNameFromGenericType(CSharpDataType)}[]";
 
             if (CSharpDataType.Contains(DTONamespaceEnding)) // FT: We don't want to handle "ActionResult" for example
+            {
                 return ExtractAngularClassNameFromGenericType(CSharpDataType); // ManyToOne
+            }
 
             if (CSharpDataType.EndsWith("Codes")) // Enum
                 return CSharpDataType;
@@ -1333,8 +1385,14 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             string result;
 
             string[] parts = input.Split('<'); // List, long>
+
             parts[parts.Length-1] = parts[parts.Length-1].Replace(">", ""); // long
-            if (parts[parts.Length-1].IsBaseType() && parts[parts.Length-2].IsEnumerable() == false)
+
+            if (input.Contains("TableResponseDTO"))
+            {
+                result = "TableResponse";
+            }
+            else if (parts[parts.Length-1].IsBaseType() && parts[parts.Length-2].IsEnumerable() == false)
                 result = parts[parts.Length-2]; // NamebookDTO<long>
             else if (parts[parts.Length-1].IsBaseType())
             {

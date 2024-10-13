@@ -94,14 +94,20 @@ namespace {{basePartOfNamespace}}.Services
             _authorizationService = authorizationService;
         }
 """);
-            foreach (ClassDeclarationSyntax c in entityClasses)
+            foreach (ClassDeclarationSyntax entityClass in entityClasses)
             {
-                if (c.GetBaseType() == null) // FT: Handling many to many, maybe you should do something else in the future
+                string baseType = entityClass.GetBaseType();
+
+                if (baseType == null) // FT: Handling many to many, maybe you should do something else in the future
                     continue;
-                string nameOfTheEntityClass = c.Identifier.Text;
-                string nameOfTheEntityClassFirstLower = c.Identifier.Text.FirstCharToLower();
-                string idTypeOfTheEntityClass = Helper.GetGenericIdType(c, entityClasses);
-                string displayNameProperty = Helper.GetDisplayNamePropForClass(c, entityClasses);
+
+                if (baseType == "NotificationUser")
+                    continue;
+
+                string nameOfTheEntityClass = entityClass.Identifier.Text;
+                string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
+                string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, entityClasses);
+                string displayNameProperty = Helper.GetDisplayNamePropForClass(entityClass, entityClasses);
 
                 sb.AppendLine($$"""
         public async Task<{{nameOfTheEntityClass}}DTO> Get{{nameOfTheEntityClass}}DTOAsync({{idTypeOfTheEntityClass}} id, bool authorize = true)
@@ -113,7 +119,7 @@ namespace {{basePartOfNamespace}}.Services
                     {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
                 }
 
-                return await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{c.Identifier.Text}}ProjectToConfig()).FirstOrDefaultAsync();
+                return await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ProjectToConfig()).FirstOrDefaultAsync();
             });
         }
 
@@ -142,7 +148,7 @@ namespace {{basePartOfNamespace}}.Services
                 data = await paginationResult.Query
                     .Skip(tableFilterPayload.First)
                     .Take(tableFilterPayload.Rows)
-                    .ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{c.Identifier.Text}}ProjectToConfig())
+                    .ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ProjectToConfig())
                     .ToListAsync();
             });
 
@@ -163,14 +169,14 @@ namespace {{basePartOfNamespace}}.Services
 
                 paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload, query);
 
-                data = await paginationResult.Query.ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{c.Identifier.Text}}ExcelProjectToConfig()).ToListAsync();
+                data = await paginationResult.Query.ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ExcelProjectToConfig()).ToListAsync();
             });
 
             string[] excelPropertiesToExclude = ExcelPropertiesToExclude.GetHeadersToExclude(new {{nameOfTheEntityClass}}DTO());
             return _excelService.FillReportTemplate<{{nameOfTheEntityClass}}DTO>(data, paginationResult.TotalRecords, excelPropertiesToExclude).ToArray();
         }
 
-        {{(c.IsAbstract() ? "" : GetSavingData(nameOfTheEntityClass, idTypeOfTheEntityClass, c, entityClasses, generateAuthorizationMethods))}}
+        {{(entityClass.IsAbstract() ? "" : GetSavingData(nameOfTheEntityClass, idTypeOfTheEntityClass, entityClass, entityClasses, generateAuthorizationMethods))}}
         
         public async virtual Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForAutocomplete(int limit, string query, IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
         {
@@ -228,7 +234,22 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-{{string.Join("\n", GetEnumerableGeneratedMethods(c, entityClasses, generateAuthorizationMethods, referencedClassesEntities))}}
+        public async Task<List<{{nameOfTheEntityClass}}DTO>> Load{{nameOfTheEntityClass}}DTOList(IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                }
+
+                return await {{nameOfTheEntityClassFirstLower}}Query
+                    .ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ToDTOConfig())
+                    .ToListAsync();
+            });
+        }
+
+{{string.Join("\n", GetEnumerableGeneratedMethods(entityClass, entityClasses, generateAuthorizationMethods, referencedClassesEntities))}}
 
 """);
             }
@@ -247,10 +268,10 @@ namespace {{basePartOfNamespace}}.Services
         /// <param name="c"></param>
         /// <param name="classes">Used just to pass to GetIdTypeOfManyToOneProperty method</param>
         /// <returns></returns>
-        static List<string> GetManyToOneInstancesForSave(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
+        static List<string> GetManyToOneInstancesForSave(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> classes)
         {
             List<string> result = new List<string>();
-            List<SoftProperty> properties = c.Members.OfType<PropertyDeclarationSyntax>()
+            List<SoftProperty> properties = entityClass.Members.OfType<PropertyDeclarationSyntax>()
                 .Select(prop => new SoftProperty()
                 {
                     Type = prop.Type.ToString(),
@@ -271,6 +292,8 @@ namespace {{basePartOfNamespace}}.Services
                     result.Add($$"""
             if (dto.{{prop.IdentifierText}}Id > 0)
                 poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{GetIdTypeOfManyToOneProperty(prop.Type, classes)}}>(dto.{{prop.IdentifierText}}Id.Value, null);
+            else
+                poco.{{prop.IdentifierText}} = null;
 """);
                 }
                 else
@@ -278,6 +301,8 @@ namespace {{basePartOfNamespace}}.Services
                     result.Add($$"""
             if (dto.{{prop.IdentifierText}}Id > 0)
                 poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{GetIdTypeOfManyToOneProperty(prop.Type, classes)}}>(dto.{{prop.IdentifierText}}Id.Value);
+            else
+                poco.{{prop.IdentifierText}} = null;
 """);
                 }
             }

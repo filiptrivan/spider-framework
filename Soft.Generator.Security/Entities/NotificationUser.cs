@@ -10,7 +10,7 @@ namespace Soft.Generator.Security.Entities
 {
     public class NotificationUser
     {
-        public bool? IsMarkedAsRead { get; set; }
+        public bool IsMarkedAsRead { get; set; }
 
         public long NotificationsId { get; set; }
 

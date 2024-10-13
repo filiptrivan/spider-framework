@@ -153,11 +153,11 @@ namespace Soft.SourceGenerators.Helpers
         public static string GetBaseType(this ClassDeclarationSyntax c)
         {
             TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
+
             if (baseType != null)
                 return baseType.ToString();
-            else
-                return null; // FT: It doesn't, many to many doesn't
-                             //return "Every entity class needs to have the base class";
+
+            return null; // FT: many to many doesn't have base class
         }
 
         public static SoftClass ToSoftClass(this ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)

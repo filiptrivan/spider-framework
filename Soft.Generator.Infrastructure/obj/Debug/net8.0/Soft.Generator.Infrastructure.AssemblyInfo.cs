@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Soft.Generator.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5fa6ef1089eb4310cc36db357f1dfe0efa4f34dc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a2b80b98248aafc3089839ae0e99c2d1b6cdc172")]
 [assembly: System.Reflection.AssemblyProductAttribute("Soft.Generator.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Soft.Generator.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

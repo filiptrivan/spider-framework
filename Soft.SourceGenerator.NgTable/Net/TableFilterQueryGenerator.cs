@@ -65,10 +65,13 @@ namespace {{basePartOfNamespace}}.TableFiltering
 """);
             foreach (ClassDeclarationSyntax entityClass in entityClasses)
             {
-                if (entityClass.BaseList?.Types == null)
-                {
+                string baseType = entityClass.GetBaseType();
+
+                if (baseType == null)
                     continue;
-                }
+
+                if (baseType == "NotificationUser")
+                    continue;
 
                 SoftClass entitySoftClass = entityClass.ToSoftClass(classes);
 

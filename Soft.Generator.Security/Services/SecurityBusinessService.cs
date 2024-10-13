@@ -563,10 +563,11 @@ namespace Soft.Generator.Security.Services
 
         public async Task<int> GetUnreadNotificationCountForTheCurrentUser()
         {
+            long currentUserId = _authenticationService.GetCurrentUserId();
+
             return await _context.WithTransactionAsync(async () =>
             {
-                long currentUserId = _authenticationService.GetCurrentUserId();
-                return await _context.DbSet<NotificationUser>().Where(x => x.UsersId == currentUserId && x.IsMarkedAsRead != true).CountAsync();
+                return await _context.DbSet<NotificationUser>().Where(x => x.UsersId == currentUserId && x.IsMarkedAsRead == false).CountAsync();
             });
         }
 
