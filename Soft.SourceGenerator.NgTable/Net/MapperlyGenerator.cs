@@ -48,8 +48,8 @@ namespace Soft.SourceGenerator.NgTable.Net
             string outputPath = Helper.GetGeneratorOutputPath(nameof(MapperlyGenerator), classes);
             if (outputPath == null) return;
 
-            List<ClassDeclarationSyntax> entityClassesHelper = Helper.GetEntityClasses(classes);
-            List<ClassDeclarationSyntax> entityClasses = Helper.GetUninheritedClasses(entityClassesHelper);
+            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
+            //List<ClassDeclarationSyntax> entityClassesHelper = Helper.GetUninheritedClasses(entityClasses);
 
             ClassDeclarationSyntax mapperClass = Helper.GetManualyWrittenMapperClass(classes);
 

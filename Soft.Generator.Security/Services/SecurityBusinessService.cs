@@ -465,113 +465,101 @@ namespace Soft.Generator.Security.Services
 
         #endregion
 
-        #region Notification
+        //#region Notification
 
-        public async Task UpdateUserListForNotification<TUser>(long notificationId, bool isMarkAsRead, List<long> selectedUserIds) where TUser : class, IUser, new()
-        {
-            if (selectedUserIds == null)
-                return;
+        //public async Task UpdateUserListForNotification<TUser>(long notificationId, bool isMarkAsRead, List<long> selectedUserIds) where TUser : class, IUser, new()
+        //{
+        //    if (selectedUserIds == null)
+        //        return;
 
-            await _context.WithTransactionAsync(async () =>
-            {
-                List<NotificationUser> notificationUserList = await _context.DbSet<NotificationUser>().Where(x => x.NotificationsId == notificationId).ToListAsync();
+        //    await _context.WithTransactionAsync(async () =>
+        //    {
+        //        List<NotificationUser> notificationUserList = await _context.DbSet<NotificationUser>().Where(x => x.NotificationsId == notificationId).ToListAsync();
 
-                foreach (NotificationUser notificationUser in notificationUserList)
-                {
-                    if (selectedUserIds.Contains(notificationUser.UsersId))
-                        selectedUserIds.Remove(notificationUser.UsersId);
-                    else
-                        _context.DbSet<NotificationUser>().Remove(notificationUser);
-                }
+        //        foreach (NotificationUser notificationUser in notificationUserList)
+        //        {
+        //            if (selectedUserIds.Contains(notificationUser.UsersId))
+        //                selectedUserIds.Remove(notificationUser.UsersId);
+        //            else
+        //                _context.DbSet<NotificationUser>().Remove(notificationUser);
+        //        }
 
-                foreach (long selectedUserId in selectedUserIds)
-                {
-                    NotificationUser notificationUser = new NotificationUser
-                    {
-                        NotificationsId = notificationId,
-                        UsersId = selectedUserId,
-                        IsMarkedAsRead = isMarkAsRead,
-                    };
+        //        foreach (long selectedUserId in selectedUserIds)
+        //        {
+        //            NotificationUser notificationUser = new NotificationUser
+        //            {
+        //                NotificationsId = notificationId,
+        //                UsersId = selectedUserId,
+        //                IsMarkedAsRead = isMarkAsRead,
+        //            };
 
-                    await _context.DbSet<NotificationUser>().AddAsync(notificationUser);
-                }
+        //            await _context.DbSet<NotificationUser>().AddAsync(notificationUser);
+        //        }
 
 
-                await _context.SaveChangesAsync();
-            });
-        }
+        //        await _context.SaveChangesAsync();
+        //    });
+        //}
 
-        public async Task<List<NamebookDTO<long>>> LoadUserExtendedNamebookListForNotification<TUser>(long notificationId) where TUser : class, IUser, new()
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                await _authorizationService.AuthorizeAndThrowAsync<TUser>(PermissionCodes.ReadUserExtended);
+        //public async Task<List<NamebookDTO<long>>> LoadUserExtendedNamebookListForNotification<TUser>(long notificationId) where TUser : class, IUser, new()
+        //{
+        //    return await _context.WithTransactionAsync(async () =>
+        //    {
+        //        await _authorizationService.AuthorizeAndThrowAsync<TUser>(PermissionCodes.ReadUserExtended);
 
-                return await _context.DbSet<TUser>()
-                    .AsNoTracking()
-                    .Where(x => x.Notifications.Any(x => x.Id == notificationId))
-                    .Select(x => new NamebookDTO<long>
-                    {
-                        Id = x.Id,
-                        DisplayName = x.Email,
-                    })
-                    .ToListAsync();
-            });
-        }
+        //        return await _context.DbSet<TUser>()
+        //            .AsNoTracking()
+        //            .Where(x => x.Notifications.Any(x => x.Id == notificationId))
+        //            .Select(x => new NamebookDTO<long>
+        //            {
+        //                Id = x.Id,
+        //                DisplayName = x.Email,
+        //            })
+        //            .ToListAsync();
+        //    });
+        //}
 
-        public async Task<NotificationDTO> SaveNotificationAndReturnDTOExtendedAsync<TUser>(NotificationSaveBodyDTO notificationSaveBodyDTO) where TUser : class, IUser, new()
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                NotificationDTO savedNotificationDTO = await SaveNotificationAndReturnDTOAsync(notificationSaveBodyDTO.NotificationDTO);
+        //public async Task<TableResponseDTO<NotificationDTO>> LoadNotificationListForTheCurrentUser<TUser>(TableFilterDTO tableFilterDTO) where TUser : class, IUser, new()
+        //{
+        //    TableResponseDTO<NotificationDTO> result = new TableResponseDTO<NotificationDTO>();
+        //    long currentUserId = _authenticationService.GetCurrentUserId(); // FT: Not doing user.Notifications, because he could have a lot of them.
 
-                await UpdateUserListForNotification<TUser>(savedNotificationDTO.Id, notificationSaveBodyDTO.IsMarkedAsRead, notificationSaveBodyDTO.SelectedUserIds);
+        //    await _context.WithTransactionAsync(async () =>
+        //    {
+        //        int count = await _context.DbSet<NotificationUser>().Where(x => x.UsersId == currentUserId).CountAsync();
 
-                return savedNotificationDTO;
-            });
-        }
+        //        List<NotificationDTO> notificationsDTO = await _context.DbSet<TUser>()
+        //            .Where(x => x.Id == currentUserId)
+        //            .SelectMany(x => x.Notifications)
+        //            .OrderByDescending(x => x.CreatedAt)
+        //            .Skip(tableFilterDTO.First)
+        //            .Take(tableFilterDTO.Rows)
+        //            .Select(x => new NotificationDTO
+        //            {
+        //                Id = x.Id,
+        //                Title = x.Title,
+        //                Description = x.Description,
+        //                IsMarkedAsRead = _context.DbSet<NotificationUser>().Where(i => i.NotificationsId == x.Id).Select(x => x.IsMarkedAsRead).SingleOrDefault()
+        //            })
+        //            .ToListAsync();
+        //        result.Data = notificationsDTO;
+        //        result.TotalRecords = count;
+        //    });
 
-        public async Task<TableResponseDTO<NotificationDTO>> LoadNotificationListForTheCurrentUser<TUser>(TableFilterDTO tableFilterDTO) where TUser : class, IUser, new()
-        {
-            TableResponseDTO<NotificationDTO> result = new TableResponseDTO<NotificationDTO>();
-            long currentUserId = _authenticationService.GetCurrentUserId(); // FT: Not doing user.Notifications, because he could have a lot of them.
+        //    return result;
+        //}
 
-            await _context.WithTransactionAsync(async () =>
-            {
-                int count = await _context.DbSet<NotificationUser>().Where(x => x.UsersId == currentUserId).CountAsync();
+        //public async Task<int> GetUnreadNotificationCountForTheCurrentUser()
+        //{
+        //    long currentUserId = _authenticationService.GetCurrentUserId();
 
-                List<NotificationDTO> notificationsDTO = await _context.DbSet<TUser>()
-                    .Where(x => x.Id == currentUserId)
-                    .SelectMany(x => x.Notifications)
-                    .OrderByDescending(x => x.CreatedAt)
-                    .Skip(tableFilterDTO.First)
-                    .Take(tableFilterDTO.Rows)
-                    .Select(x => new NotificationDTO
-                    {
-                        Id = x.Id,
-                        Title = x.Title,
-                        Description = x.Description,
-                        IsMarkedAsRead = _context.DbSet<NotificationUser>().Where(i => i.NotificationsId == x.Id).Select(x => x.IsMarkedAsRead).SingleOrDefault()
-                    })
-                    .ToListAsync();
-                result.Data = notificationsDTO;
-                result.TotalRecords = count;
-            });
+        //    return await _context.WithTransactionAsync(async () =>
+        //    {
+        //        return await _context.DbSet<NotificationUser>().Where(x => x.UsersId == currentUserId && x.IsMarkedAsRead == false).CountAsync();
+        //    });
+        //}
 
-            return result;
-        }
-
-        public async Task<int> GetUnreadNotificationCountForTheCurrentUser()
-        {
-            long currentUserId = _authenticationService.GetCurrentUserId();
-
-            return await _context.WithTransactionAsync(async () =>
-            {
-                return await _context.DbSet<NotificationUser>().Where(x => x.UsersId == currentUserId && x.IsMarkedAsRead == false).CountAsync();
-            });
-        }
-
-        #endregion
+        //#endregion
 
     }
 }

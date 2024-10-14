@@ -101,9 +101,6 @@ namespace {{basePartOfNamespace}}.Services
                 if (baseType == null) // FT: Handling many to many, maybe you should do something else in the future
                     continue;
 
-                if (baseType == "NotificationUser")
-                    continue;
-
                 string nameOfTheEntityClass = entityClass.Identifier.Text;
                 string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
                 string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, entityClasses);
@@ -244,6 +241,7 @@ namespace {{basePartOfNamespace}}.Services
                 }
 
                 return await {{nameOfTheEntityClassFirstLower}}Query
+                    .AsNoTracking()
                     .ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ToDTOConfig())
                     .ToListAsync();
             });

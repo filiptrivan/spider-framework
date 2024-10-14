@@ -32,7 +32,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static readonly string MapperNamespaceEnding = "DataMappers";
 
         public static readonly List<string> BaseTypePropertiies = new List<string> { "Id", "Version", "CreatedAt", "ModifiedAt" };
-        public static readonly List<string> BaseClassNames = new List<string> { "TableFilter", "TableResponse", "TableSelection", "Namebook", "Codebook", "BusinessObject", "ReadonlyObject", "ExcelReportOptions", "NotificationUser", "RoleUser" };
+        public static readonly List<string> BaseClassNames = new List<string> { "TableFilter", "TableResponse", "TableSelection", "Namebook", "Codebook", "BusinessObject", "ReadonlyObject", "ExcelReportOptions", "RoleUser" };
 
         #region Syntax and Semantic targets
 
@@ -660,17 +660,17 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     if (baseType.ToString() == "RoleDTO")
                         properties.AddRange(GetRoleDTOProperties());
 
-                    if (baseType.ToString() == "Notification")
-                        properties.AddRange(GetNotificationProperties());
+                    //if (baseType.ToString() == "Notification")
+                    //    properties.AddRange(GetNotificationProperties());
 
-                    if (baseType.ToString() == "NotificationDTO")
-                        properties.AddRange(GetNotificationDTOProperties());
+                    //if (baseType.ToString() == "NotificationDTO")
+                    //    properties.AddRange(GetNotificationDTOProperties());
 
-                    if (baseType.ToString() == "NotificationUser")
-                        properties.AddRange(GetNotificationUserProperties());
+                    //if (baseType.ToString() == "NotificationUser")
+                    //    properties.AddRange(GetNotificationUserProperties());
 
-                    if (baseType.ToString() == "NotificationUserDTO")
-                        properties.AddRange(GetNotificationUserDTOProperties());
+                    //if (baseType.ToString() == "NotificationUserDTO")
+                    //    properties.AddRange(GetNotificationUserDTOProperties());
 
                     break;
                 }
@@ -1133,13 +1133,13 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 result.Add($"DeleteRole");
             }
 
-            if (entityClasses.Select(x => x.Identifier.Text).Contains("Notification") == false) // FT: Hack for other projects
-            {
-                result.Add($"ReadNotification");
-                result.Add($"EditNotification");
-                result.Add($"InsertNotification");
-                result.Add($"DeleteNotification");
-            }
+            //if (entityClasses.Select(x => x.Identifier.Text).Contains("Notification") == false) // FT: Hack for other projects
+            //{
+            //    result.Add($"ReadNotification");
+            //    result.Add($"EditNotification");
+            //    result.Add($"InsertNotification");
+            //    result.Add($"DeleteNotification");
+            //}
 
             return result;
         }
@@ -1293,9 +1293,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             {
                 if (baseType.ToString() == "Role")
                     return "int";
-
-                if (baseType.ToString() == "Notification")
-                    return "long";
 
                 ClassDeclarationSyntax baseC = classes.Where(x => x.Identifier.Text == baseType.ToString()).FirstOrDefault();
 

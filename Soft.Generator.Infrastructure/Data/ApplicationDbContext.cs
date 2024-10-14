@@ -29,8 +29,6 @@ namespace Soft.Generator.Infrastructure.Data
         public DbSet<Role> Roles { get; set; }
         public DbSet<RoleUser> RoleUser { get; set; }
         public DbSet<Permission> Permissions { get; set; }
-        public DbSet<Notification> Notifications { get; set; }
-        public DbSet<NotificationUser> NotificationUser { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -53,21 +51,6 @@ namespace Soft.Generator.Infrastructure.Data
                 .UsingEntity<RoleUser>(
                     j => j.HasOne<Role>().WithMany().HasForeignKey(ru => ru.RolesId),
                     j => j.HasOne<TUser>().WithMany().HasForeignKey(ru => ru.UsersId)
-                );
-
-            modelBuilder.Entity<NotificationUser>()
-                .HasKey(ru => new { ru.NotificationsId, ru.UsersId });
-
-            modelBuilder.Entity<TUser>()
-                .HasMany(e => e.Notifications)
-                .WithMany()
-                .UsingEntity<NotificationUser>(
-                    j => j.HasOne<Notification>()
-                          .WithMany()
-                          .HasForeignKey(ru => ru.NotificationsId),
-                    j => j.HasOne<TUser>()
-                          .WithMany()
-                          .HasForeignKey(ru => ru.UsersId)
                 );
 
             if (SettingsProvider.Current.UseGoogleAsExternalProvider == false)

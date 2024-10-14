@@ -70,9 +70,6 @@ namespace {{basePartOfNamespace}}.TableFiltering
                 if (baseType == null)
                     continue;
 
-                if (baseType == "NotificationUser")
-                    continue;
-
                 SoftClass entitySoftClass = entityClass.ToSoftClass(classes);
 
                 usings.Add(entityClass.
