@@ -282,7 +282,7 @@ using {{item}};
                                     break;
 
                                 case "in":
-                                    {{numberTypeWithoutQuestion}}[] values = JsonSerializer.Deserialize<{{numberTypeWithoutQuestion}}[]>(filter.Value.ToString());
+                                    {{numberType}}[] values = JsonSerializer.Deserialize<{{numberType}}[]>(filter.Value.ToString());
                                     condition = x => values.Contains(x.{{entityDotNotation}});
                                     break;
                 

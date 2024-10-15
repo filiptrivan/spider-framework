@@ -142,23 +142,42 @@ namespace {{basePartOfNamespace}}.ValidationRules
 
         static string GetRuleForProp(SoftProperty prop)
         {
-            List<string> singleRulesOnProperty;
-            string propType = prop.Type;
-            string propName = prop.IdentifierText;
+            List<string> singleRulesOnProperty = GetSingleRulesForProp(prop); // NotEmpty(), Length(0, 70);
+            string propName = GetPropNameForRule(prop, singleRulesOnProperty);
 
-            singleRulesOnProperty = GetSingleRulesForProp(prop); // NotEmpty(), Length(0, 70)
-
-            if (singleRulesOnProperty.Count == 0 || propType.IsEnumerable())
+            if (propName == null)
                 return null;
 
-            if (propType.IsBaseType() == false)  // FT: if it is not base type and not enumerable than it's many to one for sure, and the validation can only be for id to be required
+            if (prop.Attributes.Any(x => x.Name == "Required") == false) // FT: If there is no required attribute, we should let user save null to database
             {
-                propName = $"{propName}Id";
-                if (singleRulesOnProperty.Count > 1)
-                    propName = "YOU CAN'T DEFINE ANYTHING THAN REQUIRED VALIDATION FOR MANY TO ONE PROPERTY";
+                if (prop.Type == "string")
+                {
+                    singleRulesOnProperty.Add($"Unless(i => string.IsNullOrEmpty(i.{propName}))");
+                }
+                else
+                {
+                    singleRulesOnProperty.Add($"Unless(i => i.{propName} == null)");
+                }
             }
 
             return $"RuleFor(x => x.{propName}).{string.Join(".", singleRulesOnProperty)};";
+        }
+
+        private static string GetPropNameForRule(SoftProperty prop, List<string> singleRulesOnProperty)
+        {
+            string propName = prop.IdentifierText;
+
+            if (singleRulesOnProperty.Count == 0 || prop.Type.IsEnumerable())
+                return null;
+
+            if (prop.Type.IsBaseType() == false)  // FT: if it is not base type and not enumerable than it's many to one for sure, and the validation can only be for id to be required
+            {
+                propName = $"{prop.IdentifierText}Id";
+                if (singleRulesOnProperty.Count > 1)
+                    propName = "YOU CAN'T DEFINE ANYTHING THEN REQUIRED VALIDATION FOR MANY TO ONE PROPERTY";
+            }
+
+            return propName;
         }
 
         static List<string> GetSingleRulesForProp(SoftProperty prop)
@@ -181,7 +200,11 @@ namespace {{basePartOfNamespace}}.ValidationRules
                             singleRules.Add($"Length(0, {FindNumberBetweenVarcharParentheses(attribute.Value)})");
                         break;
                     case "StringLength":
-                        singleRules.Add($"Length({FindMinValueForStringLength(attribute.Value)}, {FindMaxValueForStringLength(attribute.Value)})");
+                        string minValue = FindMinValueForStringLength(attribute.Value);
+                        if (minValue == null)
+                            singleRules.Add($"Length({FindMaxValueForStringLength(attribute.Value)})");
+                        else
+                            singleRules.Add($"Length({minValue}, {FindMaxValueForStringLength(attribute.Value)})");
                         break;
                     case "Precision":
                         singleRules.Add($"PrecisionScale({attribute.Value}, false)"); // FT: only here the attribute.Value should be two values eg. 6, 7
@@ -265,7 +288,7 @@ namespace {{basePartOfNamespace}}.ValidationRules
             if (match.Success)
                 return match.Groups[1].Value;
             else
-                return "0";
+                return null;
         }
 
         /// <summary>

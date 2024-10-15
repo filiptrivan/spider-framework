@@ -12,6 +12,7 @@ using System.IO;
 using System.Diagnostics;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
+using static System.Net.WebRequestMethods;
 
 namespace Soft.SourceGenerator.NgTable.Angular
 {
@@ -106,10 +107,14 @@ export class {{angularClassIdentifier}} extends BaseEntity
                 string DTOPropLowerCase = DTOProp.IdentifierText.FirstCharToLower();
                 string angularIdentifierText;
                 if (DTOProp.Type.IsTypeNullable() || alwaysNullable == true)
+                {
                     angularIdentifierText = $"{DTOPropLowerCase}?";
+                }
                 else
+                {
                     angularIdentifierText = DTOPropLowerCase;
-
+                }
+                
                 string angularDataType = Helper.GetAngularDataType(DTOProp.Type);
                 result.Add($"{angularIdentifierText}: {angularDataType};");
             }

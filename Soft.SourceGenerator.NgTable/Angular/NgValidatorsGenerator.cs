@@ -162,6 +162,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
             {
                 Match lengthMatch = Regex.Match(rules, @"Length\((\d+),\s*(\d+)\)");
                 Match singleLengthMatch = Regex.Match(rules, @"Length\((\d+)\)");
+
                 if (lengthMatch.Success)
                 {
                     string ruleName = "stringLengthRule";
@@ -200,7 +201,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
                     string max = rangeMatch.Groups[1].Value;
                     ruleStatements.Add($$"""
         const max = {{max}};
-        const {{ruleName}} = value <= max;
+        const {{ruleName}} = (value <= max) || (typeof value === 'undefined' || value === null || value === '');
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must be less or equal to ${{max}}");
@@ -218,7 +219,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
                     string min = rangeMatch.Groups[1].Value;
                     ruleStatements.Add($$"""
         const min = {{min}};
-        const {{ruleName}} = value >= min;
+        const {{ruleName}} = (value >= min) || (typeof value === 'undefined' || value === null || value === '');
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must be greater or equal to ${{min}}");
@@ -262,7 +263,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
         const precision = {{precision}};
         const scale = {{scale}};
         const ignoreTrailingZeros = {{ignoreTrailingZeros}};
-        const {{ruleName}} = validatePrecisionScale(value, precision, scale, ignoreTrailingZeros);
+        const {{ruleName}} = validatePrecisionScale(value, precision, scale, ignoreTrailingZeros) || (typeof value === 'undefined' || value === null || value === '');
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must have a total number of ${{precision}} digits, and the number of digits after the decimal point must not exceed ${{scale}}");

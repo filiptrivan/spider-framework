@@ -538,7 +538,11 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 }
                 else if (propType.IsBaseType() && propType != "string")
                 {
-                    propType = $"{prop.Type}?";
+                    if (prop.Type == "int?")
+                    {
+
+                    }
+                    propType = $"{prop.Type}?".Replace("??", "?");
                 }
                 else if (propType != "string")
                 {
