@@ -495,14 +495,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     }
                 })
                 .ToList();
-
-            // FT: Return if...
-            //return classes
-            //    .Where(x => x.Ancestors()
-            //        .OfType<NamespaceDeclarationSyntax>()
-            //        .Select(ns => ns.Name.ToString())
-            //        .Any(ns => ns.EndsWith($".{DTONamespaceEnding}")))
-            //    .ToList();
         }
 
         public static string GetTypeForTheClassAndPropName(SoftClass c, string propName)
@@ -532,6 +524,11 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     props.Add(new SoftProperty { IdentifierText = $"{propName}CommaSeparated", Type = "string" });
                     continue;
                 }
+                else if (propType == "byte[]")
+                {
+                    props.Add(new SoftProperty { IdentifierText = propName, Type = "FormFile" });
+                    continue;
+                }
                 else if (propType.IsEnumerable())
                 {
                     continue;
@@ -550,52 +547,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 }
 
                 props.Add(new SoftProperty { IdentifierText = propName, Type = propType });
-            }
-
-            return props;
-        }
-
-        /// <summary>
-        /// </summary>
-        /// <param name="c"></param>
-        /// <param name="classes">Passing this just to pass it further to the GetGenericIdType method</param>
-        /// <returns></returns>
-        public static List<string> GetDTOWithoutBaseProps(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
-        {
-            List<string> props = new List<string>(); // public string Email { get; set; }
-            List<SoftProperty> properties = GetPropsOfCurrentClass(entityClass);
-
-            foreach (SoftProperty prop in properties)
-            {
-                string propType = prop.Type;
-                string propName = prop.IdentifierText;
-
-                if (propType.PropTypeIsManyToOne())
-                {
-                    props.Add($"public string {propName}DisplayName {{ get; set; }}");
-                    ClassDeclarationSyntax manyToOneClass = entityClasses.Where(x => x.Identifier.Text == propType).Single();
-                    props.Add($"public {Helper.GetGenericIdType(manyToOneClass, entityClasses)}? {propName}Id {{ get; set; }}");
-                    continue;
-                }
-                else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
-                {
-                    props.Add($"public string {propName}CommaSeparated {{ get; set; }}");
-                    continue;
-                }
-                else if (propType.IsEnumerable())
-                {
-                    continue;
-                }
-                else if (propType.IsBaseType() && propType != "string")
-                {
-                    propType = $"{prop.Type}?".Replace("??", "?");
-                }
-                else if (propType != "string")
-                {
-                    propType = "UNSUPPORTED TYPE";
-                }
-
-                props.Add($"public {propType} {propName} {{ get; set; }}");
             }
 
             return props;

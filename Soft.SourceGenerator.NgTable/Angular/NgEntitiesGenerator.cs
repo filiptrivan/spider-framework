@@ -63,8 +63,7 @@ import { TableFilterSortMeta } from "src/app/core/entities/table-filter-sort-met
                 foreach (SoftClass DTOClass in DTOClassGroup) // It can only be 2 here
                     DTOProperties.AddRange(DTOClass.Properties);
 
-                List<string> angularPropertyDefinitions = GetAllAngularPropertyDefinitions(DTOProperties, true); // FT: If, in some moment, we want to make another aproach set this to false, now it doesn't matter
-                List<string> nullableAngularPropertyDefinitions = GetAllAngularPropertyDefinitions(DTOProperties, true);
+                List<string> angularPropertyDefinitions = GetAllAngularPropertyDefinitions(DTOProperties); // FT: If, in some moment, we want to make another aproach set this to false, now it doesn't matter
                 string angularClassIdentifier = DTOClassGroup.Key.Replace("DTO", "");
 
                 sbImports.Append(string.Join("\n", Helper.GetAngularImports(DTOProperties, projectName)));
@@ -80,7 +79,7 @@ export class {{angularClassIdentifier}} extends BaseEntity
     {
         {{string.Join(",\n\t\t", DTOProperties.Select(x => x.IdentifierText.FirstCharToLower()))}}
     }:{
-        {{string.Join("\n\t\t", nullableAngularPropertyDefinitions)}}     
+        {{string.Join("\n\t\t", angularPropertyDefinitions)}}     
     } = {}
     ) {
         super('{{angularClassIdentifier}}'); 
@@ -99,24 +98,15 @@ export class {{angularClassIdentifier}} extends BaseEntity
             Helper.WriteToTheFile(sbImports.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-entities.generated.ts");
         }
 
-        private static List<string> GetAllAngularPropertyDefinitions(List<SoftProperty> DTOProperties, bool alwaysNullable = false)
+        private static List<string> GetAllAngularPropertyDefinitions(List<SoftProperty> DTOProperties)
         {
             List<string> result = new List<string>();
-            foreach (SoftProperty DTOProp in DTOProperties) // FT: Trying to solve constant generating duplicate properties in angular with distinct
+            foreach (SoftProperty DTOProp in DTOProperties)
             {
                 string DTOPropLowerCase = DTOProp.IdentifierText.FirstCharToLower();
-                string angularIdentifierText;
-                if (DTOProp.Type.IsTypeNullable() || alwaysNullable == true)
-                {
-                    angularIdentifierText = $"{DTOPropLowerCase}?";
-                }
-                else
-                {
-                    angularIdentifierText = DTOPropLowerCase;
-                }
-                
+
                 string angularDataType = Helper.GetAngularDataType(DTOProp.Type);
-                result.Add($"{angularIdentifierText}: {angularDataType};");
+                result.Add($"{DTOPropLowerCase}?: {angularDataType};");
             }
 
             return result;

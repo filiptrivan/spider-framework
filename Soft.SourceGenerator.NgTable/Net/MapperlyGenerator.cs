@@ -64,6 +64,7 @@ namespace Soft.SourceGenerator.NgTable.Net
 
             sb.AppendLine($$"""
 using Mapster;
+using Microsoft.AspNetCore.Http;
 using {{basePartOfNamespace}}.DTO;
 using {{basePartOfNamespace}}.Entities;
 
@@ -198,6 +199,11 @@ namespace {{basePartOfNamespace}}.DataMappers
 
                     // FT: eg.                      ".Map(dest => dest.SegmentationItemsCommaSeparated, src => string.Join(", ", src.CheckedSegmentationItems.Select(x => x.Name)))"
                     manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}CommaSeparated, src => string.Join(\", \", src.{entityPropName}.Select(x => x.{displayNamePropOEnumerable})))");
+                }
+
+                if(entityPropType == "byte[]")
+                {
+                    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName} == null ? null : new FormFile(new MemoryStream(src.{entityPropName}), 0, src.{entityPropName}.Length, \"{entityPropName}\", \"{entityPropName}\"))");
                 }
             }
 
