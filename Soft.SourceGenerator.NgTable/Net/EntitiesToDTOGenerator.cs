@@ -107,7 +107,7 @@ namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator
                 }
                 else if (propType == "byte[]")
                 {
-                    props.Add($"public FormFile {propName} {{ get; set; }}");
+                    props.Add($"public string {propName} {{ get; set; }}");
                     continue;
                 }
                 else if (propType.IsEnumerable())

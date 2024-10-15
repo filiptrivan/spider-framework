@@ -79,12 +79,13 @@ namespace {{basePartOfNamespace}}.DataMappers
                 //if (baseClass == null)
                 //    continue;
 
-        //{{(c.IsAbstract() ? "" : GetMapper("ToEntityConfig", c.Identifier.Text, mapperClass))}} // FT: I think we don't need this anymore
         //{{GetMapperDTO($"ExcelProjectToConfig", mapperClass, c, entityClasses)}} // FT: Excel map or project to, you don't need both
 
                 sb.AppendLine($$"""
 
         #region {{entityClass.Identifier.Text}}
+
+        {{(entityClass.IsAbstract() ? "" : GetMapper($"{entityClass.Identifier.Text}DTOToEntityConfig", mapperClass, entityClass, entityClasses))}}
 
         {{GetMapperDTO($"{entityClass.Identifier.Text}ToDTOConfig", mapperClass, entityClass, entityClasses)}}
 
@@ -105,8 +106,7 @@ namespace {{basePartOfNamespace}}.DataMappers
             context.AddSource($"{projectName}Mapper.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
-        [Obsolete]
-        public static string GetMapper(string methodName, string entityClassName, ClassDeclarationSyntax mapperClass)
+        public static string GetMapper(string methodName, ClassDeclarationSyntax mapperClass, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
         {
             if (mapperClass == null)
                 return "You didn't define DataMappers";
@@ -114,9 +114,42 @@ namespace {{basePartOfNamespace}}.DataMappers
             if (HasNonGeneratedPair(mapperClass, methodName))
                 return "";
 
+            List<string> mappers = GetFromDTOToEntityConfig(entityClass, entityClasses);
+
             string result = $$"""
-.
+        public static TypeAdapterConfig {{methodName}}()
+        {
+            TypeAdapterConfig config = new TypeAdapterConfig();
+            System.Text.ASCIIEncoding encoding = new System.Text.ASCIIEncoding();
+
+            config
+                .NewConfig<{{entityClass.Identifier.Text}}DTO, {{entityClass.Identifier.Text}}>()
+                {{string.Join("\t\t\t\t\n", mappers)}}
+                ;
+
+            return config;
+        }
 """;
+
+            return result;
+        }
+
+        private static List<string> GetFromDTOToEntityConfig(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        {
+            List<string> result = new List<string>();
+
+            List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
+
+            foreach (SoftProperty entityProp in entityProperties)
+            {
+                string entityPropType = entityProp.Type;
+                string entityPropName = entityProp.IdentifierText;
+
+                if (entityPropType == "byte[]")
+                {
+                    result.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName} == null ? null : encoding.GetBytes(src.{entityPropName}))");
+                }
+            }
 
             return result;
         }
@@ -139,7 +172,7 @@ namespace {{basePartOfNamespace}}.DataMappers
             if (HasNonGeneratedPair(mapperClass, methodName))
                 return "";
 
-            List<string> manyToOneAttributeMappers = GetAttributesForManyToOneClass(entityClass, entityClasses);
+            List<string> manyToOneMappers = GetConfigForManyToOneClass(entityClass, entityClasses);
 
             return $$"""
         public static TypeAdapterConfig {{methodName}}()
@@ -148,7 +181,7 @@ namespace {{basePartOfNamespace}}.DataMappers
 
             config
                 .NewConfig<{{entityClass.Identifier.Text}}, {{entityClass.Identifier.Text}}DTO>()
-{{string.Join("\t\t\t\t\n", manyToOneAttributeMappers)}}
+                {{string.Join("\t\t\t\t\n", manyToOneMappers)}}
                 ;
 
             return config;
@@ -156,7 +189,7 @@ namespace {{basePartOfNamespace}}.DataMappers
 """;
         }
 
-        public static List<string> GetAttributesForManyToOneClass(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        public static List<string> GetConfigForManyToOneClass(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
         {
             List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
 
@@ -203,7 +236,7 @@ namespace {{basePartOfNamespace}}.DataMappers
 
                 if(entityPropType == "byte[]")
                 {
-                    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName} == null ? null : new FormFile(new MemoryStream(src.{entityPropName}), 0, src.{entityPropName}.Length, \"{entityPropName}\", \"{entityPropName}\"))");
+                    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName} == null ? null : Convert.ToBase64String(src.{entityPropName}))");
                 }
             }
 

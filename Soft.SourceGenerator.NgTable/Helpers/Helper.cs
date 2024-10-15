@@ -526,7 +526,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 }
                 else if (propType == "byte[]")
                 {
-                    props.Add(new SoftProperty { IdentifierText = propName, Type = "FormFile" });
+                    props.Add(new SoftProperty { IdentifierText = propName, Type = "string" });
                     continue;
                 }
                 else if (propType.IsEnumerable())

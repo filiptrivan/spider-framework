@@ -558,7 +558,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 sb.AppendLine($$"""
 
-                poco = dto.Adapt<{{nameOfTheEntityClass}}>();
+                poco = dto.Adapt<{{nameOfTheEntityClass}}>(Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
                 await dbSet.AddAsync(poco);
 """);
             }
@@ -574,7 +574,7 @@ namespace {{basePartOfNamespace}}.Services
                     }
 
                     poco = await LoadInstanceAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>(dto.Id, dto.Version);
-                    dto.Adapt(poco);
+                    dto.Adapt(poco, Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
                     dbSet.Update(poco);
                 }
                 else
@@ -584,7 +584,7 @@ namespace {{basePartOfNamespace}}.Services
                         {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Insert{nameOfTheEntityClass});" : "")}}
                     }
 
-                    poco = dto.Adapt<{{nameOfTheEntityClass}}>();
+                    poco = dto.Adapt<{{nameOfTheEntityClass}}>(Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
                     await dbSet.AddAsync(poco);
                 }
 """);
