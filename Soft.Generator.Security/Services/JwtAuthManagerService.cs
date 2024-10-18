@@ -270,17 +270,15 @@ namespace Soft.Generator.Security.Services
             LoginVerificationTokenDTO loginVerificationTokenDTO = _usersLoginVerificationTokens.Where(x => x.Key == verificationTokenKey && x.Value.Email == email && x.Value.BrowserId == browserId).SingleOrDefault().Value;
 
             if (loginVerificationTokenDTO == null)
-            {
-                throw new ExpiredVerificationException("The verification code has expired."); // We can not give allow user to send again from here, because it is deleted
-            }
+                throw new ExpiredVerificationException("The verification code has expired."); // FT: We can not allow user to "send again" from here, because it is deleted
+
             KeyValuePair<string, LoginVerificationTokenDTO> lastVerificationToken = _usersLoginVerificationTokens
                 .Where(x => x.Value.Email == loginVerificationTokenDTO.Email)
                 .OrderByDescending(x => x.Value.ExpireAt)
                 .FirstOrDefault();
+
             if (verificationTokenKey != lastVerificationToken.Key)
-            {
                 throw new ExpiredVerificationException("Please, use the latest code sent.");
-            }
 
             return loginVerificationTokenDTO;
         }

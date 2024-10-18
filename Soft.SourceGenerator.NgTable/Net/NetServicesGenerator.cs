@@ -593,6 +593,8 @@ namespace {{basePartOfNamespace}}.Services
 {{string.Join("\n", GetManyToOneInstancesForSave(c, entityClasses))}}
 
                 await _context.SaveChangesAsync();
+
+
             });
 
             return poco;

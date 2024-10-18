@@ -1218,13 +1218,11 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             if (CSharpDataType.IsEnumerable())
                 return $"{ExtractAngularClassNameFromGenericType(CSharpDataType)}[]";
 
-            if (CSharpDataType.Contains(DTONamespaceEnding)) // FT: We don't want to handle "ActionResult" for example
-            {
-                return ExtractAngularClassNameFromGenericType(CSharpDataType); // ManyToOne
-            }
-
-            if (CSharpDataType.EndsWith("Codes")) // Enum
+            if (CSharpDataType.EndsWith("Codes") || CSharpDataType.EndsWith("Codes>")) // Enum
                 return CSharpDataType;
+
+            if (CSharpDataType.Contains(DTONamespaceEnding) || (CSharpDataType.Contains("Task<") && CSharpDataType.Contains("ActionResult") == false)) // FT: We don't want to handle "ActionResult"
+                return ExtractAngularClassNameFromGenericType(CSharpDataType); // ManyToOne
 
             return "any"; // eg. "ActionResult", "Task"...
         }
@@ -1344,8 +1342,14 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             {
                 result = "TableResponse";
             }
-            else if (parts[parts.Length-1].IsBaseType() && parts[parts.Length-2].IsEnumerable() == false)
-                result = parts[parts.Length-2]; // NamebookDTO<long>
+            else if (input.Contains("NamebookDTO"))
+            {
+                result = "Namebook";
+            }
+            else if (input.Contains("CodebookDTO"))
+            {
+                result = "Codebook";
+            }
             else if (parts[parts.Length-1].IsBaseType())
             {
                 result = GetAngularDataType(parts[parts.Length-1]); // List<long>

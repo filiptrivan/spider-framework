@@ -57,7 +57,6 @@ namespace Soft.Generator.Security.Services
                 TUser user = await Authenticate<TUser>(loginDTO);
                 userEmail = user.Email;
                 userId = user.Id;
-
             });
             string verificationCode = _jwtAuthManagerService.GenerateAndSaveLoginVerificationCode(userEmail, userId, loginDTO.BrowserId);
             try
@@ -197,7 +196,7 @@ namespace Soft.Generator.Security.Services
                     else if (user.HasLoggedInWithExternalProvider && user.Password == null)
                     {
                         registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UserWithoutPasswordExists;
-                        registrationResultDTO.Message = "Your account already exists with third-party (eg. Google) authentication. If you want to set up an password as well, please log in to your profile and add a password.";
+                        registrationResultDTO.Message = "Your account already exists with third-party (eg. Google) authentication. If you want to set up a password as well, please log in to your profile and add a password, or use the 'Forgot password?' option to reset it.";
                     }
                     else if (user.Password != null)
                     {
@@ -326,7 +325,10 @@ namespace Soft.Generator.Security.Services
                     throw new BusinessException("You have entered a wrong email."); // TODO FT: Resources
 
                 if (currentUser.NumberOfFailedAttemptsInARow > SettingsProvider.Current.NumberOfFailedLoginAttemptsInARowToDisableUser) // FT: It could never be 21 if the value from settings is 20, but putting > just in case
-                    throw new BusinessException($"You have entered the wrong password {SettingsProvider.Current.NumberOfFailedLoginAttemptsInARowToDisableUser} times in a row, your account has been disabled, please click on \"Forgot password?\".");
+                    throw new BusinessException($"You have entered the wrong password {SettingsProvider.Current.NumberOfFailedLoginAttemptsInARowToDisableUser} times in a row, your account has been disabled, please click on 'Forgot password?'.");
+
+                if (currentUser.Password == null)
+                    throw new BusinessException("Your account already exists with third-party (eg. Google) authentication. If you want to set up a password as well, please log in to your profile and add a password, or use the 'Forgot password?' option to reset it.");
 
                 if (BCrypt.Net.BCrypt.EnhancedVerify(loginDTO.Password, currentUser.Password) == false)
                 {

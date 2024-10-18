@@ -48,7 +48,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
             List<ClassDeclarationSyntax> controllerClasses = Helper.GetControllerClasses(classes);
 
             StringBuilder sb = new StringBuilder();
-            List<SoftProperty> properties = new List<SoftProperty>();
+            //List<SoftProperty> properties = new List<SoftProperty>();
             List<string> angularHttpMethods = new List<string>();
             foreach (ClassDeclarationSyntax controllerClass in controllerClasses) // FT: Big part of this method is not user because we changed the way of importing ng classes
             {
@@ -62,9 +62,9 @@ namespace Soft.SourceGenerator.NgTable.Angular
                             Type = x.Type.ToString(),
                         })
                         .ToList();
-                    properties.AddRange(parameterProperties);
+                    //properties.AddRange(parameterProperties);
                     string returnType = endpointMethod.ReturnType.ToString();
-                    properties.Add(new SoftProperty { Type = returnType });
+                    //properties.Add(new SoftProperty { Type = returnType });
                     angularHttpMethods.Add(GetAngularHttpMethod(endpointMethod, Helper.GetAngularDataType(returnType), controllerName));
                 }
             }
@@ -146,7 +146,14 @@ export class ApiGeneratedService extends ApiSecurityService {
             }
             if (endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "HttpPost")))
             {
-                if (methodName.Contains("ForTable") || skipSpinner) // FT HACK: Be carefull with method name
+                if (returnType == "string")
+                {
+                    result = @$"
+    {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{ 
+        return this.http.post(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, {{...environment.httpOptions, responseType: 'text'}});
+    }}";
+                }
+                else if (methodName.Contains("ForTable") || skipSpinner) // FT HACK: Be carefull with method name
                 {
                     result = @$"
     {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{ 

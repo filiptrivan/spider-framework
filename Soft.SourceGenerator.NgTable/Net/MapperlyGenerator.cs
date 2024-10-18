@@ -147,7 +147,7 @@ namespace {{basePartOfNamespace}}.DataMappers
 
                 if (entityPropType == "byte[]")
                 {
-                    result.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName} == null ? null : encoding.GetBytes(src.{entityPropName}))");
+                    result.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName} == null ? null : Convert.FromBase64String(src.{entityPropName}))");
                 }
             }
 
