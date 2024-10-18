@@ -55,6 +55,7 @@ namespace Soft.SourceGenerator.NgTable.Net
 using Microsoft.AspNetCore.Http;
 using Soft.Generator.Shared.DTO;
 using Soft.Generator.Security.DTO;
+using Soft.Generator.Shared.Helpers;
 
 namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator, it's mandatory for partial classes
 {
@@ -117,6 +118,11 @@ namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator
                 else if (propType.IsBaseType() && propType != "string")
                 {
                     propType = $"{prop.Type}?".Replace("??", "?");
+                }
+                else if (prop.Attributes.Any(x => x.Name == "BlobName"))
+                {
+                    props.Add($"public string {propName}Data {{ get; set; }}");
+                    props.Add($"public MimeTypes {propName}MimeType {{ get; set; }}");
                 }
                 else if (propType != "string")
                 {

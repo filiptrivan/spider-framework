@@ -535,11 +535,12 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 }
                 else if (propType.IsBaseType() && propType != "string")
                 {
-                    if (prop.Type == "int?")
-                    {
-
-                    }
                     propType = $"{prop.Type}?".Replace("??", "?");
+                }
+                else if (prop.Attributes.Any(x => x.Name == "BlobName"))
+                {
+                    props.Add(new SoftProperty { IdentifierText = $"{propName}Data", Type = "string" });
+                    props.Add(new SoftProperty { IdentifierText = $"{propName}MimeType", Type = "MimeTypes" });
                 }
                 else if (propType != "string")
                 {
@@ -1219,6 +1220,9 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 return $"{ExtractAngularClassNameFromGenericType(CSharpDataType)}[]";
 
             if (CSharpDataType.EndsWith("Codes") || CSharpDataType.EndsWith("Codes>")) // Enum
+                return CSharpDataType;
+
+            if (CSharpDataType.EndsWith("MimeTypes") || CSharpDataType.EndsWith("MimeTypes>"))
                 return CSharpDataType;
 
             if (CSharpDataType.Contains(DTONamespaceEnding) || (CSharpDataType.Contains("Task<") && CSharpDataType.Contains("ActionResult") == false)) // FT: We don't want to handle "ActionResult"

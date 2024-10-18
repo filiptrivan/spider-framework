@@ -53,6 +53,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
 import { BaseEntity } from "../../../core/entities/base-entity";
 import { TableFilterContext } from "src/app/core/entities/table-filter-context";
 import { TableFilterSortMeta } from "src/app/core/entities/table-filter-sort-meta";
+import { MimeTypes } from "src/app/core/entities/mime-type";
 
 """);
 
