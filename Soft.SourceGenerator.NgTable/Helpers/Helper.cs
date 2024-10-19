@@ -540,7 +540,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 else if (prop.Attributes.Any(x => x.Name == "BlobName"))
                 {
                     props.Add(new SoftProperty { IdentifierText = $"{propName}Data", Type = "string" });
-                    props.Add(new SoftProperty { IdentifierText = $"{propName}MimeType", Type = "MimeTypes" });
                 }
                 else if (propType != "string")
                 {
@@ -877,6 +876,16 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 Name = a.Name.ToString(),
                 Value = argumentValue?.Replace("\"", "").Replace("@", "")
             };
+        }
+
+        public static List<SoftProperty> GetBlobProperties(SoftClass c)
+        {
+            return c.Properties.Where(x => x.Attributes.Any(x => x.Name == "BlobName")).ToList();
+        }
+
+        public static List<SoftProperty> GetBlobProperties(List<SoftProperty> properties)
+        {
+            return properties.Where(x => x.Attributes.Any(x => x.Name == "BlobName")).ToList();
         }
 
         public static List<SoftAttribute> GetAllAttributesOfTheClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)

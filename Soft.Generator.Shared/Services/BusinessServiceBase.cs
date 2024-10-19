@@ -10,16 +10,22 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using Azure;
+using System.ComponentModel;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 
 namespace Soft.Generator.Shared.Services
 {
     public class BusinessServiceBase
     {
         private readonly IApplicationDbContext _context;
+        private readonly BlobContainerClient _blobContainerClient;
 
-        public BusinessServiceBase(IApplicationDbContext context)
+        public BusinessServiceBase(IApplicationDbContext context, BlobContainerClient blobContainerClient)
         {
-            _context=context;
+            _context = context;
+            _blobContainerClient = blobContainerClient;
         }
 
         protected internal async Task<T> LoadInstanceAsync<T, ID>(ID id, int? version) 
@@ -78,27 +84,71 @@ namespace Soft.Generator.Shared.Services
             });
         }
 
-        //public async Task UpdateManyToManyAssociation<T1, T2>(IQueryable<TUser> query, Enum permissionCode)
-        //{
-        //    return await _context.WithTransactionAsync(async () =>
-        //    {
-        //        List<Role> roles = await LoadRoleListForUserExtended(userExtendedSaveBodyDTO.UserExtendedDTO.Id);
-        //        foreach (Role role in roles)
-        //        {
-        //            if (userExtendedSaveBodyDTO.RoleIds.Contains(role.Id))
-        //                userExtendedSaveBodyDTO.RoleIds.Remove(role.Id);
-        //            else
-        //                _context.DbSet<Role>().Remove(role); // TODO FT: Benchmark which is better for performance in this case, Remove, or ExecuteDelete
-        //        }
+        /// <summary>
+        /// </summary>
+        /// <returns>Newly generated file name</returns>
+        protected async Task<string> UploadFileAsync(string fileName, string objectType, string objectProperty, string objectId, Stream content)
+        {
+            string fileExtension = GetFileExtensionFromFileName(fileName);
 
-        //        List<Role> rolesToInsert = await _context.DbSet<Role>()
-        //                                    .Where(x => userExtendedSaveBodyDTO.RoleIds.Contains(x.Id))
-        //                                    .ToListAsync();
+            // TODO FT: Delete class name and prop name if you don't need it
+            // TODO FT: Validate if user has changed ContentType to something we don't handle
+            string blobName = $"{objectId}-{Guid.NewGuid()}.{fileExtension}";
 
-        //        await _context.DbSet<Role>().AddRangeAsync(rolesToInsert);
-        //    });
+            BlobClient blobClient = _blobContainerClient.GetBlobClient(blobName);
 
-        //}
+            await blobClient.UploadAsync(content);
+
+            Dictionary<string, string> tags = new Dictionary<string, string>
+            {
+                { "objectType", $"{objectType}" },
+                { "objectProperty", $"{objectProperty}" },
+                { "objectId", $"{objectId}" },
+            };
+
+            await blobClient.SetTagsAsync(tags); // https://stackoverflow.com/questions/52769758/azure-blob-storage-authorization-permission-mismatch-error-for-get-request-wit 
+
+            return blobName;
+        }
+
+        // uzimam id iz imena kog je poslao jer ne mogu drugacije da ga posaljem
+        protected static ID GetObjectIdFromFileName<ID>(string fileName) where ID : struct
+        {
+            List<string> parts = fileName.Split('-').ToList();
+
+            if (parts.Count != 2) // FT: It could be only 2 because when firstly uploading the file, there is no guid part
+                throw new HackerException($"Invalid file name format ({fileName}).");
+
+            string idPart = parts[0];
+
+            // Try to convert the string part to the specified struct type
+            if (TypeDescriptor.GetConverter(typeof(ID)).IsValid(idPart))
+                return (ID)TypeDescriptor.GetConverter(typeof(ID)).ConvertFromString(idPart);
+
+            throw new InvalidCastException($"Cannot convert '{idPart}' to {typeof(ID)}.");
+        }
+
+        protected static string GetFileExtensionFromFileName(string fileName)
+        {
+            List<string> parts = fileName.Split('.').ToList();
+
+            if (parts.Count < 2) // FT: It could be only 2, it's not the same validation as spliting with '-'
+                throw new HackerException($"Invalid file name format ({fileName}).");
+
+            return parts.Last(); // FT: The file could be .abc.png
+        }
+
+        // FT: Before this in save method the authorization is being done, so we don't need to do it here also
+        protected async Task DeleteNonActiveBlobs(string activeBlobName, string objectType, string objectProperty, string objectId)
+        {
+            AsyncPageable<TaggedBlobItem> blobs = _blobContainerClient.FindBlobsByTagsAsync($"\"objectType\"='{objectType}' AND \"objectProperty\"='{objectProperty}' AND \"objectId\"='{objectId}'");
+
+            await foreach (TaggedBlobItem blob in blobs)
+            {
+                if (blob.BlobName != activeBlobName)
+                    await _blobContainerClient.DeleteBlobAsync(blob.BlobName, Azure.Storage.Blobs.Models.DeleteSnapshotsOption.IncludeSnapshots);
+            }
+        }
 
     }
 }

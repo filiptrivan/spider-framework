@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Authorization;
 using Soft.Generator.Security.Entities;
 using Soft.Generator.Shared.DTO;
 using Mapster;
+using Azure.Storage.Blobs;
 
 namespace Soft.Generator.Security.Services
 {
@@ -30,16 +31,18 @@ namespace Soft.Generator.Security.Services
         private readonly AuthenticationService _authenticationService;
         private readonly AuthorizationService _authorizationService;
         private readonly EmailingService _emailingService;
+        private readonly BlobContainerClient _blobContainerClient;
 
         public SecurityBusinessService(IApplicationDbContext context, IJwtAuthManager jwtAuthManagerService, EmailingService emailingService, AuthenticationService authenticationService, AuthorizationService authorizationService, 
-            ExcelService excelService)
-            : base(context, excelService, authorizationService)
+            ExcelService excelService, BlobContainerClient blobContainerClient)
+            : base(context, excelService, authorizationService, blobContainerClient)
         {
             _context = context;
             _jwtAuthManagerService = jwtAuthManagerService;
             _emailingService = emailingService;
             _authenticationService = authenticationService;
             _authorizationService = authorizationService;
+            _blobContainerClient = blobContainerClient;
         }
 
         #region Authentication

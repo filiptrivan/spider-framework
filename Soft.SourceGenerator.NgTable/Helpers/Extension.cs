@@ -100,6 +100,16 @@ namespace Soft.SourceGenerators.Helpers
                 propType == "Guid";
         }
 
+        public static bool HasBlobProperty(this SoftClass c)
+        {
+            return c.Properties.SelectMany(x => x.Attributes).Any(x => x.Name == "BlobName");
+        }
+
+        public static bool HasBlobProperty(this List<SoftProperty> properties)
+        {
+            return properties.SelectMany(x => x.Attributes).Any(x => x.Name == "BlobName");
+        }
+
         /// <summary>
         /// The same method is in the .NET8 linq, but source generator is .NET2
         /// </summary>

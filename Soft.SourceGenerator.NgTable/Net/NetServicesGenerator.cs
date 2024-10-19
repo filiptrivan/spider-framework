@@ -77,6 +77,7 @@ using Soft.Generator.Shared.Services;
 using Soft.Generator.Shared.DTO;
 using Soft.Generator.Shared.Extensions;
 using Mapster;
+using Azure.Storage.Blobs;
 
 namespace {{basePartOfNamespace}}.Services
 {
@@ -85,13 +86,15 @@ namespace {{basePartOfNamespace}}.Services
         private readonly IApplicationDbContext _context;
         private readonly ExcelService _excelService;
         private readonly AuthorizationService _authorizationService;
+        private readonly BlobContainerClient _blobContainerClient;
 
-        public {{projectName}}BusinessServiceGenerated(IApplicationDbContext context, ExcelService excelService, AuthorizationService authorizationService)
-        : base(context)
+        public {{projectName}}BusinessServiceGenerated(IApplicationDbContext context, ExcelService excelService, AuthorizationService authorizationService, BlobContainerClient blobContainerClient)
+        : base(context, blobContainerClient)
         {
             _context=context;
             _excelService = excelService;
             _authorizationService = authorizationService;
+            _blobContainerClient = blobContainerClient;
         }
 """);
             foreach (ClassDeclarationSyntax entityClass in entityClasses)
@@ -269,12 +272,8 @@ namespace {{basePartOfNamespace}}.Services
         static List<string> GetManyToOneInstancesForSave(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> classes)
         {
             List<string> result = new List<string>();
-            List<SoftProperty> properties = entityClass.Members.OfType<PropertyDeclarationSyntax>()
-                .Select(prop => new SoftProperty()
-                {
-                    Type = prop.Type.ToString(),
-                    IdentifierText = prop.Identifier.Text
-                })
+
+            List<SoftProperty> properties = Helper.GetAllPropertiesOfTheClass(entityClass, classes)
                 .Where(prop => prop.Type.PropTypeIsManyToOne())
                 .ToList();
 
@@ -314,15 +313,11 @@ namespace {{basePartOfNamespace}}.Services
             string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower(); // user
             string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, classes); // long
 
-            List<string> result = new List<string>();
-            List<SoftProperty> propertiesEntityClass = entityClass.Members.OfType<PropertyDeclarationSyntax>()
-                .Select(prop => new SoftProperty()
-                {
-                    Type = prop.Type.ToString(),
-                    IdentifierText = prop.Identifier.Text
-                })
+            List<SoftProperty> propertiesEntityClass = Helper.GetAllPropertiesOfTheClass(entityClass, classes, true)
                 .Where(prop => prop.Type.IsEnumerable())
                 .ToList();
+
+            List<string> result = new List<string>();
 
             foreach (SoftProperty prop in propertiesEntityClass) // List<Role> Roles
             {
@@ -537,9 +532,14 @@ namespace {{basePartOfNamespace}}.Services
             return parts[parts.Length-1].Replace(">", "");
         }
 
-        static string GetSavingData(string nameOfTheEntityClass, string idTypeOfTheEntityClass, ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> entityClasses, bool generateAuthorizationMethods)
+        static string GetSavingData(string nameOfTheEntityClass, string idTypeOfTheEntityClass, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, bool generateAuthorizationMethods)
         {
             StringBuilder sb = new StringBuilder();
+
+            List<SoftProperty> propertiesEntityClass = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
+
+            List<SoftProperty> blobProperties = Helper.GetBlobProperties(propertiesEntityClass);
+
             sb.Append($$"""
         protected virtual void OnBefore{{nameOfTheEntityClass}}IsMapped({{nameOfTheEntityClass}}DTO dto) { }
 
@@ -554,7 +554,7 @@ namespace {{basePartOfNamespace}}.Services
                 OnBefore{{nameOfTheEntityClass}}IsMapped(dto);
                 DbSet<{{nameOfTheEntityClass}}> dbSet = _context.DbSet<{{nameOfTheEntityClass}}>();
 """);
-            if (c.IsEntityReadonlyObject())
+            if (entityClass.IsEntityReadonlyObject())
             {
                 sb.AppendLine($$"""
 
@@ -590,11 +590,11 @@ namespace {{basePartOfNamespace}}.Services
 """);
             }
             sb.AppendLine($$"""
-{{string.Join("\n", GetManyToOneInstancesForSave(c, entityClasses))}}
+{{string.Join("\n", GetManyToOneInstancesForSave(entityClass, entityClasses))}}
 
                 await _context.SaveChangesAsync();
 
-
+                {{string.Join("\n\t\t\t\t", GetNonActiveDeleteBlobMethods(entityClass, propertiesEntityClass))}}
             });
 
             return poco;
@@ -606,11 +606,26 @@ namespace {{basePartOfNamespace}}.Services
             {
                 {{nameOfTheEntityClass}} poco = await Save{{nameOfTheEntityClass}}AndReturnDomainAsync(dto, authorizeUpdate, authorizeInsert);
 
-                return poco.Adapt<{{nameOfTheEntityClass}}DTO>(Mapper.{{c.Identifier.Text}}ToDTOConfig());
+                return poco.Adapt<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ToDTOConfig());
             });
         }
 """);
             return sb.ToString();
         }
+
+        private static List<string> GetNonActiveDeleteBlobMethods(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
+        {
+            List<string> result = new List<string>();
+
+            List<SoftProperty> blobProperies = Helper.GetBlobProperties(propertiesEntityClass);
+
+            foreach (SoftProperty property in blobProperies)
+            {
+                result.Add($"await DeleteNonActiveBlobs(dto.{property.IdentifierText}, nameof({entityClass.Identifier.Text}), nameof({entityClass.Identifier.Text}.{property.IdentifierText}), dto.Id.ToString());");
+            }
+
+            return result;
+        }
+
     }
 }

@@ -122,7 +122,6 @@ namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator
                 else if (prop.Attributes.Any(x => x.Name == "BlobName"))
                 {
                     props.Add($"public string {propName}Data {{ get; set; }}");
-                    props.Add($"public MimeTypes {propName}MimeType {{ get; set; }}");
                 }
                 else if (propType != "string")
                 {

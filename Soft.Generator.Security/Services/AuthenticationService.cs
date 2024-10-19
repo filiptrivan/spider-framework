@@ -13,6 +13,7 @@ using System.Net.Sockets;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using Azure.Storage.Blobs;
 
 namespace Soft.Generator.Security.Services
 {
@@ -20,12 +21,14 @@ namespace Soft.Generator.Security.Services
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IApplicationDbContext _context;
+        private readonly BlobContainerClient _blobContainerClient;
 
-        public AuthenticationService(IHttpContextAccessor httpContextAccessor, IApplicationDbContext context)
-            : base(context)
+        public AuthenticationService(IHttpContextAccessor httpContextAccessor, IApplicationDbContext context, BlobContainerClient blobContainerClient)
+            : base(context, blobContainerClient)
         {
             _httpContextAccessor = httpContextAccessor;
             _context = context;
+            _blobContainerClient = blobContainerClient;
         }
 
         public long GetCurrentUserId()
