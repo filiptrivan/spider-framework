@@ -67,7 +67,7 @@ namespace Soft.Generator.Shared.Emailing
             }
             catch (Exception ex)
             {
-                // log
+                // don't throw, log
                 throw;
             }
         }

@@ -78,6 +78,8 @@ using Soft.Generator.Shared.DTO;
 using Soft.Generator.Shared.Extensions;
 using Mapster;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Microsoft.AspNetCore.Http;
 
 namespace {{basePartOfNamespace}}.Services
 {
@@ -109,6 +111,8 @@ namespace {{basePartOfNamespace}}.Services
                 string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, entityClasses);
                 string displayNameProperty = Helper.GetDisplayNamePropForClass(entityClass, entityClasses);
 
+                List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
+
                 sb.AppendLine($$"""
         public async Task<{{nameOfTheEntityClass}}DTO> Get{{nameOfTheEntityClass}}DTOAsync({{idTypeOfTheEntityClass}} id, bool authorize = true)
         {
@@ -119,7 +123,11 @@ namespace {{basePartOfNamespace}}.Services
                     {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
                 }
 
-                return await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ProjectToConfig()).FirstOrDefaultAsync();
+                {{nameOfTheEntityClass}}DTO dto = await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ProjectToConfig()).FirstOrDefaultAsync();
+
+{{string.Join("\n", GetPopulateDTOWithBlobParts(entityClass, entityProperties))}}
+
+                return dto;
             });
         }
 
@@ -176,7 +184,7 @@ namespace {{basePartOfNamespace}}.Services
             return _excelService.FillReportTemplate<{{nameOfTheEntityClass}}DTO>(data, paginationResult.TotalRecords, excelPropertiesToExclude).ToArray();
         }
 
-        {{(entityClass.IsAbstract() ? "" : GetSavingData(nameOfTheEntityClass, idTypeOfTheEntityClass, entityClass, entityClasses, generateAuthorizationMethods))}}
+        {{(entityClass.IsAbstract() ? "" : GetSavingData(nameOfTheEntityClass, idTypeOfTheEntityClass, entityClass, entityClasses, generateAuthorizationMethods, entityProperties))}}
         
         public async virtual Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForAutocomplete(int limit, string query, IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
         {
@@ -249,6 +257,8 @@ namespace {{basePartOfNamespace}}.Services
                     .ToListAsync();
             });
         }
+    
+{{string.Join("\n", GetUploadBlobMethods(entityClass, idTypeOfTheEntityClass, entityProperties))}}
 
 {{string.Join("\n", GetEnumerableGeneratedMethods(entityClass, entityClasses, generateAuthorizationMethods, referencedClassesEntities))}}
 
@@ -532,13 +542,9 @@ namespace {{basePartOfNamespace}}.Services
             return parts[parts.Length-1].Replace(">", "");
         }
 
-        static string GetSavingData(string nameOfTheEntityClass, string idTypeOfTheEntityClass, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, bool generateAuthorizationMethods)
+        static string GetSavingData(string nameOfTheEntityClass, string idTypeOfTheEntityClass, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, bool generateAuthorizationMethods, List<SoftProperty> entityProperties)
         {
             StringBuilder sb = new StringBuilder();
-
-            List<SoftProperty> propertiesEntityClass = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
-
-            List<SoftProperty> blobProperties = Helper.GetBlobProperties(propertiesEntityClass);
 
             sb.Append($$"""
         protected virtual void OnBefore{{nameOfTheEntityClass}}IsMapped({{nameOfTheEntityClass}}DTO dto) { }
@@ -594,7 +600,7 @@ namespace {{basePartOfNamespace}}.Services
 
                 await _context.SaveChangesAsync();
 
-                {{string.Join("\n\t\t\t\t", GetNonActiveDeleteBlobMethods(entityClass, propertiesEntityClass))}}
+                {{string.Join("\n\t\t\t\t", GetNonActiveDeleteBlobMethods(entityClass, entityProperties))}}
             });
 
             return poco;
@@ -622,6 +628,66 @@ namespace {{basePartOfNamespace}}.Services
             foreach (SoftProperty property in blobProperies)
             {
                 result.Add($"await DeleteNonActiveBlobs(dto.{property.IdentifierText}, nameof({entityClass.Identifier.Text}), nameof({entityClass.Identifier.Text}.{property.IdentifierText}), dto.Id.ToString());");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetPopulateDTOWithBlobParts(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
+        {
+            List<string> result = new List<string>();
+
+            List<SoftProperty> blobProperies = Helper.GetBlobProperties(propertiesEntityClass);
+
+            foreach (SoftProperty property in blobProperies)
+            {
+                result.Add($$"""
+                if (dto != null && !string.IsNullOrEmpty(dto.{{property.IdentifierText}}))
+                {
+                    BlobClient blobClient = _blobContainerClient.GetBlobClient(dto.{{property.IdentifierText}});
+
+                    Azure.Response<BlobDownloadResult> blobDownloadInfo = await blobClient.DownloadContentAsync();
+
+                    byte[] byteArray = blobDownloadInfo.Value.Content.ToArray();
+
+                    string base64 = Convert.ToBase64String(byteArray);
+
+                    dto.{{property.IdentifierText}}Data = $"filename={dto.{{property.IdentifierText}}};base64,{base64}";
+                }
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetUploadBlobMethods(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, List<SoftProperty> entityProperties)
+        {
+            List<string> result = new List<string>();
+
+            List<SoftProperty> blobProperies = Helper.GetBlobProperties(entityProperties);
+
+            string nameOfTheEntityClass = entityClass.Identifier.Text;
+            string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
+
+            foreach (SoftProperty property in blobProperies)
+            {
+                result.Add($$"""
+        public async Task<string> Upload{{nameOfTheEntityClass}}{{property.IdentifierText}}Async(IFormFile file) // FT: It doesn't work without interface
+        {
+            using Stream stream = file.OpenReadStream();
+
+            {{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id = GetObjectIdFromFileName<{{idTypeOfTheEntityClass}}>(file.FileName);
+
+            OnBefore{{nameOfTheEntityClass}}{{property.IdentifierText}}BlobIsUploaded({{nameOfTheEntityClassFirstLower}}Id); // FT: Authorize access for this id...
+
+            string fileName = await UploadFileAsync(file.FileName, nameof({{nameOfTheEntityClass}}), nameof({{nameOfTheEntityClass}}.{{property.IdentifierText}}), {{nameOfTheEntityClassFirstLower}}Id.ToString(), stream);
+
+            return fileName;
+        }
+
+        public virtual async Task OnBefore{{nameOfTheEntityClass}}{{property.IdentifierText}}BlobIsUploaded ({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id) { }
+"""
+);
             }
 
             return result;

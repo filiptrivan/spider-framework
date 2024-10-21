@@ -116,7 +116,7 @@ namespace Soft.Generator.Shared.Services
         {
             List<string> parts = fileName.Split('-').ToList();
 
-            if (parts.Count != 2) // FT: It could be only 2 because when firstly uploading the file, there is no guid part
+            if (parts.Count < 2)
                 throw new HackerException($"Invalid file name format ({fileName}).");
 
             string idPart = parts[0];
