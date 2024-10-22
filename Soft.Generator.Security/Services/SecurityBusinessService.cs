@@ -363,9 +363,9 @@ namespace Soft.Generator.Security.Services
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                await _authorizationService.AuthorizeAndThrowAsync<TUser>(Enums.PermissionCodes.ReadRole);
+                //await _authorizationService.AuthorizeAndThrowAsync<TUser>(Enums.PermissionCodes.ReadRole);
 
-                return _context.DbSet<TUser>()
+                return await _context.DbSet<TUser>()
                     .AsNoTracking()
                     .Where(x => x.Id == userId)
                     .SelectMany(x => x.Roles)
@@ -375,7 +375,7 @@ namespace Soft.Generator.Security.Services
                         Id = role.Id,
                         DisplayName = role.Name,
                     })
-                    .ToList();
+                    .ToListAsync();
             });
         }
 
