@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "Soft.Generator.DesktopApp/1.0.0": {
+        "runtime": {
+          "Soft.Generator.DesktopApp.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Soft.Generator.DesktopApp/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

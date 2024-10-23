@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Soft.Generator.Security")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a40a6eccec6e9dcbe306d1c791646606de40bb05")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+895b9702aa0296031209113adfff16653da46160")]
 [assembly: System.Reflection.AssemblyProductAttribute("Soft.Generator.Security")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Soft.Generator.Security")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

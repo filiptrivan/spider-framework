@@ -32,7 +32,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static readonly string MapperNamespaceEnding = "DataMappers";
 
         public static readonly List<string> BaseTypePropertiies = new List<string> { "Id", "Version", "CreatedAt", "ModifiedAt" };
-        public static readonly List<string> BaseClassNames = new List<string> { "TableFilter", "TableResponse", "TableSelection", "Namebook", "Codebook", "BusinessObject", "ReadonlyObject", "ExcelReportOptions", "RoleUser" };
+        public static readonly List<string> BaseClassNames = new List<string> { "TableFilter", "TableResponse", "TableSelection", "Namebook", "Codebook", "SimpleSaveResult", "BusinessObject", "ReadonlyObject", "ExcelReportOptions", "RoleUser" };
 
         #region Syntax and Semantic targets
 

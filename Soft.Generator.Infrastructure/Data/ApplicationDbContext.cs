@@ -8,6 +8,7 @@ using Soft.Generator.Shared.Helpers;
 using Soft.Generator.Shared.Enums;
 using Soft.Generator.Security.Interface;
 using Soft.Generator.Security.Entities;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Soft.Generator.Infrastructure.Data
 {
@@ -27,7 +28,7 @@ namespace Soft.Generator.Infrastructure.Data
 
         public DbSet<TUser> Users { get; set; }
         public DbSet<Role> Roles { get; set; }
-        public DbSet<RoleUser> RoleUser { get; set; }
+        public DbSet<RoleUser> RoleUser { get; set; } // M2M
         public DbSet<Permission> Permissions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -140,5 +141,6 @@ namespace Soft.Generator.Infrastructure.Data
         //}
 
     }
+
 
 }
