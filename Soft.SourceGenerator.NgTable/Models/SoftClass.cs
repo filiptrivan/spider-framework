@@ -15,5 +15,7 @@ namespace Soft.SourceGenerators.Models
         /// For the DTO classes
         /// </summary>
         public bool IsGenerated { get; set; }
+
+        public List<SoftAttribute> Attributes { get; set; }
     }
 }

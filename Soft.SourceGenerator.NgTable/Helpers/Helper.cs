@@ -467,6 +467,25 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 .ToList();
         }
 
+        public static List<SoftClass> GetSoftEntityClasses(IList<ClassDeclarationSyntax> classes)
+        {
+            return classes
+                .Where(x => x.Ancestors()
+                    .OfType<NamespaceDeclarationSyntax>()
+                    .Select(ns => ns.Name.ToString())
+                    .Any(ns => ns.EndsWith($".{EntitiesNamespaceEnding}")))
+                .Select(x =>
+                {
+                    return new SoftClass
+                    {
+                        Name = x.Identifier.Text,
+                        Properties = GetAllPropertiesOfTheClass(x, classes, true),
+                        Attributes = GetAllAttributesOfTheClass(x, classes)
+                    };
+                })
+                .ToList();
+        }
+
         public static List<SoftClass> GetDTOClasses(IList<ClassDeclarationSyntax> classes)
         {
             return classes
@@ -511,6 +530,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             {
                 string propType = prop.Type;
                 string propName = prop.IdentifierText;
+                // FT: Not adding attributes because they are not the same
 
                 if (propType.PropTypeIsManyToOne())
                 {
@@ -615,18 +635,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     if (baseType.ToString() == "RoleDTO")
                         properties.AddRange(GetRoleDTOProperties());
 
-                    //if (baseType.ToString() == "Notification")
-                    //    properties.AddRange(GetNotificationProperties());
-
-                    //if (baseType.ToString() == "NotificationDTO")
-                    //    properties.AddRange(GetNotificationDTOProperties());
-
-                    //if (baseType.ToString() == "NotificationUser")
-                    //    properties.AddRange(GetNotificationUserProperties());
-
-                    //if (baseType.ToString() == "NotificationUserDTO")
-                    //    properties.AddRange(GetNotificationUserDTOProperties());
-
                     break;
                 }
                 else
@@ -662,14 +670,14 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     {
                         new SoftAttribute { Name="SoftDisplayName" },
                         new SoftAttribute { Name="Required" },
-                        new SoftAttribute { Name="StringLength", Value="100" },
+                        new SoftAttribute { Name="StringLength", Value="255, MinimumLength = 1" },
                     }
                 },
                 new SoftProperty 
                 {
                     IdentifierText="Description", Type="string", Attributes=new List<SoftAttribute>
                     {
-                        new SoftAttribute { Name="StringLength", Value="400" },
+                        new SoftAttribute { Name="StringLength", Value="400, MinimumLength = 1" },
                     }
                 },
                 new SoftProperty 
@@ -702,134 +710,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             };
 
             properties.AddRange(GetPropertiesForBaseClasses($"{BusinessObject}DTO", "int"));
-
-            return properties;
-        }
-
-        public static List<SoftProperty> GetNotificationProperties()
-        {
-
-            List<SoftProperty> properties = new List<SoftProperty>
-            {
-                new SoftProperty
-                {
-                    IdentifierText="Title", Type="string", Attributes=new List<SoftAttribute>
-                    {
-                        new SoftAttribute { Name="SoftDisplayName" },
-                        new SoftAttribute { Name="Required" },
-                        new SoftAttribute { Name="StringLength", Value="100" },
-                    }
-                },
-                new SoftProperty
-                {
-                    IdentifierText="TitleLatin", Type="string", Attributes=new List<SoftAttribute>
-                    {
-                        new SoftAttribute { Name="Required" },
-                        new SoftAttribute { Name="StringLength", Value="100" },
-                    }
-                },
-                new SoftProperty
-                {
-                    IdentifierText="Description", Type="string", Attributes=new List<SoftAttribute>
-                    {
-                        new SoftAttribute { Name="StringLength", Value="400" },
-                        new SoftAttribute { Name="Required" },
-                    }
-                },
-                new SoftProperty
-                {
-                    IdentifierText="DescriptionLatin", Type="string", Attributes=new List<SoftAttribute>
-                    {
-                        new SoftAttribute { Name="StringLength", Value="400" },
-                        new SoftAttribute { Name="Required" },
-                    }
-                },
-                new SoftProperty
-                {
-                    IdentifierText="EmailBody", Type="string", Attributes=new List<SoftAttribute>
-                    {
-                        new SoftAttribute { Name="StringLength", Value="1000" },
-                    }
-                }
-            };
-
-            properties.AddRange(GetPropertiesForBaseClasses(BusinessObject, "long"));
-
-            return properties;
-        }
-
-        public static List<SoftProperty> GetNotificationDTOProperties()
-        {
-
-            List<SoftProperty> properties = new List<SoftProperty>
-            {
-                new SoftProperty
-                {
-                    IdentifierText="Title", Type="string"
-                },
-                new SoftProperty
-                {
-                    IdentifierText="TitleLatin", Type="string"
-                },
-                new SoftProperty
-                {
-                    IdentifierText="Description", Type="string"
-                },
-                new SoftProperty
-                {
-                    IdentifierText="DescriptionLatin", Type="string"
-                },
-                new SoftProperty
-                {
-                    IdentifierText="EmailBody", Type="string"
-                }
-            };
-
-            properties.AddRange(GetPropertiesForBaseClasses($"{BusinessObject}DTO", "long"));
-
-            return properties;
-        }
-
-        public static List<SoftProperty> GetNotificationUserProperties()
-        {
-
-            List<SoftProperty> properties = new List<SoftProperty>
-            {
-                new SoftProperty
-                {
-                    IdentifierText="IsMarkedAsRead", Type="bool?"
-                },
-                new SoftProperty
-                {
-                    IdentifierText="NotificationsId", Type="long"
-                },
-                new SoftProperty
-                {
-                    IdentifierText="UsersId", Type="long"
-                },
-            };
-
-            return properties;
-        }
-
-        public static List<SoftProperty> GetNotificationUserDTOProperties()
-        {
-
-            List<SoftProperty> properties = new List<SoftProperty>
-            {
-                new SoftProperty
-                {
-                    IdentifierText="IsMarkedAsRead", Type="bool?"
-                },
-                new SoftProperty
-                {
-                    IdentifierText="NotificationsId", Type="long?"
-                },
-                new SoftProperty
-                {
-                    IdentifierText="UsersId", Type="long?"
-                },
-            };
 
             return properties;
         }
@@ -992,6 +872,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 {
                     Type = prop.Type.ToString(),
                     IdentifierText = prop.Identifier.Text,
+                    ClassIdentifierText = c.Identifier.Text,
                     Attributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
                     {
                         return GetSoftAttribute(x);

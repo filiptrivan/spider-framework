@@ -19,12 +19,12 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//#if DEBUG
-//            if (!Debugger.IsAttached)
-//            {
-//                Debugger.Launch();
-//            }
-//#endif
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntities(s),
@@ -184,8 +184,10 @@ namespace {{basePartOfNamespace}}.Services
             return _excelService.FillReportTemplate<{{nameOfTheEntityClass}}DTO>(data, paginationResult.TotalRecords, excelPropertiesToExclude).ToArray();
         }
 
-        {{(entityClass.IsAbstract() ? "" : GetSavingData(nameOfTheEntityClass, idTypeOfTheEntityClass, entityClass, entityClasses, generateAuthorizationMethods, entityProperties))}}
+{{(entityClass.IsAbstract() || entityClass.IsEntityReadonlyObject() ? "" : GetSavingData(entityClass, idTypeOfTheEntityClass, entityClasses, generateAuthorizationMethods, entityProperties))}}
         
+{{(entityClass.IsAbstract() || entityClass.IsEntityReadonlyObject() ? "" : GetDeletingData(entityClass, idTypeOfTheEntityClass, entityClasses, generateAuthorizationMethods))}}
+
         public async virtual Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForAutocomplete(int limit, string query, IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
@@ -542,8 +544,10 @@ namespace {{basePartOfNamespace}}.Services
             return parts[parts.Length-1].Replace(">", "");
         }
 
-        static string GetSavingData(string nameOfTheEntityClass, string idTypeOfTheEntityClass, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, bool generateAuthorizationMethods, List<SoftProperty> entityProperties)
+        static string GetSavingData(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses, bool generateAuthorizationMethods, List<SoftProperty> propertiesEntityClass)
         {
+            string nameOfTheEntityClass = entityClass.Identifier.Text;
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append($$"""
@@ -596,11 +600,12 @@ namespace {{basePartOfNamespace}}.Services
 """);
             }
             sb.AppendLine($$"""
+
 {{string.Join("\n", GetManyToOneInstancesForSave(entityClass, entityClasses))}}
 
                 await _context.SaveChangesAsync();
 
-                {{string.Join("\n\t\t\t\t", GetNonActiveDeleteBlobMethods(entityClass, entityProperties))}}
+                {{string.Join("\n\t\t\t\t", GetNonActiveDeleteBlobMethods(entityClass, propertiesEntityClass))}}
             });
 
             return poco;
@@ -631,6 +636,71 @@ namespace {{basePartOfNamespace}}.Services
             }
 
             return result;
+        }
+
+        private static string GetDeletingData(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses, bool generateAuthorizationMethods)
+        {
+            string nameOfTheEntityClass = entityClass.Identifier.Text;
+            string nameOfTheEntityClassFirstLower = nameOfTheEntityClass.FirstCharToLower();
+
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append($$"""
+        public virtual async Task OnBefore{{nameOfTheEntityClass}}AsyncDelete({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id) { }
+
+        public async Task Delete{{nameOfTheEntityClass}}Async({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
+        {
+            await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Delete{nameOfTheEntityClass});" : "")}}
+                }
+
+                await OnBefore{{nameOfTheEntityClass}}AsyncDelete({{nameOfTheEntityClassFirstLower}}Id);
+
+{{string.Join("\n", GetManyToOneDeleteQueries(entityClass, entityClasses))}}
+
+                await DeleteEntityAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>({{nameOfTheEntityClassFirstLower}}Id);
+            });
+        }
+""");
+
+            return sb.ToString();
+        }
+
+        private static List<string> GetManyToOneDeleteQueries(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        {
+            List<string> result = new List<string>();
+
+            string nameOfTheEntityClass = entityClass.Identifier.Text;
+            string nameOfTheEntityClassFirstLower = nameOfTheEntityClass.FirstCharToLower();
+
+            List<SoftClass> softEntityClasses = Helper.GetSoftEntityClasses(entityClasses);
+
+            List<SoftProperty> manyToOneRequiredProperties = GetManyToOneRequiredProperties(nameOfTheEntityClass, softEntityClasses);
+
+            foreach (SoftProperty prop in manyToOneRequiredProperties)
+            {
+                ClassDeclarationSyntax nestedEntityClass = Helper.GetClass(prop.ClassIdentifierText, entityClasses);
+                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, entityClasses));
+
+                result.Add($$"""
+                await _context.DbSet<{{nestedEntityClass.Identifier.Text}}>().Where(x => x.{{prop.IdentifierText}}.Id == {{nameOfTheEntityClassFirstLower}}Id).ExecuteDeleteAsync();
+""");
+            }
+
+            return result;
+        }
+
+        private static List<SoftProperty> GetManyToOneRequiredProperties(string nameOfTheEntityClass, List<SoftClass> softEntityClasses)
+        {
+            return softEntityClasses
+                .SelectMany(x => x.Properties)
+                .Where(prop => prop.Type.PropTypeIsManyToOne() &&
+                               prop.Attributes.Any(x => x.Name == "ManyToOneRequired") &&
+                               prop.Type == nameOfTheEntityClass)
+                .ToList();
         }
 
         private static List<string> GetPopulateDTOWithBlobParts(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
