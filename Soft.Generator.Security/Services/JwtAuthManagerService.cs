@@ -41,7 +41,7 @@ namespace Soft.Generator.Security.Services
         #region Refresh
 
         /// <summary>
-        /// 1. Stole refresh but doesn't have access - we validate if he has access ()
+        /// 1. Stole refresh but doesn't have access - we validate if he has access
         /// 2. Stole a refresh from one user, he has his own valid access - we log both of them out because they have different emails
         /// 3. Stole access but no refresh
         /// 4. Stole both - we can't do anything to him, we only try to stop him if he's on a different ip address

@@ -28,7 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            softTextbox1 = new SoftTextbox();
             menuStrip1 = new MenuStrip();
             homeToolStripMenuItem = new ToolStripMenuItem();
             applicationToolStripMenuItem = new ToolStripMenuItem();
@@ -40,18 +39,7 @@
             pathToDomainFolderToolStripMenuItem = new ToolStripMenuItem();
             pnl_Main = new Panel();
             menuStrip1.SuspendLayout();
-            pnl_Main.SuspendLayout();
             SuspendLayout();
-            // 
-            // softTextbox1
-            // 
-            softTextbox1.LabelValue = "label1e";
-            softTextbox1.Location = new Point(3, 3);
-            softTextbox1.Name = "softTextbox1";
-            softTextbox1.Size = new Size(238, 63);
-            softTextbox1.TabIndex = 0;
-            softTextbox1.TextBoxValue = "";
-            softTextbox1.Load += softTextbox1_Load;
             // 
             // menuStrip1
             // 
@@ -67,13 +55,14 @@
             homeToolStripMenuItem.Name = "homeToolStripMenuItem";
             homeToolStripMenuItem.Size = new Size(62, 20);
             homeToolStripMenuItem.Text = "Početna";
-            homeToolStripMenuItem.Click += početnaToolStripMenuItem_Click;
+            homeToolStripMenuItem.Click += homeToolStripMenuItem_Click;
             // 
             // applicationToolStripMenuItem
             // 
             applicationToolStripMenuItem.Name = "applicationToolStripMenuItem";
             applicationToolStripMenuItem.Size = new Size(70, 20);
             applicationToolStripMenuItem.Text = "Aplikacija";
+            applicationToolStripMenuItem.Click += applicationToolStripMenuItem_Click;
             // 
             // companyToolStripMenuItem
             // 
@@ -114,12 +103,11 @@
             // 
             // pnl_Main
             // 
-            pnl_Main.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            pnl_Main.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             pnl_Main.BackColor = SystemColors.ActiveCaption;
-            pnl_Main.Controls.Add(softTextbox1);
-            pnl_Main.Location = new Point(12, 27);
+            pnl_Main.Location = new Point(0, 27);
             pnl_Main.Name = "pnl_Main";
-            pnl_Main.Size = new Size(776, 411);
+            pnl_Main.Size = new Size(800, 424);
             pnl_Main.TabIndex = 2;
             // 
             // Form1
@@ -134,14 +122,11 @@
             Text = "Form1";
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
-            pnl_Main.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
 
         #endregion
-
-        private SoftTextbox softTextbox1;
         private MenuStrip menuStrip1;
         private ToolStripMenuItem applicationToolStripMenuItem;
         private ToolStripMenuItem companyToolStripMenuItem;

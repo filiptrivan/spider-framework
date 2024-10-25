@@ -7,7 +7,19 @@
     <Compile Update="Controls\SoftTextbox.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Update="Pages\ApplicationPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Pages\CompanyPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Pages\DomainFolderPathPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Update="Pages\HomePage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Pages\SettingPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
   </ItemGroup>

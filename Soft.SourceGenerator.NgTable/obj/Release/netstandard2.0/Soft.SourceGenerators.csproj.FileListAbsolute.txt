@@ -1,0 +1,11 @@
+E:\Projects\Soft.Generator\Source\Soft.SourceGenerator.NgTable\bin\Release\netstandard2.0\Soft.SourceGenerators.deps.json
+E:\Projects\Soft.Generator\Source\Soft.SourceGenerator.NgTable\bin\Release\netstandard2.0\Soft.SourceGenerators.dll
+E:\Projects\Soft.Generator\Source\Soft.SourceGenerator.NgTable\bin\Release\netstandard2.0\Soft.SourceGenerators.pdb
+E:\Projects\Soft.Generator\Source\Soft.SourceGenerator.NgTable\obj\Release\netstandard2.0\Soft.SourceGenerators.csproj.AssemblyReference.cache
+E:\Projects\Soft.Generator\Source\Soft.SourceGenerator.NgTable\obj\Release\netstandard2.0\Soft.SourceGenerators.GeneratedMSBuildEditorConfig.editorconfig
+E:\Projects\Soft.Generator\Source\Soft.SourceGenerator.NgTable\obj\Release\netstandard2.0\Soft.SourceGenerators.AssemblyInfoInputs.cache
+E:\Projects\Soft.Generator\Source\Soft.SourceGenerator.NgTable\obj\Release\netstandard2.0\Soft.SourceGenerators.AssemblyInfo.cs
+E:\Projects\Soft.Generator\Source\Soft.SourceGenerator.NgTable\obj\Release\netstandard2.0\Soft.SourceGenerators.csproj.CoreCompileInputs.cache
+E:\Projects\Soft.Generator\Source\Soft.SourceGenerator.NgTable\obj\Release\netstandard2.0\Soft.SourceGenerators.sourcelink.json
+E:\Projects\Soft.Generator\Source\Soft.SourceGenerator.NgTable\obj\Release\netstandard2.0\Soft.SourceGenerators.dll
+E:\Projects\Soft.Generator\Source\Soft.SourceGenerator.NgTable\obj\Release\netstandard2.0\Soft.SourceGenerators.pdb

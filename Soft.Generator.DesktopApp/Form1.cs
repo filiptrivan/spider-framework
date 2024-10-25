@@ -11,20 +11,26 @@ namespace Soft.Generator.DesktopApp
             //Form1.WindowState = FormWindowState.Maximized;
         }
 
-        private void softTextbox1_Load(object sender, EventArgs e)
-        {
-            softTextbox1.LabelValue = "Ime aplikacije";
-        }
-
-        private void početnaToolStripMenuItem_Click(object sender, EventArgs e)
+        private void homeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             pnl_Main.Controls.Clear();
 
-            HomePage pocetnaPage = new HomePage();
+            HomePage homePage = new HomePage();
 
-            pocetnaPage.Dock = DockStyle.Fill;
+            homePage.Dock = DockStyle.Fill;
 
-            pnl_Main.Controls.Add(pocetnaPage);
+            pnl_Main.Controls.Add(homePage);
+        }
+
+        private void applicationToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            pnl_Main.Controls.Clear();
+
+            ApplicationPage applicationPage = new ApplicationPage();
+
+            applicationPage.Dock = DockStyle.Fill;
+
+            pnl_Main.Controls.Add(applicationPage);
         }
     }
 }

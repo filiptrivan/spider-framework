@@ -19,7 +19,7 @@ namespace Soft.Generator.DesktopApp.Pages
 
         private void HomePage_Load(object sender, EventArgs e)
         {
-            Size = Screen.PrimaryScreen.WorkingArea.Size;
+            //Size = Screen.PrimaryScreen.WorkingArea.Size;
         }
     }
 }

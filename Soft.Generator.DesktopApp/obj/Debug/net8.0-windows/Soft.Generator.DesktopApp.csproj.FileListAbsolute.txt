@@ -17,3 +17,7 @@ E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-win
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.pdb
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.genruntimeconfig.cache
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\ref\Soft.Generator.DesktopApp.dll
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.ApplicationPage.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.CompanyPage.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.DomainFolderPathPage.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.SettingPage.resources

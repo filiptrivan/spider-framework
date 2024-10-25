@@ -632,7 +632,7 @@ namespace {{basePartOfNamespace}}.Services
 
             foreach (SoftProperty property in blobProperies)
             {
-                result.Add($"await DeleteNonActiveBlobs(dto.{property.IdentifierText}, nameof({entityClass.Identifier.Text}), nameof({entityClass.Identifier.Text}.{property.IdentifierText}), dto.Id.ToString());");
+                result.Add($"await DeleteNonActiveBlobs(dto.{property.IdentifierText}, nameof({entityClass.Identifier.Text}), nameof({entityClass.Identifier.Text}.{property.IdentifierText}), poco.Id.ToString());");
             }
 
             return result;
@@ -659,7 +659,7 @@ namespace {{basePartOfNamespace}}.Services
 
                 await OnBefore{{nameOfTheEntityClass}}AsyncDelete({{nameOfTheEntityClassFirstLower}}Id);
 
-{{string.Join("\n", GetManyToOneDeleteQueries(entityClass, entityClasses))}}
+{{string.Join("\n", GetManyToOneDeleteQueries(entityClass, entityClasses, 0))}}
 
                 await DeleteEntityAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>({{nameOfTheEntityClassFirstLower}}Id);
             });
@@ -669,8 +669,14 @@ namespace {{basePartOfNamespace}}.Services
             return sb.ToString();
         }
 
-        private static List<string> GetManyToOneDeleteQueries(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        private static List<string> GetManyToOneDeleteQueries(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, int recursiveIteration)
         {
+            if (recursiveIteration > 5000)
+            {
+                GetManyToOneDeleteQueries(null, null, int.MaxValue);
+                return new List<string> { "You made cascade delete infinite loop." };
+            }
+
             List<string> result = new List<string>();
 
             string nameOfTheEntityClass = entityClass.Identifier.Text;
@@ -683,10 +689,27 @@ namespace {{basePartOfNamespace}}.Services
             foreach (SoftProperty prop in manyToOneRequiredProperties)
             {
                 ClassDeclarationSyntax nestedEntityClass = Helper.GetClass(prop.ClassIdentifierText, entityClasses);
-                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, entityClasses));
+                string nestedEntityClassName = nestedEntityClass.Identifier.Text;
+                string nestedEntityClassNameLowerCase = nestedEntityClassName.FirstCharToLower();
+                string nestedEntityClassIdType = Helper.GetGenericIdType(nestedEntityClass, entityClasses);
 
-                result.Add($$"""
-                await _context.DbSet<{{nestedEntityClass.Identifier.Text}}>().Where(x => x.{{prop.IdentifierText}}.Id == {{nameOfTheEntityClassFirstLower}}Id).ExecuteDeleteAsync();
+                if (recursiveIteration == 0)
+                {
+                    result.Add($$"""
+                List<{{nestedEntityClassIdType}}> {{nestedEntityClassNameLowerCase}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => x.{{prop.IdentifierText}}.Id == {{nameOfTheEntityClassFirstLower}}Id).Select(x => x.Id).ToListAsync();
+""");
+                }
+                else
+                {
+                    result.Add($$"""
+                List<{{nestedEntityClassIdType}}> {{nestedEntityClassNameLowerCase}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{nameOfTheEntityClassFirstLower}}ListToDelete.Contains(x.{{prop.IdentifierText}}.Id)).Select(x => x.Id).ToListAsync();
+""");
+                }
+
+                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, entityClasses, recursiveIteration + 1));
+
+                    result.Add($$"""
+                await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{nestedEntityClassNameLowerCase}}ListToDelete.Contains(x.Id)).ExecuteDeleteAsync();
 """);
             }
 
@@ -714,15 +737,22 @@ namespace {{basePartOfNamespace}}.Services
                 result.Add($$"""
                 if (dto != null && !string.IsNullOrEmpty(dto.{{property.IdentifierText}}))
                 {
-                    BlobClient blobClient = _blobContainerClient.GetBlobClient(dto.{{property.IdentifierText}});
+                    try
+                    {
+                        BlobClient blobClient = _blobContainerClient.GetBlobClient(dto.{{property.IdentifierText}});
 
-                    Azure.Response<BlobDownloadResult> blobDownloadInfo = await blobClient.DownloadContentAsync();
+                        Azure.Response<BlobDownloadResult> blobDownloadInfo = await blobClient.DownloadContentAsync();
 
-                    byte[] byteArray = blobDownloadInfo.Value.Content.ToArray();
+                        byte[] byteArray = blobDownloadInfo.Value.Content.ToArray();
 
-                    string base64 = Convert.ToBase64String(byteArray);
+                        string base64 = Convert.ToBase64String(byteArray);
 
-                    dto.{{property.IdentifierText}}Data = $"filename={dto.{{property.IdentifierText}}};base64,{base64}";
+                        dto.{{property.IdentifierText}}Data = $"filename={dto.{{property.IdentifierText}}};base64,{base64}";
+                    }
+                    catch
+                    {
+                        // TODO FT: Log
+                    }
                 }
 """);
             }
