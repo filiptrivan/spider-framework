@@ -13,10 +13,16 @@
     <Compile Update="Pages\CompanyPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="Pages\DomainFolderPathPage.cs">
+    <Compile Update="Pages\PathToDomainFolderPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Pages\FrameworkPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Update="Pages\HomePage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Pages\PermissionPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Update="Pages\SettingPage.cs">

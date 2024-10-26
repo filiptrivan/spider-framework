@@ -69,12 +69,14 @@
             companyToolStripMenuItem.Name = "companyToolStripMenuItem";
             companyToolStripMenuItem.Size = new Size(76, 20);
             companyToolStripMenuItem.Text = "Kompanija";
+            companyToolStripMenuItem.Click += companyToolStripMenuItem_Click;
             // 
             // settingToolStripMenuItem
             // 
             settingToolStripMenuItem.Name = "settingToolStripMenuItem";
             settingToolStripMenuItem.Size = new Size(85, 20);
             settingToolStripMenuItem.Text = "Podešavanje";
+            settingToolStripMenuItem.Click += settingToolStripMenuItem_Click;
             // 
             // codebookToolStripMenuItem
             // 
@@ -88,18 +90,21 @@
             frameworkToolStripMenuItem.Name = "frameworkToolStripMenuItem";
             frameworkToolStripMenuItem.Size = new Size(237, 22);
             frameworkToolStripMenuItem.Text = "Okvir";
+            frameworkToolStripMenuItem.Click += frameworkToolStripMenuItem_Click;
             // 
             // permissionToolStripMenuItem
             // 
             permissionToolStripMenuItem.Name = "permissionToolStripMenuItem";
             permissionToolStripMenuItem.Size = new Size(237, 22);
             permissionToolStripMenuItem.Text = "Permisija";
+            permissionToolStripMenuItem.Click += permissionToolStripMenuItem_Click;
             // 
             // pathToDomainFolderToolStripMenuItem
             // 
             pathToDomainFolderToolStripMenuItem.Name = "pathToDomainFolderToolStripMenuItem";
             pathToDomainFolderToolStripMenuItem.Size = new Size(237, 22);
             pathToDomainFolderToolStripMenuItem.Text = "Putanja do domenskog foldera";
+            pathToDomainFolderToolStripMenuItem.Click += pathToDomainFolderToolStripMenuItem_Click;
             // 
             // pnl_Main
             // 
