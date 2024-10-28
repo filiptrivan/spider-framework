@@ -120,14 +120,14 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [AuthGuard]
         public async Task<TableResponseDTO<RoleDTO>> LoadRoleListForTable(TableFilterDTO dto)
         {
-            return await _securityBusinessService.LoadRoleListForTable(dto, _context.DbSet<Role>().Where(a => EF.Property<string>(a, "Discriminator") == nameof(Role)));
+            return await _securityBusinessService.LoadRoleListForTable(dto, _context.DbSet<Role>());
         }
 
         [HttpPost]
         [AuthGuard]
         public async Task<IActionResult> ExportRoleListToExcel(TableFilterDTO dto)
         {
-            byte[] fileContent = await _securityBusinessService.ExportRoleListToExcel(dto, _context.DbSet<Role>().Where(a => EF.Property<string>(a, "Discriminator") == nameof(Role)));
+            byte[] fileContent = await _securityBusinessService.ExportRoleListToExcel(dto, _context.DbSet<Role>());
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"Roles.xlsx"));
         }
 
@@ -163,14 +163,14 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [AuthGuard]
         public async Task<List<NamebookDTO<int>>> LoadRoleListForAutocomplete(int limit, string query)
         {
-            return await _securityBusinessService.LoadRoleListForAutocomplete(limit, query, _context.DbSet<Role>().Where(a => EF.Property<string>(a, "Discriminator") == nameof(Role)));
+            return await _securityBusinessService.LoadRoleListForAutocomplete(limit, query, _context.DbSet<Role>());
         }
 
         [HttpGet]
         [AuthGuard]
         public async Task<List<NamebookDTO<int>>> LoadRoleListForDropdown()
         {
-            return await _securityBusinessService.LoadRoleListForDropdown(_context.DbSet<Role>().Where(a => EF.Property<string>(a, "Discriminator") == nameof(Role)));
+            return await _securityBusinessService.LoadRoleListForDropdown(_context.DbSet<Role>());
         }
 
         #endregion

@@ -53,32 +53,22 @@ namespace Soft.Generator.Shared.Excel
             if (options == null)
                 options = new ExcelReportOptionsDTO();
 
-            string fileName = $"TableTemplate.xlsx";
-            byte[] cachedTemplate = StaticMemoryCache.GetOrSet(fileName, () =>
-            {
-                string filePath = Path.Combine(ExcelTemplatesFullPath, fileName);
-                return File.ReadAllBytes(filePath);
-            }, 300);
-
-            //byte[] template = DeepCopier.Clone(cachedTemplate);
             MemoryStream outputStream = new MemoryStream();
-            using (MemoryStream templateStream = new MemoryStream(cachedTemplate))
-            using (ExcelPackage excel = new ExcelPackage(outputStream, templateStream))
-            {
-                if (data != null)
-                {
-                    if (count > 0)
-                    {
-                        Type type = typeof(T);
-                        PropertyInfo[] propertiesToInclude = GetMembersToInclude(excelPropertiesToExclude, type);
 
-                        ExcelWorksheet sheet = excel.Workbook.Worksheets[options.DataSheetName];
-                        LoadFromCollectionOverride(data, count, type, sheet, propertiesToInclude);
-                    }
+            using (ExcelPackage excel = new ExcelPackage())
+            {
+                if (data != null && count > 0)
+                {
+                    ExcelWorksheet sheet = excel.Workbook.Worksheets.Add(options.DataSheetName);
+                    Type type = typeof(T);
+                    PropertyInfo[] propertiesToInclude = GetMembersToInclude(excelPropertiesToExclude, type);
+
+                    LoadFromCollectionOverride(data, count, type, sheet, propertiesToInclude);
                 }
-                excel.Save();
+                excel.SaveAs(outputStream);
             }
 
+            outputStream.Position = 0;
             return outputStream;
         }
 

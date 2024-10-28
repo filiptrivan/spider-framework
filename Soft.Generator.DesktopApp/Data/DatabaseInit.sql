@@ -11,8 +11,12 @@ CREATE TABLE Company (
 CREATE TABLE Permission (
     Id INT PRIMARY KEY AUTO_INCREMENT,
     Name NVARCHAR(100) NOT NULL,
-    Code NVARCHAR(100) NOT NULL
+    Code NVARCHAR(100) NOT NULL unique
 );
+
+insert into Permission (Name, Code) values ('Dodavanje kompanije', 'InsertCompany');
+insert into Permission (Name, Code) values ('Menjanje kompanije', 'UpdateCompany');
+insert into Permission (Name, Code) values ('Brisanje kompanije', 'DeleteCompany');
 
 CREATE TABLE Framework (
     Id INT PRIMARY KEY AUTO_INCREMENT,

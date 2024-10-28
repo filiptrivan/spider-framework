@@ -1,16 +1,22 @@
-﻿using MySql.Data.MySqlClient;
+﻿using MySqlConnector;
 using Soft.Generator.DesktopApp.Entities;
+using Soft.Generator.DesktopApp.Extensions;
 using Soft.Generator.DesktopApp.Pages;
+using Soft.Generator.DesktopApp.Services;
 using System.Data;
 
 namespace Soft.Generator.DesktopApp
 {
     public partial class Form1 : Form
     {
-        MySqlConnection connection = new MySqlConnection(Settings.ConnectionString);
+        private readonly MySqlConnection _connection;
+        private readonly DesktopAppService _desktopAppService;
 
-        public Form1()
+        public Form1(MySqlConnection connection, DesktopAppService desktopAppService)
         {
+            _connection = connection;
+            _desktopAppService = desktopAppService;
+
             InitializeComponent();
 
             homeToolStripMenuItem_Click(null, null);
@@ -20,49 +26,29 @@ namespace Soft.Generator.DesktopApp
 
         private void homeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            List<Permission> permissions = GetPermissions();
+            _connection.WithTransaction(() =>
+            {
+                List<Permission> permissions = _desktopAppService.GetPermissions();
+
+                Permission permission = _desktopAppService.GetPermission(1);
+
+                Permission insert = new Permission
+                {
+                    Name = "Test",
+                    Code = "TestCode",
+                };
+
+                _desktopAppService.InsertPermission(insert);
+
+                _desktopAppService.InsertPermission(insert);
+            });
 
             NavigateToPage<HomePage>();
         }
 
-        private List<Permission> GetPermissions()
+        private ConnectionState State()
         {
-            List<Permission> permissions = new List<Permission>();
-
-            string query = "SELECT * FROM Permission";
-
-            try
-            {
-                if (connection.State == ConnectionState.Closed)
-                {
-                    connection.Open();
-                }
-
-                using (MySqlCommand cmd = new MySqlCommand(query, connection))
-                using (MySqlDataReader reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        var permission = new Permission
-                        {
-                            Id = reader.GetInt32("Id"),
-                            Name = reader.GetString("Name"),
-                            Code = reader.GetString("Code"),
-                        };
-                        permissions.Add(permission);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}");
-            }
-            finally
-            {
-                connection.Close();
-            }
-
-            return permissions;
+            return _connection.State;
         }
 
         private void applicationToolStripMenuItem_Click(object sender, EventArgs e)
