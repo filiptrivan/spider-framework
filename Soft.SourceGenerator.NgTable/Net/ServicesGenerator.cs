@@ -14,7 +14,7 @@ using System.Text;
 namespace Soft.SourceGenerator.NgTable.Net
 {
     [Generator]
-    public class NetServicesGenerator : IIncrementalGenerator
+    public class ServicesGenerator : IIncrementalGenerator
     {
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -57,7 +57,7 @@ namespace Soft.SourceGenerator.NgTable.Net
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
-            bool generateAuthorizationMethods = projectName != "Security";
+            bool isSecurityProject = projectName == "Security";
 
             sb.AppendLine($$"""
 using {{basePartOfNamespace}}.ValidationRules;
@@ -80,20 +80,21 @@ using Mapster;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.AspNetCore.Http;
+{{(isSecurityProject ? "using Soft.Generator.Security.Interface;" : "")}}
 
 namespace {{basePartOfNamespace}}.Services
 {
-    public class {{projectName}}BusinessServiceGenerated : BusinessServiceBase
+    {{(isSecurityProject ? $"public class {projectName}BusinessServiceGenerated<TUser> : BusinessServiceBase where TUser : class, IUser, new()" : $"public class {projectName}BusinessServiceGenerated : BusinessServiceBase")}}
     {
         private readonly IApplicationDbContext _context;
         private readonly ExcelService _excelService;
-        private readonly AuthorizationService _authorizationService;
+        {{(isSecurityProject ? "private readonly AuthorizationBusinessService<TUser> _authorizationService;" : "private readonly AuthorizationBusinessService _authorizationService;")}}
         private readonly BlobContainerClient _blobContainerClient;
 
-        public {{projectName}}BusinessServiceGenerated(IApplicationDbContext context, ExcelService excelService, AuthorizationService authorizationService, BlobContainerClient blobContainerClient)
+        public {{projectName}}BusinessServiceGenerated(IApplicationDbContext context, ExcelService excelService, {{(isSecurityProject ? "AuthorizationBusinessService<TUser> authorizationService" : "AuthorizationBusinessService authorizationService")}}, BlobContainerClient blobContainerClient)
         : base(context, blobContainerClient)
         {
-            _context=context;
+            _context = context;
             _excelService = excelService;
             _authorizationService = authorizationService;
             _blobContainerClient = blobContainerClient;
@@ -120,7 +121,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize) 
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                    await _authorizationService.{{nameOfTheEntityClass}}SingleReadAuthorize(id);
                 }
 
                 {{nameOfTheEntityClass}}DTO dto = await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ProjectToConfig()).FirstOrDefaultAsync();
@@ -148,7 +149,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize) 
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                    await _authorizationService.{{nameOfTheEntityClass}}ListReadAuthorize();
                 }
 
                 paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload, query);
@@ -172,7 +173,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                    await _authorizationService.{{nameOfTheEntityClass}}ListReadAuthorize();
                 }
 
                 paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload, query);
@@ -184,9 +185,9 @@ namespace {{basePartOfNamespace}}.Services
             return _excelService.FillReportTemplate<{{nameOfTheEntityClass}}DTO>(data, paginationResult.TotalRecords, excelPropertiesToExclude).ToArray();
         }
 
-{{(entityClass.IsAbstract() || entityClass.IsEntityReadonlyObject() ? "" : GetSavingData(entityClass, idTypeOfTheEntityClass, entityClasses, generateAuthorizationMethods, entityProperties))}}
+{{(entityClass.IsAbstract() || entityClass.IsEntityReadonlyObject() ? "" : GetSavingData(entityClass, idTypeOfTheEntityClass, entityClasses, entityProperties))}}
         
-{{(entityClass.IsAbstract() || entityClass.IsEntityReadonlyObject() ? "" : GetDeletingData(entityClass, idTypeOfTheEntityClass, entityClasses, generateAuthorizationMethods))}}
+{{(entityClass.IsAbstract() || entityClass.IsEntityReadonlyObject() ? "" : GetDeletingData(entityClass, idTypeOfTheEntityClass, entityClasses))}}
 
         public async virtual Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForAutocomplete(int limit, string query, IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
         {
@@ -194,7 +195,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                    await _authorizationService.{{nameOfTheEntityClass}}ListReadAuthorize();
                 }
 
                 if (!string.IsNullOrEmpty(query))
@@ -217,7 +218,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                    await _authorizationService.{{nameOfTheEntityClass}}ListReadAuthorize();
                 }
 
                 return await {{nameOfTheEntityClassFirstLower}}Query
@@ -236,7 +237,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                    await _authorizationService.{{nameOfTheEntityClass}}ListReadAuthorize();
                 }
 
                 return await {{nameOfTheEntityClassFirstLower}}Query
@@ -250,7 +251,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                    await _authorizationService.{{nameOfTheEntityClass}}ListReadAuthorize();
                 }
 
                 return await {{nameOfTheEntityClassFirstLower}}Query
@@ -262,7 +263,7 @@ namespace {{basePartOfNamespace}}.Services
     
 {{string.Join("\n", GetUploadBlobMethods(entityClass, idTypeOfTheEntityClass, entityProperties))}}
 
-{{string.Join("\n", GetEnumerableGeneratedMethods(entityClass, entityClasses, generateAuthorizationMethods, referencedClassesEntities))}}
+{{string.Join("\n", GetEnumerableGeneratedMethods(entityClass, entityClasses, referencedClassesEntities))}}
 
 """);
             }
@@ -319,7 +320,7 @@ namespace {{basePartOfNamespace}}.Services
             return result;
         }
 
-        static List<string> GetEnumerableGeneratedMethods(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> classes, bool generateAuthorizationMethods, IEnumerable<INamedTypeSymbol> referencedClassesEntities)
+        static List<string> GetEnumerableGeneratedMethods(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> classes, IEnumerable<INamedTypeSymbol> referencedClassesEntities)
         {
             string nameOfTheEntityClass = entityClass.Identifier.Text; // User
             string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower(); // user
@@ -366,7 +367,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                    await _authorizationService.{{nameOfTheEntityClass}}SingleReadAuthorize({{nameOfTheEntityClassFirstLower}}Id);
                 }
 
                 return await _context.DbSet<{{classNameFromTheList}}>()
@@ -387,7 +388,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                    await _authorizationService.{{nameOfTheEntityClass}}SingleReadAuthorize({{nameOfTheEntityClassFirstLower}}Id);
                 }
 
                 return await _context.DbSet<{{classNameFromTheList}}>()
@@ -406,7 +407,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                    await _authorizationService.{{nameOfTheEntityClass}}SingleReadAuthorize({{nameOfTheEntityClassFirstLower}}Id);
                 }
 
                 return await _context.DbSet<{{classNameFromTheList}}>()
@@ -427,7 +428,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{nameOfTheEntityClass});" : "")}}
+                    await _authorizationService.{{nameOfTheEntityClass}}SingleReadAuthorize({{nameOfTheEntityClassFirstLower}}Id);
                 }
 
                 return await _context.DbSet<{{classNameFromTheList}}>()
@@ -544,7 +545,7 @@ namespace {{basePartOfNamespace}}.Services
             return parts[parts.Length-1].Replace(">", "");
         }
 
-        static string GetSavingData(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses, bool generateAuthorizationMethods, List<SoftProperty> propertiesEntityClass)
+        static string GetSavingData(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses, List<SoftProperty> propertiesEntityClass)
         {
             string nameOfTheEntityClass = entityClass.Identifier.Text;
 
@@ -580,7 +581,7 @@ namespace {{basePartOfNamespace}}.Services
                 {
                     if (authorizeUpdate)
                     {
-                        {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Edit{nameOfTheEntityClass});" : "")}}
+                        await _authorizationService.{{nameOfTheEntityClass}}SingleUpdateAuthorize(dto);
                     }
 
                     poco = await LoadInstanceAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>(dto.Id, dto.Version);
@@ -591,7 +592,7 @@ namespace {{basePartOfNamespace}}.Services
                 {
                     if (authorizeInsert)
                     {
-                        {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Insert{nameOfTheEntityClass});" : "")}}
+                        await _authorizationService.{{nameOfTheEntityClass}}SingleInsertAuthorize(dto);
                     }
 
                     poco = dto.Adapt<{{nameOfTheEntityClass}}>(Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
@@ -638,7 +639,7 @@ namespace {{basePartOfNamespace}}.Services
             return result;
         }
 
-        private static string GetDeletingData(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses, bool generateAuthorizationMethods)
+        private static string GetDeletingData(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses)
         {
             string nameOfTheEntityClass = entityClass.Identifier.Text;
             string nameOfTheEntityClassFirstLower = nameOfTheEntityClass.FirstCharToLower();
@@ -654,7 +655,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    {{(generateAuthorizationMethods ? $"await _authorizationService.AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Delete{nameOfTheEntityClass});" : "")}}
+                    await _authorizationService.{{nameOfTheEntityClass}}DeleteAuthorize({{nameOfTheEntityClassFirstLower}}Id);
                 }
 
                 await OnBefore{{nameOfTheEntityClass}}AsyncDelete({{nameOfTheEntityClassFirstLower}}Id);
@@ -772,11 +773,26 @@ namespace {{basePartOfNamespace}}.Services
             foreach (SoftProperty property in blobProperies)
             {
                 result.Add($$"""
-        public async Task<string> Upload{{nameOfTheEntityClass}}{{property.IdentifierText}}Async(IFormFile file) // FT: It doesn't work without interface
+        public async Task<string> Upload{{nameOfTheEntityClass}}{{property.IdentifierText}}Async(IFormFile file, bool authorizeUpdate = true, bool authorizeInsert = true) // FT: It doesn't work without interface
         {
             using Stream stream = file.OpenReadStream();
 
             {{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id = GetObjectIdFromFileName<{{idTypeOfTheEntityClass}}>(file.FileName);
+
+            if ({{nameOfTheEntityClassFirstLower}}Id > 0)
+            {
+                if (authorizeUpdate)
+                {
+                    await _authorizationService.{{nameOfTheEntityClass}}SingleUpdateAuthorize({{nameOfTheEntityClassFirstLower}}Id);
+                }
+            }
+            else
+            {
+                if (authorizeInsert)
+                {
+                    await _authorizationService.{{nameOfTheEntityClass}}SingleInsertAuthorize();
+                }
+            }
 
             OnBefore{{nameOfTheEntityClass}}{{property.IdentifierText}}BlobIsUploaded({{nameOfTheEntityClassFirstLower}}Id); // FT: Authorize access for this id...
 

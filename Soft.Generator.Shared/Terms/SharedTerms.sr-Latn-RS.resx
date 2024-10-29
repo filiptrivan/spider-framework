@@ -129,4 +129,31 @@
   <data name="GlobalError" xml:space="preserve">
     <value>Dogodila se greška u sistemu, naš tim je obavešten i otkloniće je u najkraćem mogućem roku. Hvala Vam na strpljenju. Kod greške:</value>
   </data>
+  <data name="Password" xml:space="preserve">
+    <value>Šifra</value>
+  </data>
+  <data name="UserExcel" xml:space="preserve">
+    <value>Korisnici</value>
+  </data>
+  <data name="RoleExcel" xml:space="preserve">
+    <value>Uloge</value>
+  </data>
+  <data name="NotificationExcel" xml:space="preserve">
+    <value>Notifikacije</value>
+  </data>
+  <data name="UnauthorizedAccessExceptionMessage" xml:space="preserve">
+    <value>Nemate potrebna prava da biste izvršili operaciju.</value>
+  </data>
+  <data name="ExpiredLoginVerificationCodeException" xml:space="preserve">
+    <value>Vaš verifikacioni kod je istekao. Zatražite novi kod da biste nastavili.</value>
+  </data>
+  <data name="LatestVerificationCodeException" xml:space="preserve">
+    <value>Poslato je više verifikacionih kodova, molimo Vas da koristite poslednji.</value>
+  </data>
+  <data name="ExpiredRefreshTokenException" xml:space="preserve">
+    <value>Vaša sesija je istekla, molimo Vas da se prijavite ponovo.</value>
+  </data>
+  <data name="TwoDifferentIpAddressesRefreshException" xml:space="preserve">
+    <value>Ne možete da koristite aplikaciju sa dve različite IP adrese u isto vreme, molimo vas da se prijavite ponovo.</value>
+  </data>
 </root>

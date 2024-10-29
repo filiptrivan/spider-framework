@@ -21,19 +21,21 @@ using Soft.Generator.Security.Entities;
 using Soft.Generator.Shared.DTO;
 using Mapster;
 using Azure.Storage.Blobs;
+using Microsoft.IdentityModel.Tokens;
+using Soft.Generator.Shared.Terms;
 
 namespace Soft.Generator.Security.Services
 {
-    public class SecurityBusinessService : SecurityBusinessServiceGenerated
+    public class SecurityBusinessService<TUser> : SecurityBusinessServiceGenerated<TUser> where TUser : class, IUser, new()
     {
         private readonly IApplicationDbContext _context;
         private readonly IJwtAuthManager _jwtAuthManagerService;
         private readonly AuthenticationService _authenticationService;
-        private readonly AuthorizationService _authorizationService;
+        private readonly AuthorizationBusinessService<TUser> _authorizationService;
         private readonly EmailingService _emailingService;
         private readonly BlobContainerClient _blobContainerClient;
 
-        public SecurityBusinessService(IApplicationDbContext context, IJwtAuthManager jwtAuthManagerService, EmailingService emailingService, AuthenticationService authenticationService, AuthorizationService authorizationService, 
+        public SecurityBusinessService(IApplicationDbContext context, IJwtAuthManager jwtAuthManagerService, EmailingService emailingService, AuthenticationService authenticationService, AuthorizationBusinessService<TUser> authorizationService, 
             ExcelService excelService, BlobContainerClient blobContainerClient)
             : base(context, excelService, authorizationService, blobContainerClient)
         {
@@ -48,7 +50,7 @@ namespace Soft.Generator.Security.Services
         #region Authentication
 
         // Login
-        public async Task SendLoginVerificationEmail<TUser>(LoginDTO loginDTO) where TUser : class, IUser, new()
+        public async Task SendLoginVerificationEmail(LoginDTO loginDTO)
         {
             LoginDTOValidationRules validationRules = new LoginDTOValidationRules();
             validationRules.ValidateAndThrow(loginDTO);
@@ -57,7 +59,7 @@ namespace Soft.Generator.Security.Services
             long userId = 0;
             await _context.WithTransactionAsync(async () =>
             {
-                TUser user = await Authenticate<TUser>(loginDTO);
+                TUser user = await Authenticate(loginDTO);
                 userEmail = user.Email;
                 userId = user.Id;
             });
@@ -85,13 +87,13 @@ namespace Soft.Generator.Security.Services
             return GetLoginResultDTO(loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email, jwtAuthResultDTO);
         }
 
-        public async Task<LoginResultDTO> LoginExternal<TUser>(ExternalProviderDTO externalProviderDTO, string googleClientId) where TUser : class, IUser, new()
+        public async Task<LoginResultDTO> LoginExternal(ExternalProviderDTO externalProviderDTO, string googleClientId)
         {
             GoogleJsonWebSignature.Payload payload = await ValidateGoogleToken(externalProviderDTO.IdToken, googleClientId);
 
             return await _context.WithTransactionAsync(async () =>
             {
-                TUser user = await GetUserByEmailAsync<TUser>(payload.Email); // FT: Check if user already exist in the database
+                TUser user = await GetUserByEmailAsync(payload.Email); // FT: Check if user already exist in the database
                 DbSet<TUser> userDbSet = _context.DbSet<TUser>();
 
                 if (user == null)
@@ -122,7 +124,7 @@ namespace Soft.Generator.Security.Services
 
 
         // Forgot password
-        public async Task SendForgotPasswordVerificationEmail<TUser>(ForgotPasswordDTO forgotPasswordDTO) where TUser : class, IUser, new()
+        public async Task SendForgotPasswordVerificationEmail(ForgotPasswordDTO forgotPasswordDTO)
         {
             ForgotPasswordDTOValidationRules validationRules = new ForgotPasswordDTOValidationRules();
             validationRules.ValidateAndThrow(forgotPasswordDTO);
@@ -131,7 +133,7 @@ namespace Soft.Generator.Security.Services
             long userId = 0;
             await _context.WithTransactionAsync(async () =>
             {
-                TUser user = await GetUserByEmailAsync<TUser>(forgotPasswordDTO.Email);
+                TUser user = await GetUserByEmailAsync(forgotPasswordDTO.Email);
                 if (user == null)
                     throw new BusinessException("The user with the forwarded email does not exist in the system.");
                 userEmail = user.Email;
@@ -149,7 +151,7 @@ namespace Soft.Generator.Security.Services
             }
         }
 
-        public async Task<LoginResultDTO> ForgotPassword<TUser>(VerificationTokenRequestDTO verificationRequestDTO) where TUser : class, IUser, new()
+        public async Task<LoginResultDTO> ForgotPassword(VerificationTokenRequestDTO verificationRequestDTO)
         {
             VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
             validationRules.ValidateAndThrow(verificationRequestDTO);
@@ -169,7 +171,7 @@ namespace Soft.Generator.Security.Services
         }
 
         // Registration
-        public async Task<RegistrationVerificationResultDTO> SendRegistrationVerificationEmail<TUser>(RegistrationDTO registrationDTO) where TUser : class, IUser, new()
+        public async Task<RegistrationVerificationResultDTO> SendRegistrationVerificationEmail(RegistrationDTO registrationDTO)
         {
             RegistrationVerificationResultDTO registrationResultDTO = new RegistrationVerificationResultDTO();
 
@@ -180,7 +182,7 @@ namespace Soft.Generator.Security.Services
 
                 await _context.WithTransactionAsync(async () =>
                 {
-                    TUser user = await GetUserByEmailAsync<TUser>(registrationDTO.Email);
+                    TUser user = await GetUserByEmailAsync(registrationDTO.Email);
 
                     if (user == null)
                     {
@@ -208,7 +210,7 @@ namespace Soft.Generator.Security.Services
                     }
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UnexpectedError;
                 // TODO FT: log it
@@ -218,7 +220,7 @@ namespace Soft.Generator.Security.Services
             return registrationResultDTO;
         }
 
-        public async Task<LoginResultDTO> Register<TUser>(VerificationTokenRequestDTO verificationRequestDTO) where TUser : class, IUser, new()
+        public async Task<LoginResultDTO> Register(VerificationTokenRequestDTO verificationRequestDTO)
         {
             VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
             validationRules.ValidateAndThrow(verificationRequestDTO);
@@ -244,17 +246,18 @@ namespace Soft.Generator.Security.Services
         }
 
 
-        public async Task<LoginResultDTO> GetLoginResultDTOAsync<TUser>(RefreshTokenRequestDTO request) where TUser : class, IUser, new()
+        public async Task<LoginResultDTO> GetLoginResultDTOAsync(RefreshTokenRequestDTO request)
         {
             if (string.IsNullOrWhiteSpace(request.RefreshToken))
-                throw new UnauthorizedException();
+                throw new SecurityTokenException(SharedTerms.ExpiredRefreshTokenException); // FT: It's not realy this reason, but it's easier then realy explaining the user what has happened, this could happen if he deleted the cache from the browser
+
             string accessToken = await _authenticationService.GetAccessTokenAsync();
             List<Claim> principalClaims = _jwtAuthManagerService.GetPrincipalClaimsForAccessToken(request, accessToken);
 
             long accesTokenUserId = _authenticationService.GetCurrentUserId();
             string accessTokenUserEmail = _authenticationService.GetCurrentUserEmail();
 
-            string emailFromTheDb = await GetCurrentUserEmailByIdAsync<TUser>(accesTokenUserId);
+            string emailFromTheDb = await GetCurrentUserEmailByIdAsync(accesTokenUserId);
             if (emailFromTheDb != accessTokenUserEmail) // The email from db changed, and the user is using the old one in access token
                 _jwtAuthManagerService.RemoveRefreshTokenByEmail(accessTokenUserEmail);
 
@@ -270,7 +273,7 @@ namespace Soft.Generator.Security.Services
             };
         }
 
-        public async Task<string> GetCurrentUserEmailByIdAsync<TUser>(long id) where TUser : class, IUser, new()
+        public async Task<string> GetCurrentUserEmailByIdAsync(long id)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -278,7 +281,7 @@ namespace Soft.Generator.Security.Services
             });
         }
 
-        public async Task<TUser> GetUserByEmailAsync<TUser>(string email) where TUser : class, IUser
+        public async Task<TUser> GetUserByEmailAsync(string email)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -316,7 +319,7 @@ namespace Soft.Generator.Security.Services
             };
         }
 
-        private async Task<TUser> Authenticate<TUser>(LoginDTO loginDTO) where TUser : class, IUser, new()
+        private async Task<TUser> Authenticate(LoginDTO loginDTO)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -359,7 +362,7 @@ namespace Soft.Generator.Security.Services
 
         #region User
 
-        public async Task<List<NamebookDTO<int>>> LoadRoleNamebookListForUserExtended<TUser>(long userId) where TUser : class, IUser, new()
+        public async Task<List<NamebookDTO<int>>> LoadRoleNamebookListForUserExtended(long userId)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -379,7 +382,7 @@ namespace Soft.Generator.Security.Services
             });
         }
 
-        public async Task UpdateRoleListForUser<TUser>(long userId, List<int> selectedRoleIds) where TUser : class, IUser, new()
+        public async Task UpdateRoleListForUser(long userId, List<int> selectedRoleIds)
         {
             await _context.WithTransactionAsync(async () =>
             {
@@ -404,7 +407,7 @@ namespace Soft.Generator.Security.Services
 
         #region Role
 
-        public async Task UpdateUserListForRole<TUser>(int roleId, List<long> selectedUserIds) where TUser : class, IUser, new()
+        public async Task UpdateUserListForRole(int roleId, List<long> selectedUserIds)
         {
             if (selectedUserIds == null)
                 return;
@@ -437,7 +440,7 @@ namespace Soft.Generator.Security.Services
             });
         }
 
-        public async Task<List<NamebookDTO<long>>> LoadUserExtendedNamebookListForRole<TUser>(long roleId) where TUser : class, IUser, new()
+        public async Task<List<NamebookDTO<long>>> LoadUserExtendedNamebookListForRole(long roleId)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -455,13 +458,13 @@ namespace Soft.Generator.Security.Services
             });
         }
 
-        public async Task<RoleDTO> SaveRoleAndReturnDTOExtendedAsync<TUser>(RoleSaveBodyDTO roleSaveBodyDTO) where TUser : class, IUser, new()
+        public async Task<RoleDTO> SaveRoleAndReturnDTOExtendedAsync(RoleSaveBodyDTO roleSaveBodyDTO)
         {
             return await _context.WithTransactionAsync(async () =>
             {
                 RoleDTO savedRoleDTO = await SaveRoleAndReturnDTOAsync(roleSaveBodyDTO.RoleDTO);
 
-                await UpdateUserListForRole<TUser>(savedRoleDTO.Id, roleSaveBodyDTO.SelectedUserIds);
+                await UpdateUserListForRole(savedRoleDTO.Id, roleSaveBodyDTO.SelectedUserIds);
                 await UpdatePermissionListForRole(savedRoleDTO.Id, roleSaveBodyDTO.SelectedPermissionIds);
 
                 return savedRoleDTO;

@@ -141,6 +141,9 @@ namespace Soft.Generator.Shared.Services
         // FT: Before this in save method the authorization is being done, so we don't need to do it here also
         protected async Task DeleteNonActiveBlobs(string activeBlobName, string objectType, string objectProperty, string objectId)
         {
+            if (objectId == "0") // FT: If we delete 0, we will delete the blob for multiple users/partners/etc.
+                return;
+
             AsyncPageable<TaggedBlobItem> blobs = _blobContainerClient.FindBlobsByTagsAsync($"\"objectType\"='{objectType}' AND \"objectProperty\"='{objectProperty}' AND \"objectId\"='{objectId}'");
 
             await foreach (TaggedBlobItem blob in blobs)

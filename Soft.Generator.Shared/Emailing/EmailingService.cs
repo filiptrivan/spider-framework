@@ -47,23 +47,20 @@ namespace Soft.Generator.Shared.Emailing
 
         public async Task SendEmailAsync(List<string> recipients, string subject, string body)
         {
-            MailMessage mailMessage = new MailMessage
-            {
-                From = new MailAddress(SettingsProvider.Current.EmailSender),
-                Subject = subject,
-                Body = body,
-                BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
-                IsBodyHtml = true,
-            };
-
-            foreach (var recipient in recipients)
-            {
-                mailMessage.To.Add(recipient);
-            }
-
             try
             {
-                await _smtpClient.SendMailAsync(mailMessage);
+                foreach (string recipient in recipients)
+                {
+                    MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, recipient)
+                    {
+                        Subject = subject,
+                        Body = body,
+                        BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
+                        IsBodyHtml = true,
+                    };
+
+                    await _smtpClient.SendMailAsync(mailMessage);
+                }
             }
             catch (Exception ex)
             {

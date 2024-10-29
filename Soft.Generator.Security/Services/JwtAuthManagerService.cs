@@ -6,6 +6,7 @@ using OfficeOpenXml.FormulaParsing.Excel.Functions.RefAndLookup;
 using Soft.Generator.Security.DTO;
 using Soft.Generator.Security.Interface;
 using Soft.Generator.Shared.SoftExceptions;
+using Soft.Generator.Shared.Terms;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.IdentityModel.Tokens.Jwt;
@@ -56,7 +57,7 @@ namespace Soft.Generator.Security.Services
             // and we send another request with the same refresh token as the previous one, and since we deleted it, it doesn't exist
             if (!_usersRefreshTokens.TryGetValue(request.RefreshToken, out RefreshTokenDTO existingRefreshToken))
             {
-                throw new SecurityTokenException("Invalid token, login again."); // The token has expired
+                throw new SecurityTokenException(SharedTerms.ExpiredRefreshTokenException); // The token has expired
             }
             // Unauthenticating both user, this could happen if someone stoled access token (aleksa.trivan), and has own valid refresh token (filip.trivan), he could indefinedly generate access tokens for the (aleksa.trivan) then
             // This is not solving this problem (hacker can not change claims in the jwt token): https://stackoverflow.com/questions/27301557/if-you-can-decode-jwt-how-are-they-secure we are doing that with Decoding JWT token.
@@ -65,14 +66,14 @@ namespace Soft.Generator.Security.Services
             {
                 RemoveRefreshTokenByEmail(existingRefreshToken.Email);
                 RemoveRefreshTokenByEmail(dbUserEmail);
-                throw new SecurityTokenException("Invalid token, login again.");
+                throw new HackerException("The email can't be different in refresh and access token.");
             }
             if (SettingsProvider.Current.AllowTheUseOfAppWithDifferentIpAddresses == false && IsRefreshTokenWithNewIpAddress(existingRefreshToken.Email, existingRefreshToken.IpAddress) == true)
             {
                 // cuvas device-ove koje je cesto korisio, guras ih u familiju uredjaja, po nekom algoritmu odredi neki koji ti se cini sumnjiv i
                 // na njemu mu trazi multifaktor aut. ako je klijent uopste trazio multifaktor
                 RemoveRefreshTokenByEmail(existingRefreshToken.Email); // Don't need to delete for userDTO also, because we already did that
-                throw new SecurityTokenException("Please login again, you can't use the application with two different IP addresses at the same time.");
+                throw new SecurityTokenException(SharedTerms.TwoDifferentIpAddressesRefreshException);
             }
 
             return GenerateAccessAndRefreshTokens(dbUserEmail, principalClaims, existingRefreshToken.IpAddress, request.BrowserId, dbUserId); // need to recover the original claims
@@ -168,16 +169,17 @@ namespace Soft.Generator.Security.Services
 
         /// <summary>
         /// FT: I don't know do i even need to validate this old access token for Refresh
+        /// I think it's okay to do this because i need claims, if i don't get claims here i would need to load him from the database because the id of the user isnt in the refresh token
         /// </summary>
-        public (ClaimsPrincipal, JwtSecurityToken) DecodeJwtToken(string token)
+        public (ClaimsPrincipal, JwtSecurityToken) DecodeJwtToken(string accessToken)
         {
-            if (string.IsNullOrWhiteSpace(token))
+            if (string.IsNullOrWhiteSpace(accessToken))
                 throw new SecurityTokenException("Invalid token.");
 
             byte[] secretKey = Encoding.UTF8.GetBytes(SettingsProvider.Current.JwtKey);
 
             ClaimsPrincipal principal = new JwtSecurityTokenHandler()
-                .ValidateToken(token,
+                .ValidateToken(accessToken,
                     new TokenValidationParameters
                     {
                         ValidateIssuer = true,
@@ -270,7 +272,7 @@ namespace Soft.Generator.Security.Services
             LoginVerificationTokenDTO loginVerificationTokenDTO = _usersLoginVerificationTokens.Where(x => x.Key == verificationTokenKey && x.Value.Email == email && x.Value.BrowserId == browserId).SingleOrDefault().Value;
 
             if (loginVerificationTokenDTO == null)
-                throw new ExpiredVerificationException("The verification code has expired."); // FT: We can not allow user to "send again" from here, because it is deleted
+                throw new ExpiredVerificationException(SharedTerms.ExpiredLoginVerificationCodeException); // FT: We can not allow user to "send again" from here, because it is deleted
 
             KeyValuePair<string, LoginVerificationTokenDTO> lastVerificationToken = _usersLoginVerificationTokens
                 .Where(x => x.Value.Email == loginVerificationTokenDTO.Email)
@@ -278,7 +280,7 @@ namespace Soft.Generator.Security.Services
                 .FirstOrDefault();
 
             if (verificationTokenKey != lastVerificationToken.Key)
-                throw new ExpiredVerificationException("Please, use the latest code sent.");
+                throw new ExpiredVerificationException(SharedTerms.LatestVerificationCodeException);
 
             return loginVerificationTokenDTO;
         }

@@ -22,12 +22,12 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 {
     public class BaseSecurityController<TUser> : SoftControllerBase where TUser : class, IUser, new()
     {
-        private readonly SecurityBusinessService _securityBusinessService;
+        private readonly SecurityBusinessService<TUser> _securityBusinessService;
         private readonly IJwtAuthManager _jwtAuthManagerService;
         private readonly IApplicationDbContext _context;
         private readonly AuthenticationService _authenticationService;
 
-        public BaseSecurityController(SecurityBusinessService securityBusinessService, IJwtAuthManager jwtAuthManagerService, IApplicationDbContext context, AuthenticationService authenticationService)
+        public BaseSecurityController(SecurityBusinessService<TUser> securityBusinessService, IJwtAuthManager jwtAuthManagerService, IApplicationDbContext context, AuthenticationService authenticationService)
         {
             _securityBusinessService = securityBusinessService;
             _jwtAuthManagerService = jwtAuthManagerService;
@@ -40,7 +40,7 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [HttpPost]
         public async Task SendLoginVerificationEmail(LoginDTO loginDTO)
         {
-            await _securityBusinessService.SendLoginVerificationEmail<TUser>(loginDTO);
+            await _securityBusinessService.SendLoginVerificationEmail(loginDTO);
         }
 
         [HttpPost]
@@ -53,31 +53,31 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [HttpPost]
         public async Task SendForgotPasswordVerificationEmail(ForgotPasswordDTO forgotPasswordDTO)
         {
-            await _securityBusinessService.SendForgotPasswordVerificationEmail<TUser>(forgotPasswordDTO);
+            await _securityBusinessService.SendForgotPasswordVerificationEmail(forgotPasswordDTO);
         }
 
         [HttpPost]
         public async Task<LoginResultDTO> ForgotPassword(VerificationTokenRequestDTO request)
         {
-            return await _securityBusinessService.ForgotPassword<TUser>(request);
+            return await _securityBusinessService.ForgotPassword(request);
         }
 
         [HttpPost]
         public async Task<LoginResultDTO> LoginExternal(ExternalProviderDTO externalProviderDTO) // TODO FT: Add enum for which external provider you should login user
         {
-            return await _securityBusinessService.LoginExternal<TUser>(externalProviderDTO, SettingsProvider.Current.GoogleClientId);
+            return await _securityBusinessService.LoginExternal(externalProviderDTO, SettingsProvider.Current.GoogleClientId);
         }
 
         [HttpPost]
         public async Task<RegistrationVerificationResultDTO> SendRegistrationVerificationEmail(RegistrationDTO registrationDTO)
         {
-            return await _securityBusinessService.SendRegistrationVerificationEmail<TUser>(registrationDTO);
+            return await _securityBusinessService.SendRegistrationVerificationEmail(registrationDTO);
         }
 
         [HttpPost]
         public async Task<LoginResultDTO> Register(VerificationTokenRequestDTO request)
         {
-            return await _securityBusinessService.Register<TUser>(request);
+            return await _securityBusinessService.Register(request);
         }
 
         [HttpGet]
@@ -96,7 +96,7 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [HttpPost]
         public async Task<LoginResultDTO> RefreshToken(RefreshTokenRequestDTO request)
         {
-            return await _securityBusinessService.GetLoginResultDTOAsync<TUser>(request);
+            return await _securityBusinessService.GetLoginResultDTOAsync(request);
         }
 
         #endregion
@@ -108,7 +108,7 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [AuthGuard]
         public async Task<List<NamebookDTO<int>>> LoadRoleNamebookListForUserExtended(long userId)
         {
-            return await _securityBusinessService.LoadRoleNamebookListForUserExtended<TUser>(userId);
+            return await _securityBusinessService.LoadRoleNamebookListForUserExtended(userId);
         }
 
         #endregion
@@ -149,14 +149,14 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [AuthGuard]
         public async Task<RoleDTO> SaveRole(RoleSaveBodyDTO roleSaveBodyDTO)
         {
-            return await _securityBusinessService.SaveRoleAndReturnDTOExtendedAsync<TUser>(roleSaveBodyDTO);
+            return await _securityBusinessService.SaveRoleAndReturnDTOExtendedAsync(roleSaveBodyDTO);
         }
 
         [HttpGet]
         [AuthGuard]
         public async Task<List<NamebookDTO<long>>> LoadUserListForRole(int roleId)
         {
-            return await _securityBusinessService.LoadUserExtendedNamebookListForRole<TUser>(roleId);
+            return await _securityBusinessService.LoadUserExtendedNamebookListForRole(roleId);
         }
 
         [HttpGet]

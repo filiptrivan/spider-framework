@@ -110,6 +110,30 @@
     <value>An error occurred in the system, our team has been informed and will fix it as soon as possible. Thank you for your patience. Error code:</value>
   </data>
   <data name="Password" xml:space="preserve">
-    <value>sifra</value>
+    <value>Password</value>
+  </data>
+  <data name="UserExcel" xml:space="preserve">
+    <value>Users</value>
+  </data>
+  <data name="RoleExcel" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="NotificationExcel" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="UnauthorizedAccessExceptionMessage" xml:space="preserve">
+    <value>You don't have the necessary rights to perform the operation.</value>
+  </data>
+  <data name="ExpiredLoginVerificationCodeException" xml:space="preserve">
+    <value>Your verification code has expired. Please request a new code to continue.</value>
+  </data>
+  <data name="LatestVerificationCodeException" xml:space="preserve">
+    <value>Please use the most recent verification code to log in, as multiple codes were sent.</value>
+  </data>
+  <data name="ExpiredRefreshTokenException" xml:space="preserve">
+    <value>Your session has expired, please login again.</value>
+  </data>
+  <data name="TwoDifferentIpAddressesRefreshException" xml:space="preserve">
+    <value>You can't use the application with two different IP addresses at the same time, please login again.</value>
   </data>
 </root>
