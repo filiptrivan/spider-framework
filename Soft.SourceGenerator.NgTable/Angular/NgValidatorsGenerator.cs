@@ -55,8 +55,9 @@ namespace Soft.SourceGenerator.NgTable.Angular
 import { ValidationErrors } from '@angular/forms';
 import { SoftFormControl, SoftValidatorFn } from 'src/app/core/components/soft-form-control/soft-form-control';
 import { validatePrecisionScale } from '../../../../core/services/helper-functions';
+import { TranslocoService } from '@jsverse/transloco';
 
-export function getValidator{{projectName}}(formControl: SoftFormControl, className: string): SoftValidatorFn {
+export function getValidator{{projectName}}(formControl: SoftFormControl, className: string, translocoService: TranslocoService): SoftValidatorFn {
     switch(formControl.label + className){
 """);
             foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
@@ -120,15 +121,16 @@ export function getValidator{{projectName}}(formControl: SoftFormControl, classN
 
             List<string> ruleStatements = new List<string>(); // eg. const {ruleName}: boolean = typeof value !== 'undefined' && value !== '';
             List<string> validationMessages = new List<string>(); // eg. must have a minimum of {min} and a maximum of {max} characters
+            List<string> translocoVariables = new List<string>(); // eg. [max, min]
             List<string> translationTags = new List<string>(); // eg. Length, IsEmpty
             List<string> ruleNames = new List<string>(); // eg. notEmptyRule
 
-            PopulateListOfStrings(rules, ruleStatements, validationMessages, ruleNames, translationTags);
+            PopulateListOfStrings(rules, ruleStatements, validationMessages, translocoVariables, ruleNames, translationTags);
 
             string allRules = string.Join(" && ", ruleNames);
 
             string result = $@"
-export function {parameterFirstLower}{classNameForValidation}Validator(control: SoftFormControl): SoftValidatorFn {{
+export function {parameterFirstLower}{classNameForValidation}Validator(control: SoftFormControl, translocoService: TranslocoService): SoftValidatorFn {{
     const validator: SoftValidatorFn = (): ValidationErrors | null => {{
         const value = control.value;
 
@@ -136,7 +138,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
 
         const {parameterFirstLower}Valid = {allRules};
 
-        return {parameterFirstLower}Valid ? null : {{ _ : $localize`:@@{string.Join("", translationTags)}:The field {validationMessages.ToCommaSeparatedString()}.` }};
+        return {parameterFirstLower}Valid ? null : {{ _ : translocoService.translate('{string.Join("", translationTags)}', {{{string.Join(", ", translocoVariables)}}}) }};
     }};
     {(ruleNames.Any(x => x == "notEmptyRule") ? "validator.hasNotEmptyRule = true;" : "")}
     return validator;
@@ -145,7 +147,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
             return result;
         }
 
-        public static void PopulateListOfStrings(string rules, List<string> ruleStatements, List<string> validationMessages, List<string> ruleNames, List<string> translationTags)
+        public static void PopulateListOfStrings(string rules, List<string> ruleStatements, List<string> validationMessages, List<string> translocoVariables, List<string> ruleNames, List<string> translationTags)
         {
             if (rules.Contains("NotEmpty"))
             {
@@ -175,6 +177,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must have a minimum of ${{min}} and a maximum of ${{max}} characters");
+                    translocoVariables.AddRange(["min", "max"]);
                     translationTags.Add("Length");
                 } 
                 else if (singleLengthMatch.Success)
@@ -187,6 +190,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must be ${{length}} character long");
+                    translocoVariables.AddRange(["length"]);
                     translationTags.Add("SingleLength");
                 }
             }
@@ -205,6 +209,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must be less or equal to ${{max}}");
+                    translocoVariables.AddRange(["max"]);
                     translationTags.Add("NumberRangeMax");
                 }
             }
@@ -223,6 +228,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must be greater or equal to ${{min}}");
+                    translocoVariables.AddRange(["min"]);
                     translationTags.Add("NumberRangeMin");
                 }
             }
@@ -267,6 +273,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must have a total number of ${{precision}} digits, and the number of digits after the decimal point must not exceed ${{scale}}");
+                    translocoVariables.AddRange(["precision", "scale"]);
                     translationTags.Add("PrecisionScale");
                 }
             }
@@ -284,7 +291,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
             {
                 validationCases.AppendLine($$"""
         case '{{validationRulePropName.FirstCharToLower()}}{{validationClassName}}':
-            return {{validationRulePropName.FirstCharToLower()}}{{validationClassName}}Validator(formControl);
+            return {{validationRulePropName.FirstCharToLower()}}{{validationClassName}}Validator(formControl, translocoService);
 """);
             }
 

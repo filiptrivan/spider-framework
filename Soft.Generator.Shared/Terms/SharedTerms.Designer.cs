@@ -61,11 +61,47 @@ namespace Soft.Generator.Shared.Terms {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to An account with the entered email address does not exist. Please check the email address or create a new account..
+        /// </summary>
+        public static string AuthenticationEmailDoesNotExistException {
+            get {
+                return ResourceManager.GetString("AuthenticationEmailDoesNotExistException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Incorrect password. Please try again or reset your password if you&apos;ve forgotten it..
+        /// </summary>
+        public static string AuthenticationIncorectPasswordException {
+            get {
+                return ResourceManager.GetString("AuthenticationIncorectPasswordException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to This record has been modified or deleted by another user..
         /// </summary>
         public static string ConcurrencyException {
             get {
                 return ResourceManager.GetString("ConcurrencyException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Your account is disabled, please contact the administrator..
+        /// </summary>
+        public static string DisabledAccountException {
+            get {
+                return ResourceManager.GetString("DisabledAccountException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Account verification.
+        /// </summary>
+        public static string EmailAccountVerificationTitle {
+            get {
+                return ResourceManager.GetString("EmailAccountVerificationTitle", resourceCulture);
             }
         }
         
@@ -88,20 +124,20 @@ namespace Soft.Generator.Shared.Terms {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Your verification code has expired. Please request a new code to continue..
-        /// </summary>
-        public static string ExpiredLoginVerificationCodeException {
-            get {
-                return ResourceManager.GetString("ExpiredLoginVerificationCodeException", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Your session has expired, please login again..
         /// </summary>
         public static string ExpiredRefreshTokenException {
             get {
                 return ResourceManager.GetString("ExpiredRefreshTokenException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Your verification code has expired. Please request a new code to continue..
+        /// </summary>
+        public static string ExpiredVerificationCodeException {
+            get {
+                return ResourceManager.GetString("ExpiredVerificationCodeException", resourceCulture);
             }
         }
         
@@ -115,7 +151,7 @@ namespace Soft.Generator.Shared.Terms {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Please use the most recent verification code to log in, as multiple codes were sent..
+        ///   Looks up a localized string similar to Please use the most recent verification code, as multiple codes were sent..
         /// </summary>
         public static string LatestVerificationCodeException {
             get {
@@ -133,6 +169,15 @@ namespace Soft.Generator.Shared.Terms {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Your account already exists with third-party (eg. Google) authentication. If you want to set up a password as well, please use the &apos;Forgot password?&apos; option to reset it or log in to your profile and add a password..
+        /// </summary>
+        public static string OnlyThirdPartyAccountButTriedToLoginException {
+            get {
+                return ResourceManager.GetString("OnlyThirdPartyAccountButTriedToLoginException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Password.
         /// </summary>
         public static string Password {
@@ -142,11 +187,29 @@ namespace Soft.Generator.Shared.Terms {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to An account with the entered email address does not exist. Please check the email address or create a new account..
+        /// </summary>
+        public static string ResetPasswordEmailDoesNotExistException {
+            get {
+                return ResourceManager.GetString("ResetPasswordEmailDoesNotExistException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Roles.
         /// </summary>
         public static string RoleExcel {
             get {
                 return ResourceManager.GetString("RoleExcel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to An account with this email address already exists..
+        /// </summary>
+        public static string SameEmailAlreadyExistsException {
+            get {
+                return ResourceManager.GetString("SameEmailAlreadyExistsException", resourceCulture);
             }
         }
         

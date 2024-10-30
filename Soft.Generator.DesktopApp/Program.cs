@@ -1,5 +1,5 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
-using MySqlConnector;
 using Soft.Generator.DesktopApp.Services;
 using System;
 using System.Windows.Forms.Design;
@@ -32,8 +32,8 @@ namespace Soft.Generator.DesktopApp
         private static void ConfigureServices(ServiceCollection services)
         {
             //services.AddMySqlDataSource(Settings.ConnectionString);
-            services.AddScoped<MySqlConnection>(_ => new MySqlConnection(Settings.ConnectionString));
-            services.AddScoped<DesktopAppService>();
+            services.AddScoped<SqlConnection>(_ => new SqlConnection(Settings.ConnectionString));
+            services.AddScoped<DesktopAppBusinessService>();
 
             services.AddTransient<Form1>();
         }

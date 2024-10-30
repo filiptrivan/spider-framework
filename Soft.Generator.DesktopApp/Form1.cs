@@ -1,4 +1,4 @@
-﻿using MySqlConnector;
+﻿using Microsoft.Data.SqlClient;
 using Soft.Generator.DesktopApp.Entities;
 using Soft.Generator.DesktopApp.Extensions;
 using Soft.Generator.DesktopApp.Pages;
@@ -9,10 +9,10 @@ namespace Soft.Generator.DesktopApp
 {
     public partial class Form1 : Form
     {
-        private readonly MySqlConnection _connection;
-        private readonly DesktopAppService _desktopAppService;
+        private readonly SqlConnection _connection;
+        private readonly DesktopAppBusinessService _desktopAppService;
 
-        public Form1(MySqlConnection connection, DesktopAppService desktopAppService)
+        public Form1(SqlConnection connection, DesktopAppBusinessService desktopAppService)
         {
             _connection = connection;
             _desktopAppService = desktopAppService;
@@ -26,29 +26,15 @@ namespace Soft.Generator.DesktopApp
 
         private void homeToolStripMenuItem_Click(object sender, EventArgs e)
         {
+
             _connection.WithTransaction(() =>
             {
-                List<Permission> permissions = _desktopAppService.GetPermissions();
-
+                List<Permission> permissions = _desktopAppService.GetPermissionList();
                 Permission permission = _desktopAppService.GetPermission(1);
-
-                Permission insert = new Permission
-                {
-                    Name = "Test",
-                    Code = "TestCode",
-                };
-
-                _desktopAppService.InsertPermission(insert);
-
-                _desktopAppService.InsertPermission(insert);
             });
 
-            NavigateToPage<HomePage>();
-        }
 
-        private ConnectionState State()
-        {
-            return _connection.State;
+            NavigateToPage<HomePage>();
         }
 
         private void applicationToolStripMenuItem_Click(object sender, EventArgs e)

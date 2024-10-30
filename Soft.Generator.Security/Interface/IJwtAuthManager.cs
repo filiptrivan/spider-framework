@@ -15,6 +15,7 @@ using System.Net;
 
 namespace Soft.Generator.Security.Interface
 {
+    // TODO FT: Sort the arguments of the methods
     public interface IJwtAuthManager
     {
         IImmutableDictionary<string, RefreshTokenDTO> UsersRefreshTokensReadOnlyDictionary { get; }
@@ -23,14 +24,14 @@ namespace Soft.Generator.Security.Interface
         IImmutableDictionary<string, ForgotPasswordVerificationTokenDTO> UsersForgotPasswordVerificationTokensReadOnlyDictionary { get; }
 
         // Refresh
-        JwtAuthResultDTO GenerateAccessAndRefreshTokens(string userEmail, List<Claim> claims, string ipAddress, string browserId, long userId);
-        JwtAuthResultDTO Refresh(RefreshTokenRequestDTO request, long dbUserId, string dbUserEmail, List<Claim> principalClaims);
-        JwtAuthResultDTO RefreshDevHack(RefreshTokenRequestDTO request, long dbUserId, string dbUserEmail, List<Claim> principalClaims);
-        List<Claim> GetPrincipalClaimsForAccessToken(RefreshTokenRequestDTO request, string accessToken);
+        JwtAuthResultDTO GenerateAccessAndRefreshTokens(long userId, string userEmail, string ipAddress, string browserId);
+        List<Claim> GenerateClaims(long userId, string userEmail);
+        JwtAuthResultDTO Refresh(RefreshTokenRequestDTO request, long dbUserId, string dbUserEmail);
+        List<Claim> GetClaimsForTheAccessToken(RefreshTokenRequestDTO request, string accessToken);
         void RemoveExpiredRefreshTokens();
         void RemoveRefreshTokenByEmail(string email);
-        (ClaimsPrincipal, JwtSecurityToken) DecodeJwtToken(string token);
-        void RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email);
+        public void Logout(string browserId, string email);
+        bool RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email);
 
         // Login verification
         LoginVerificationTokenDTO ValidateAndGetLoginVerificationTokenDTO(string verificationToken, string browserId, string email);

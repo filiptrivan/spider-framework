@@ -8,6 +8,6 @@ namespace Soft.Generator.DesktopApp
 {
     public static class Settings
     {
-        public static string ConnectionString = "server=localhost;uid=root;pwd=aleksasmrad123;database=SoftGeneratorDA;IgnoreCommandTransaction=true;Allow User Variables=true;";
+        public static string ConnectionString = "Data source=DESKTOP-LRUAM92\\SQLEXPRESS;Initial Catalog=SoftGeneratorDA;Integrated Security=True;Encrypt=false";
     }
 }

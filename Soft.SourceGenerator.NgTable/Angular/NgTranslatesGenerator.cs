@@ -55,25 +55,53 @@ namespace Soft.SourceGenerator.NgTable.Angular
                 DTOProperties.AddRange(DTOClass.Properties);
 
             sbClassNames.AppendLine($$"""
-export function getTranslatedClassName{{projectName}}(name: string): string
-{
-    switch(name) 
+import { Injectable } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class TranslateClassNames{{projectName}}Service {
+
+    constructor(
+    private translocoService: TranslocoService
+    ) {
+    }
+
+    translate(name: string): string
     {
+        switch(name) 
+        {
 {{string.Join("\n", GetCasesForClassNameTranslate(DTOClasses))}}
-        default:
-            return null;
+            default:
+                return null;
+        }
     }
 }
 """);
 
             sbLabels.AppendLine($$"""
-export function getTranslatedLabel{{projectName}}(name: string): string
-{
-    switch(name) 
+import { Injectable } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class TranslateLabels{{projectName}}Service {
+
+    constructor(
+    private translocoService: TranslocoService
+    ) {
+    }
+
+    translate(name: string): string
     {
+        switch(name) 
+        {
 {{string.Join("\n", GetCasesForLabelTranslate(DTOProperties))}}
-        default:
-            return null;
+            default:
+                return null;
+        }
     }
 }
 """);
@@ -100,8 +128,8 @@ export function getTranslatedLabel{{projectName}}(name: string): string
                     propName = propName.Replace("CommaSeparated", "");
 
                 result.Add($$""""
-        case '{{propName.FirstCharToLower()}}':
-            return $localize`:@@{{propName}}:{{propName}}`;
+            case '{{propName.FirstCharToLower()}}':
+                return this.translocoService.translate('{{propName}}');
 """");
             }
 
@@ -115,8 +143,8 @@ export function getTranslatedLabel{{projectName}}(name: string): string
             foreach (string className in DTOclasses.DistinctBy(x => x.Name).Select(x => x.Name.Replace("DTO", "")))
             {
                 result.Add($$""""
-        case '{{className}}':
-            return $localize`:@@{{className}}:{{className}}`;
+            case '{{className}}':
+                return this.translocoService.translate('{{className}}');
 """");
             }
 

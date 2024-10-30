@@ -1,24 +1,27 @@
-﻿using MySqlConnector;
+﻿using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace Soft.Generator.DesktopApp.Extensions
 {
-    public static class MySqlExtensions
+    public static class SqlExtensions
     {
-        private static AsyncLocal<Stack<MySqlTransaction>> _transactionStack = new AsyncLocal<Stack<MySqlTransaction>>();
+        private static AsyncLocal<Stack<SqlTransaction>> _transactionStack = new AsyncLocal<Stack<SqlTransaction>>();
 
-        public static T WithTransaction<T>(this MySqlConnection connection, Func<T> action)
+        public static T WithTransaction<T>(this SqlConnection connection, Func<T> action)
         {
-            Stack<MySqlTransaction> transactionStack = _transactionStack.Value ?? new Stack<MySqlTransaction>();
+            Stack<SqlTransaction> transactionStack = _transactionStack.Value ?? new Stack<SqlTransaction>();
+            TransactionScope transactionScope = null;
+            SqlTransaction transaction = null;
             bool isFirstTransaction = false;
-            MySqlTransaction transaction;
 
             if (transactionStack.Count == 0)
             {
+                transactionScope = new TransactionScope();
                 connection.Open();
                 transaction = connection.BeginTransaction(); // Start a new transaction if no existing transaction
                 transactionStack.Push(transaction);
@@ -50,22 +53,27 @@ namespace Soft.Generator.DesktopApp.Extensions
             {
                 if (isFirstTransaction)
                 {
-                    connection.Dispose();
                     transaction.Dispose();
                     transactionStack.Pop();
                     _transactionStack.Value = null;
+
+                    connection.Close();
+
+                    transactionScope.Dispose();
                 }
             }
         }
 
-        public static void WithTransaction(this MySqlConnection connection, Action action)
+        public static void WithTransaction(this SqlConnection connection, Action action)
         {
-            Stack<MySqlTransaction> transactionStack = _transactionStack.Value ?? new Stack<MySqlTransaction>();
+            Stack<SqlTransaction> transactionStack = _transactionStack.Value ?? new Stack<SqlTransaction>();
+            TransactionScope transactionScope = null;
+            SqlTransaction transaction = null;
             bool isFirstTransaction = false;
-            MySqlTransaction transaction;
 
             if (transactionStack.Count == 0)
             {
+                transactionScope = new TransactionScope();
                 connection.Open();
                 transaction = connection.BeginTransaction(); // Start a new transaction if no existing transaction
                 transactionStack.Push(transaction);
@@ -95,10 +103,14 @@ namespace Soft.Generator.DesktopApp.Extensions
             {
                 if (isFirstTransaction)
                 {
-                    connection.Close();
                     transaction.Dispose();
                     transactionStack.Pop();
                     _transactionStack.Value = null;
+
+                    connection.Close();
+
+                    transactionScope.Complete();
+                    transactionScope.Dispose();
                 }
             }
         }

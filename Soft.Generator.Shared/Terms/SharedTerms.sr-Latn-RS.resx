@@ -144,16 +144,37 @@
   <data name="UnauthorizedAccessExceptionMessage" xml:space="preserve">
     <value>Nemate potrebna prava da biste izvršili operaciju.</value>
   </data>
-  <data name="ExpiredLoginVerificationCodeException" xml:space="preserve">
+  <data name="ExpiredVerificationCodeException" xml:space="preserve">
     <value>Vaš verifikacioni kod je istekao. Zatražite novi kod da biste nastavili.</value>
   </data>
   <data name="LatestVerificationCodeException" xml:space="preserve">
-    <value>Poslato je više verifikacionih kodova, molimo Vas da koristite poslednji.</value>
+    <value>Poslato je više verifikacionih kodova, molimo Vas da unesete poslednji.</value>
   </data>
   <data name="ExpiredRefreshTokenException" xml:space="preserve">
     <value>Vaša sesija je istekla, molimo Vas da se prijavite ponovo.</value>
   </data>
   <data name="TwoDifferentIpAddressesRefreshException" xml:space="preserve">
     <value>Ne možete da koristite aplikaciju sa dve različite IP adrese u isto vreme, molimo vas da se prijavite ponovo.</value>
+  </data>
+  <data name="OnlyThirdPartyAccountButTriedToLoginException" xml:space="preserve">
+    <value>Vaš nalog je već registrovan putem treće strane (npr. Google). Ako želite da dodate i lozinku, koristite opciju „Zaboravili ste lozinku?”, ili se prijavite na profil i postavite lozinku.</value>
+  </data>
+  <data name="SameEmailAlreadyExistsException" xml:space="preserve">
+    <value>Nalog sa ovom email adresom već postoji.</value>
+  </data>
+  <data name="DisabledAccountException" xml:space="preserve">
+    <value>Vaš nalog je trenutno blokiran. Obratite se administratoru za pomoć.</value>
+  </data>
+  <data name="AuthenticationEmailDoesNotExistException" xml:space="preserve">
+    <value>Nalog sa unetom email adresom ne postoji. Molimo vas da proverite unesenu adresu ili kreirate novi nalog.</value>
+  </data>
+  <data name="AuthenticationIncorectPasswordException" xml:space="preserve">
+    <value>Pogrešna lozinka. Molimo vas da pokušate ponovo ili resetujete lozinku ako ste je zaboravili.</value>
+  </data>
+  <data name="ResetPasswordEmailDoesNotExistException" xml:space="preserve">
+    <value>Nalog sa unetom email adresom ne postoji. Molimo vas da proverite unesenu adresu ili kreirate novi nalog.</value>
+  </data>
+  <data name="EmailAccountVerificationTitle" xml:space="preserve">
+    <value>Verifikacija naloga</value>
   </data>
 </root>

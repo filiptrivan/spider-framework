@@ -85,7 +85,7 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         public ActionResult Logout(string browserId)
         {
             string email = _authenticationService.GetCurrentUserEmail();
-            _jwtAuthManagerService.RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(browserId, email);
+            _jwtAuthManagerService.Logout(browserId, email); // FT: If the malicious user is deleting browser id, and sending request with refresh token like that we will delete every refresh token for that user
 
             return Ok();
         }
@@ -96,7 +96,7 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [HttpPost]
         public async Task<LoginResultDTO> RefreshToken(RefreshTokenRequestDTO request)
         {
-            return await _securityBusinessService.GetLoginResultDTOAsync(request);
+            return await _securityBusinessService.RefreshToken(request);
         }
 
         #endregion

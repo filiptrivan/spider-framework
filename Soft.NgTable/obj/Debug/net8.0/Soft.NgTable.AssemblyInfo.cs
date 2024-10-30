@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Soft.NgTable")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5a4b5e531cad0f1c98657ee03e79510227a7f314")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+58193f6eee0bdb672563934b836d77bad2a9b5c5")]
 [assembly: System.Reflection.AssemblyProductAttribute("Soft.NgTable")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Soft.NgTable")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

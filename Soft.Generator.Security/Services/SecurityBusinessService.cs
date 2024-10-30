@@ -23,6 +23,7 @@ using Mapster;
 using Azure.Storage.Blobs;
 using Microsoft.IdentityModel.Tokens;
 using Soft.Generator.Shared.Terms;
+using Nucleus.Core.BusinessObject;
 
 namespace Soft.Generator.Security.Services
 {
@@ -83,7 +84,7 @@ namespace Soft.Generator.Security.Services
             LoginVerificationTokenDTO loginVerificationTokenDTO = _jwtAuthManagerService.ValidateAndGetLoginVerificationTokenDTO(
                 verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
             // TODO FT: Log somewhere good and bad request
-            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(loginVerificationTokenDTO.BrowserId, loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email);
+            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email, loginVerificationTokenDTO.BrowserId);
             return GetLoginResultDTO(loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email, jwtAuthResultDTO);
         }
 
@@ -110,13 +111,13 @@ namespace Soft.Generator.Security.Services
                 else
                 {
                     if (user.NumberOfFailedAttemptsInARow > SettingsProvider.Current.NumberOfFailedLoginAttemptsInARowToDisableUser)
-                        throw new BusinessException("Your account is disabled, please contact the administrator.");
+                        throw new BusinessException(SharedTerms.DisabledAccountException); // TODO FT: We will let this for now, because now there is no other way to make the user can't login
 
                     if (user.HasLoggedInWithExternalProvider == false)
                         await userDbSet.ExecuteUpdateAsync(x => x.SetProperty(x => x.HasLoggedInWithExternalProvider, true)); // There is no need for SaveChangesAsync because we don't need to update the version of the user
                 }
 
-                JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(externalProviderDTO.BrowserId, user.Id, user.Email);
+                JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(user.Id, user.Email, externalProviderDTO.BrowserId);
 
                 return GetLoginResultDTO(user.Id, user.Email, jwtAuthResultDTO);
             });
@@ -131,15 +132,20 @@ namespace Soft.Generator.Security.Services
 
             string userEmail = null;
             long userId = 0;
+
             await _context.WithTransactionAsync(async () =>
             {
                 TUser user = await GetUserByEmailAsync(forgotPasswordDTO.Email);
+
                 if (user == null)
-                    throw new BusinessException("The user with the forwarded email does not exist in the system.");
+                    throw new BusinessException(SharedTerms.ResetPasswordEmailDoesNotExistException);
+
                 userEmail = user.Email;
                 userId = user.Id;
             });
+
             string verificationCode = _jwtAuthManagerService.GenerateAndSaveForgotPasswordVerificationCode(userEmail, userId, forgotPasswordDTO.NewPassword, forgotPasswordDTO.BrowserId);
+
             try
             {
                 await _emailingService.SendVerificationEmailAsync(userEmail, verificationCode);
@@ -166,7 +172,7 @@ namespace Soft.Generator.Security.Services
                 await _context.SaveChangesAsync();
             });
             // TODO FT: Log somewhere good and bad request
-            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(forgotPasswordVerificationTokenDTO.BrowserId, forgotPasswordVerificationTokenDTO.UserId, forgotPasswordVerificationTokenDTO.Email);
+            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(forgotPasswordVerificationTokenDTO.UserId, forgotPasswordVerificationTokenDTO.Email, forgotPasswordVerificationTokenDTO.BrowserId);
             return GetLoginResultDTO(forgotPasswordVerificationTokenDTO.UserId, forgotPasswordVerificationTokenDTO.Email, jwtAuthResultDTO);
         }
 
@@ -175,47 +181,36 @@ namespace Soft.Generator.Security.Services
         {
             RegistrationVerificationResultDTO registrationResultDTO = new RegistrationVerificationResultDTO();
 
-            try
-            {
-                RegistrationDTOValidationRules validationRules = new RegistrationDTOValidationRules();
-                validationRules.ValidateAndThrow(registrationDTO);
+            RegistrationDTOValidationRules validationRules = new RegistrationDTOValidationRules();
+            validationRules.ValidateAndThrow(registrationDTO);
 
-                await _context.WithTransactionAsync(async () =>
+            await _context.WithTransactionAsync(async () =>
+            {
+                TUser user = await GetUserByEmailAsync(registrationDTO.Email);
+
+                if (user == null)
                 {
-                    TUser user = await GetUserByEmailAsync(registrationDTO.Email);
+                    string verificationCode = _jwtAuthManagerService.GenerateAndSaveRegistrationVerificationCode(registrationDTO.Email, registrationDTO.Password, registrationDTO.BrowserId);
 
-                    if (user == null)
+                    try
                     {
-                        string verificationCode = _jwtAuthManagerService.GenerateAndSaveRegistrationVerificationCode(registrationDTO.Email, registrationDTO.Password, registrationDTO.BrowserId);
-                        try
-                        {
-                            await _emailingService.SendVerificationEmailAsync(registrationDTO.Email, verificationCode);
-                        }
-                        catch (Exception)
-                        {
-                            _jwtAuthManagerService.RemoveRegistrationVerificationTokensByEmail(registrationDTO.Email); // We didn't send email, set all verification tokens invalid then
-                            throw;
-                        }
-                        registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UserDoesNotExistAndDoesNotHaveValidToken; // FT: We don't need to show the message to the user here, we will route him to another page
+                        await _emailingService.SendVerificationEmailAsync(registrationDTO.Email, verificationCode);
                     }
-                    else if (user.HasLoggedInWithExternalProvider && user.Password == null)
+                    catch (Exception)
                     {
-                        registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UserWithoutPasswordExists;
-                        registrationResultDTO.Message = "Your account already exists with third-party (eg. Google) authentication. If you want to set up a password as well, please log in to your profile and add a password, or use the 'Forgot password?' option to reset it.";
+                        _jwtAuthManagerService.RemoveRegistrationVerificationTokensByEmail(registrationDTO.Email); // We didn't send email, set all verification tokens invalid then
+                        throw;
                     }
-                    else if (user.Password != null)
-                    {
-                        registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UserWithPasswordExists;
-                        registrationResultDTO.Message = "An account with this email address already exists in the system.";
-                    }
-                });
-            }
-            catch (Exception)
-            {
-                registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UnexpectedError;
-                // TODO FT: log it
-                throw;
-            }
+                }
+                else if (user.HasLoggedInWithExternalProvider && user.Password == null)
+                {
+                    throw new BusinessException(SharedTerms.OnlyThirdPartyAccountButTriedToLoginException);
+                }
+                else if (user.Password != null)
+                {
+                    throw new BusinessException(SharedTerms.SameEmailAlreadyExistsException);
+                }
+            });
 
             return registrationResultDTO;
         }
@@ -240,29 +235,28 @@ namespace Soft.Generator.Security.Services
                 await _context.DbSet<TUser>().AddAsync(user);
                 await _context.SaveChangesAsync();
             });
-            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(verificationRequestDTO.BrowserId, user.Id, user.Email); // FT: User can't be null, it would throw earlier if he is
+            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(user.Id, user.Email, verificationRequestDTO.BrowserId); // FT: User can't be null, it would throw earlier if he is
             //await SaveLoginAndReturnDomainAsync(loginDTO); // FT: Is ipAddress == null is checked here // TODO FT: Log it
             return GetLoginResultDTO(user.Id, user.Email, jwtAuthResultDTO);
         }
 
 
-        public async Task<LoginResultDTO> GetLoginResultDTOAsync(RefreshTokenRequestDTO request)
+        public async Task<LoginResultDTO> RefreshToken(RefreshTokenRequestDTO refreshTokenRequestDTO)
         {
-            if (string.IsNullOrWhiteSpace(request.RefreshToken))
+            if (string.IsNullOrWhiteSpace(refreshTokenRequestDTO.RefreshToken))
                 throw new SecurityTokenException(SharedTerms.ExpiredRefreshTokenException); // FT: It's not realy this reason, but it's easier then realy explaining the user what has happened, this could happen if he deleted the cache from the browser
 
             string accessToken = await _authenticationService.GetAccessTokenAsync();
-            List<Claim> principalClaims = _jwtAuthManagerService.GetPrincipalClaimsForAccessToken(request, accessToken);
+            List<Claim> claims = _jwtAuthManagerService.GetClaimsForTheAccessToken(refreshTokenRequestDTO, accessToken);
 
-            long accesTokenUserId = _authenticationService.GetCurrentUserId();
-            string accessTokenUserEmail = _authenticationService.GetCurrentUserEmail();
+            long accesTokenUserId = long.Parse(claims.FirstOrDefault(x => x.Type == ClaimTypes.PrimarySid)?.Value);
+            string accessTokenUserEmail = claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
 
             string emailFromTheDb = await GetCurrentUserEmailByIdAsync(accesTokenUserId);
             if (emailFromTheDb != accessTokenUserEmail) // The email from db changed, and the user is using the old one in access token
                 _jwtAuthManagerService.RemoveRefreshTokenByEmail(accessTokenUserEmail);
 
-            //JwtAuthResultDTO jwtResult = _jwtAuthManagerService.RefreshDevHack(request, accesTokenUserId, emailFromTheDb, principalClaims); FT: REFRESH HACK
-            JwtAuthResultDTO jwtResult = _jwtAuthManagerService.Refresh(request, accesTokenUserId, emailFromTheDb, principalClaims);
+            JwtAuthResultDTO jwtResult = _jwtAuthManagerService.Refresh(refreshTokenRequestDTO, accesTokenUserId, emailFromTheDb);
 
             return new LoginResultDTO
             {
@@ -293,17 +287,11 @@ namespace Soft.Generator.Security.Services
 
         #region Helpers
 
-        private JwtAuthResultDTO GetJwtAuthResultWithRefreshDTO(string browserId, long userId, string userEmail)
+        private JwtAuthResultDTO GetJwtAuthResultWithRefreshDTO(long userId, string userEmail, string browserId)
         {
-            List<Claim> claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.PrimarySid, userId.ToString()),
-                new Claim(ClaimTypes.Email, userEmail),
-            };
-
             string ipAddress = _authenticationService.GetIPAddress();
 
-            JwtAuthResultDTO jwtAuthResult = _jwtAuthManagerService.GenerateAccessAndRefreshTokens(userEmail, claims, ipAddress, browserId, userId);
+            JwtAuthResultDTO jwtAuthResult = _jwtAuthManagerService.GenerateAccessAndRefreshTokens(userId, userEmail, ipAddress, browserId);
 
             return jwtAuthResult;
         }
@@ -328,19 +316,20 @@ namespace Soft.Generator.Security.Services
                     .SingleOrDefaultAsync();
 
                 if (currentUser == null)
-                    throw new BusinessException("You have entered a wrong email."); // TODO FT: Resources
+                    throw new BusinessException(SharedTerms.AuthenticationEmailDoesNotExistException); // TODO FT: Resources
 
-                if (currentUser.NumberOfFailedAttemptsInARow > SettingsProvider.Current.NumberOfFailedLoginAttemptsInARowToDisableUser) // FT: It could never be 21 if the value from settings is 20, but putting > just in case
-                    throw new BusinessException($"You have entered the wrong password {SettingsProvider.Current.NumberOfFailedLoginAttemptsInARowToDisableUser} times in a row, your account has been disabled, please click on 'Forgot password?'.");
+                if (currentUser.NumberOfFailedAttemptsInARow > SettingsProvider.Current.NumberOfFailedLoginAttemptsInARowToDisableUser)
+                    throw new BusinessException(SharedTerms.DisabledAccountException); // TODO FT: We will let this for now, because now there is no other way to make the user can't login
 
                 if (currentUser.Password == null)
-                    throw new BusinessException("Your account already exists with third-party (eg. Google) authentication. If you want to set up a password as well, please log in to your profile and add a password, or use the 'Forgot password?' option to reset it.");
+                    throw new BusinessException(SharedTerms.OnlyThirdPartyAccountButTriedToLoginException);
 
                 if (BCrypt.Net.BCrypt.EnhancedVerify(loginDTO.Password, currentUser.Password) == false)
                 {
-                    currentUser.NumberOfFailedAttemptsInARow++;
-                    await _context.SaveChangesAsync();
-                    throw new BusinessException("You have entered a wrong password.");
+                    // TODO FT: Maybe this has not sence if we have 2fa with email and forgot password option
+                    //currentUser.NumberOfFailedAttemptsInARow++;
+                    //await _context.SaveChangesAsync();
+                    throw new BusinessException(SharedTerms.AuthenticationIncorectPasswordException);
                 }
 
                 return currentUser;

@@ -1267,6 +1267,16 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return result;
         }
 
+        public static ClassDeclarationSyntax ExtractEntityFromList(string input, IList<ClassDeclarationSyntax> entityClasses)
+        {
+            string[] parts = input.Split('<'); // List, long>
+            string entityClassName = parts[1].Replace(">", "");
+
+            ClassDeclarationSyntax entityClass = GetClass(input, entityClasses);
+
+            return entityClass;
+        }
+
         /// <summary>
         /// DeSerializes an object from JSON
         /// </summary>

@@ -48,16 +48,5 @@ namespace Soft.Generator.Shared.Extensions
 
             return kebabCaseString;
         }
-
-        /// <summary>
-        /// Searching for the base type in TPH inheritance
-        /// </summary>
-        public static IQueryable<T> OfType<T>(this IQueryable<T> source, Type type)
-        {
-            var parameter = Expression.Parameter(typeof(T), "e");
-            var body = Expression.TypeIs(parameter, type);
-            var predicate = Expression.Lambda<Func<T, bool>>(body, parameter);
-            return source.Where(predicate);
-        }
     }
 }
