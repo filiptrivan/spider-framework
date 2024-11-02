@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Soft.Generator.DesktopApp.Attributes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,6 +19,7 @@ namespace Soft.Generator.DesktopApp.Entities
 
         public bool Regenerate { get; set; }
 
+        [ManyToOneRequired]
         public virtual WebApplication Application { get; set; }
 
         public virtual DomainFolderPath DomainFolderPath { get; set; }

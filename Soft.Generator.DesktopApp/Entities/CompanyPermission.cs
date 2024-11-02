@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace Soft.Generator.DesktopApp.Entities
 {
+    /// <summary>
+    /// Cascade delete is done in sql
+    /// </summary>
     [ManyToMany]
     public class CompanyPermission
     {

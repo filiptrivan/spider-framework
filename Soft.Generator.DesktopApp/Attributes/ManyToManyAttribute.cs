@@ -8,5 +8,12 @@ namespace Soft.Generator.DesktopApp.Attributes
 {
     public class ManyToManyAttribute : Attribute
     {
+        /// <summary>
+        /// For the properties
+        /// </summary>
+        /// <param name="value">ManyToMany table</param>
+        public ManyToManyAttribute(string value) { }
+
+        public ManyToManyAttribute() { }
     }
 }

@@ -12,8 +12,7 @@
           "CodegenCS.Core": "3.3.1",
           "Microsoft.CodeAnalysis.Analyzers": "3.3.4",
           "Microsoft.CodeAnalysis.CSharp": "4.7.0",
-          "NETStandard.Library": "2.0.3",
-          "Soft.SourceGenerators": "1.0.0"
+          "NETStandard.Library": "2.0.3"
         },
         "runtime": {
           "Soft.PS.SourceGenerators.dll": {}
@@ -227,14 +226,6 @@
             "fileVersion": "4.6.28619.1"
           }
         }
-      },
-      "Soft.SourceGenerators/1.0.0": {
-        "dependencies": {
-          "CodegenCS.Core": "3.3.1"
-        },
-        "runtime": {
-          "Soft.SourceGenerators.dll": {}
-        }
       }
     }
   },
@@ -341,11 +332,6 @@
       "sha512": "sha512-zteT+G8xuGu6mS+mzDzYXbzS7rd3K6Fjb9RiZlYlJPam2/hU7JCBZBVEcywNuR+oZ1ncTvc/cq0faRr3P01OVg==",
       "path": "system.threading.tasks.extensions/4.5.4",
       "hashPath": "system.threading.tasks.extensions.4.5.4.nupkg.sha512"
-    },
-    "Soft.SourceGenerators/1.0.0": {
-      "type": "project",
-      "serviceable": false,
-      "sha512": ""
     }
   }
 }

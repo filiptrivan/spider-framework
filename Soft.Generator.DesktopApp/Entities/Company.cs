@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Soft.Generator.DesktopApp.Attributes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,6 +19,7 @@ namespace Soft.Generator.DesktopApp.Entities
 
         public virtual List<WebApplication> Applications { get; set; }
 
+        [ManyToMany("CompanyPermission")]
         public virtual List<Permission> Permissions { get; set; }
     }
 }

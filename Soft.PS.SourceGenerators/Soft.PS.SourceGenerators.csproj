@@ -12,8 +12,4 @@
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.7.0" PrivateAssets="all" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <ProjectReference Include="..\Soft.SourceGenerator.NgTable\Soft.SourceGenerators.csproj" />
-	</ItemGroup>
-
 </Project>

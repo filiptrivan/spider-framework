@@ -71,6 +71,6 @@ CREATE TABLE CompanyPermission (
     CompanyId INT,
     PermissionId INT,
     PRIMARY KEY (CompanyId, PermissionId),
-    FOREIGN KEY (CompanyId) REFERENCES Company(Id),
-    FOREIGN KEY (PermissionId) REFERENCES Permission(Id)
+    FOREIGN KEY (CompanyId) REFERENCES Company(Id) ON DELETE CASCADE,
+    FOREIGN KEY (PermissionId) REFERENCES Permission(Id) ON DELETE CASCADE
 );

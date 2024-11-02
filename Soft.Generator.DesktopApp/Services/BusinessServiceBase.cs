@@ -52,7 +52,7 @@ WHERE Id = @id
             if (ids == null || ids.Count == 0)
                 throw new ArgumentException("Lista koju želite da obrišete ne može da bude prazna.");
 
-            var parameters = new List<string>();
+            List<string> parameters = new List<string>();
             for (int i = 0; i < ids.Count; i++)
             {
                 parameters.Add($"@id{i}");

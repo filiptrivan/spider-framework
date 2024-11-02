@@ -672,7 +672,7 @@ namespace {{basePartOfNamespace}}.Services
 
         private static List<string> GetManyToOneDeleteQueries(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, int recursiveIteration)
         {
-            if (recursiveIteration > 5000)
+            if (recursiveIteration > 5000) 
             {
                 GetManyToOneDeleteQueries(null, null, int.MaxValue);
                 return new List<string> { "You made cascade delete infinite loop." };
@@ -685,7 +685,7 @@ namespace {{basePartOfNamespace}}.Services
 
             List<SoftClass> softEntityClasses = Helper.GetSoftEntityClasses(entityClasses);
 
-            List<SoftProperty> manyToOneRequiredProperties = GetManyToOneRequiredProperties(nameOfTheEntityClass, softEntityClasses);
+            List<SoftProperty> manyToOneRequiredProperties = Helper.GetManyToOneRequiredProperties(nameOfTheEntityClass, softEntityClasses);
 
             foreach (SoftProperty prop in manyToOneRequiredProperties)
             {
@@ -715,16 +715,6 @@ namespace {{basePartOfNamespace}}.Services
             }
 
             return result;
-        }
-
-        private static List<SoftProperty> GetManyToOneRequiredProperties(string nameOfTheEntityClass, List<SoftClass> softEntityClasses)
-        {
-            return softEntityClasses
-                .SelectMany(x => x.Properties)
-                .Where(prop => prop.Type.PropTypeIsManyToOne() &&
-                               prop.Attributes.Any(x => x.Name == "ManyToOneRequired") &&
-                               prop.Type == nameOfTheEntityClass)
-                .ToList();
         }
 
         private static List<string> GetPopulateDTOWithBlobParts(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)

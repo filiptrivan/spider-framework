@@ -285,19 +285,6 @@
             "related": ".xml"
           }
         }
-      },
-      "Soft.SourceGenerators/1.0.0": {
-        "type": "project",
-        "framework": ".NETStandard,Version=v2.0",
-        "dependencies": {
-          "CodegenCS.Core": "3.3.1"
-        },
-        "compile": {
-          "bin/placeholder/Soft.SourceGenerators.dll": {}
-        },
-        "runtime": {
-          "bin/placeholder/Soft.SourceGenerators.dll": {}
-        }
       }
     }
   },
@@ -1442,11 +1429,6 @@
         "useSharedDesignerContext.txt",
         "version.txt"
       ]
-    },
-    "Soft.SourceGenerators/1.0.0": {
-      "type": "project",
-      "path": "../Soft.SourceGenerator.NgTable/Soft.SourceGenerators.csproj",
-      "msbuildProject": "../Soft.SourceGenerator.NgTable/Soft.SourceGenerators.csproj"
     }
   },
   "projectFileDependencyGroups": {
@@ -1454,8 +1436,7 @@
       "CodegenCS.Core >= 3.3.1",
       "Microsoft.CodeAnalysis.Analyzers >= 3.3.4",
       "Microsoft.CodeAnalysis.CSharp >= 4.7.0",
-      "NETStandard.Library >= 2.0.3",
-      "Soft.SourceGenerators >= 1.0.0"
+      "NETStandard.Library >= 2.0.3"
     ]
   },
   "packageFolders": {
@@ -1490,11 +1471,7 @@
       "frameworks": {
         "netstandard2.0": {
           "targetAlias": "netstandard2.0",
-          "projectReferences": {
-            "E:\\Projects\\Soft.Generator\\Source\\Soft.SourceGenerator.NgTable\\Soft.SourceGenerators.csproj": {
-              "projectPath": "E:\\Projects\\Soft.Generator\\Source\\Soft.SourceGenerator.NgTable\\Soft.SourceGenerators.csproj"
-            }
-          }
+          "projectReferences": {}
         }
       },
       "warningProperties": {

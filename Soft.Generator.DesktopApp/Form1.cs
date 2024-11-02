@@ -30,7 +30,7 @@ namespace Soft.Generator.DesktopApp
             _connection.WithTransaction(() =>
             {
                 List<Permission> permissions = _desktopAppService.GetPermissionList();
-                Permission permission = _desktopAppService.GetPermission(1);
+                List<Permission> permissionsForCompany = _desktopAppService.GetPermissionListForCompanyList([1, 2]);
             });
 
 
