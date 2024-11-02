@@ -56,9 +56,20 @@ import { ValidationErrors } from '@angular/forms';
 import { SoftFormControl, SoftValidatorFn } from 'src/app/core/components/soft-form-control/soft-form-control';
 import { validatePrecisionScale } from '../../../../core/services/helper-functions';
 import { TranslocoService } from '@jsverse/transloco';
+import { Injectable } from '@angular/core';
 
-export function getValidator{{projectName}}(formControl: SoftFormControl, className: string, translocoService: TranslocoService): SoftValidatorFn {
-    switch(formControl.label + className){
+@Injectable({
+    providedIn: 'root',
+})
+export class Validator{{projectName}}Service {
+
+    constructor(
+        private translocoService: TranslocoService
+    ) {
+    }
+
+    getValidator(formControl: SoftFormControl, className: string): SoftValidatorFn {
+        switch(formControl.label + className){
 """);
             foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
             {
@@ -82,12 +93,15 @@ export function getValidator{{projectName}}(formControl: SoftFormControl, classN
                 sbMethods.AppendLine(GenerateAngularValidationMethods(DTOClassGroup.Key, validationClassConstructorBody));
             }
             sb.AppendLine($$"""
-        default:
-            return null;
+            default:
+                return null;
+        }
     }
+
+{{sbMethods}}
 }
 """);
-            sb.AppendLine(sbMethods.ToString());
+            //sb.AppendLine(sbMethods.ToString());
 
             Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-validation-rules.generated.ts");
         }
@@ -130,19 +144,19 @@ export function getValidator{{projectName}}(formControl: SoftFormControl, classN
             string allRules = string.Join(" && ", ruleNames);
 
             string result = $@"
-export function {parameterFirstLower}{classNameForValidation}Validator(control: SoftFormControl, translocoService: TranslocoService): SoftValidatorFn {{
-    const validator: SoftValidatorFn = (): ValidationErrors | null => {{
-        const value = control.value;
+    {parameterFirstLower}{classNameForValidation}Validator(control: SoftFormControl): SoftValidatorFn {{
+        const validator: SoftValidatorFn = (): ValidationErrors | null => {{
+            const value = control.value;
 
-{string.Join("\n", ruleStatements)}
+    {string.Join("\n", ruleStatements)}
 
-        const {parameterFirstLower}Valid = {allRules};
+            const {parameterFirstLower}Valid = {allRules};
 
-        return {parameterFirstLower}Valid ? null : {{ _ : translocoService.translate('{string.Join("", translationTags)}', {{{string.Join(", ", translocoVariables)}}}) }};
-    }};
-    {(ruleNames.Any(x => x == "notEmptyRule") ? "validator.hasNotEmptyRule = true;" : "")}
-    return validator;
-}}";
+            return {parameterFirstLower}Valid ? null : {{ _ : this.translocoService.translate('{string.Join("", translationTags)}', {{{string.Join(", ", translocoVariables)}}}) }};
+        }};
+        {(ruleNames.Any(x => x == "notEmptyRule") ? "validator.hasNotEmptyRule = true;" : "")}
+        return validator;
+    }}";
 
             return result;
         }
@@ -291,7 +305,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
             {
                 validationCases.AppendLine($$"""
         case '{{validationRulePropName.FirstCharToLower()}}{{validationClassName}}':
-            return {{validationRulePropName.FirstCharToLower()}}{{validationClassName}}Validator(formControl, translocoService);
+            return this.{{validationRulePropName.FirstCharToLower()}}{{validationClassName}}Validator(formControl);
 """);
             }
 

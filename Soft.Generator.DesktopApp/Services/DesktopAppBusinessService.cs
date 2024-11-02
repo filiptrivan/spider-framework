@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Soft.Generator.DesktopApp.Services
 {
-    public class DesktopAppBusinessService : BusinessServiceBase
+    public class DesktopAppBusinessService : DesktopAppBusinessServiceGenerated
     {
         private readonly SqlConnection _connection;
 
@@ -96,67 +96,115 @@ LEFT JOIN Company AS company ON company.Id = companypermission.CompanyId
             return permissionList;
         }
 
-        public Permission GetPermission(int id)
-        {
-            List<Permission> permissionList = new List<Permission>();
-            Dictionary<int, Permission> permissionDict = new Dictionary<int, Permission>();
+//        public Permission GetPermission(int id)
+//        {
+//            List<Permission> permissionList = new List<Permission>();
+//            Dictionary<int, Permission> permissionDict = new Dictionary<int, Permission>();
+//            Dictionary<int, Company> companyDict = new Dictionary<int, Company>();
+//            Dictionary<long, WebApplication> applicationDict = new Dictionary<long, WebApplication>();
 
-            string query = @$"
-SELECT permission.Id AS PermissionId, permission.Name AS PermissionName, permission.Code AS PermissionCode, company.Id AS CompanyId, company.Name AS CompanyName
-FROM Permission AS permission
-LEFT JOIN CompanyPermission AS companypermission ON permission.Id = companypermission.PermissionId
-LEFT JOIN Company AS company ON company.Id = companypermission.CompanyId
-WHERE permission.Id = @id
-";
+//            string query = @$"
+//SELECT 
+//permission.Id AS PermissionId, permission.Name AS PermissionName, permission.Code AS PermissionCode, 
+//company.Id AS CompanyId, company.Name AS CompanyName,
+//application.Id AS WebApplicationId, application.Name AS WebApplicationName
+//FROM Permission AS permission
+//LEFT JOIN CompanyPermission AS companypermission ON permission.Id = companypermission.PermissionId
+//LEFT JOIN Company AS company ON company.Id = companypermission.CompanyId
+//LEFT JOIN WebApplication AS application ON application.CompanyId = companypermission.CompanyId
+//WHERE permission.Id = @id
+//";
 
-            _connection.WithTransaction(() =>
-            {
-                using (SqlCommand cmd = new SqlCommand(query, _connection))
-                {
-                    cmd.Parameters.AddWithValue("@id", id);
+//            _connection.WithTransaction(() =>
+//            {
+//                using (SqlCommand cmd = new SqlCommand(query, _connection))
+//                {
+//                    cmd.Parameters.AddWithValue("@id", id);
 
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            int permissionId = reader.GetInt32(reader.GetOrdinal("PermissionId"));
+//                    using (SqlDataReader reader = cmd.ExecuteReader())
+//                    {
+//                        while (reader.Read())
+//                        {
+//                            if (reader.IsDBNull(reader.GetOrdinal("PermissionId")))
+//                            {
+//                                int permissionId = reader.GetInt32(reader.GetOrdinal("PermissionId"));
+//                                bool permissionAlreadyAdded = permissionDict.TryGetValue(permissionId, out Permission permission);
+//                                if (!permissionAlreadyAdded)
+//                                {
+//                                    permission = new Permission
+//                                    {
+//                                        Id = permissionId,
+//                                        Name = reader.GetString(reader.GetOrdinal("PermissionName")),
+//                                        Code = reader.GetString(reader.GetOrdinal("PermissionCode")),
+//                                        Companies = new List<Company>()
+//                                    };
 
-                            if (!permissionDict.TryGetValue(permissionId, out Permission permission))
-                            {
-                                permission = new Permission
-                                {
-                                    Id = permissionId,
-                                    Name = reader.GetString(reader.GetOrdinal("PermissionName")),
-                                    Code = reader.GetString(reader.GetOrdinal("PermissionCode")),
-                                    Companies = new List<Company>()
-                                };
+//                                    permissionDict[permissionId] = permission;
+//                                }
 
-                                permissionDict[permissionId] = permission;
-                                permissionList.Add(permission);
-                            }
+//                                if (reader.IsDBNull(reader.GetOrdinal("CompanyId")))
+//                                {
+//                                    int companyId = reader.GetInt32(reader.GetOrdinal("CompanyId"));
+//                                    bool companyAlreadyAdded = companyDict.TryGetValue(companyId, out Company company);
+//                                    if (!companyAlreadyAdded)
+//                                    {
+//                                        company = new Company
+//                                        {
+//                                            Id = companyId,
+//                                            Name = reader.GetString(reader.GetOrdinal("CompanyName")),
+//                                        };
 
-                            if (!reader.IsDBNull(reader.GetOrdinal("CompanyId")))
-                            {
-                                Company company = new Company
-                                {
-                                    Id = reader.GetInt32(reader.GetOrdinal("CompanyId")),
-                                    Name = reader.GetString(reader.GetOrdinal("CompanyName"))
-                                };
+//                                        companyDict[companyId] = company;
+//                                        permission.Companies.Add(company);
+//                                    }
 
-                                permission.Companies.Add(company);
-                            }
-                        }
-                    }
-                }
-            });
+//                                    if (reader.IsDBNull(reader.GetOrdinal("WebApplicationId")))
+//                                    {
+//                                        long applicationId = reader.GetInt32(reader.GetOrdinal("WebApplicationId"));
+//                                        bool applicationAlreadyAdded = applicationDict.TryGetValue(applicationId, out WebApplication application);
+//                                        if (!applicationAlreadyAdded)
+//                                        {
+//                                            application = new WebApplication
+//                                            {
+//                                                Id = applicationId,
+//                                                Name = reader.GetString(reader.GetOrdinal("WebApplicationName")),
+//                                                Setting = new Setting(),
+//                                            };
 
-            Permission permission = permissionList.SingleOrDefault();
+//                                            company.WebApplications.Add(application);
+//                                        }
 
-            if (permission == null)
-                throw new Exception("Objekat ne postoji u bazi podataka.");
+//                                        if (reader.IsDBNull(reader.GetOrdinal("SettingId")))
+//                                        {
+//                                            long settingId = reader.GetInt32(reader.GetOrdinal("WebApplicationId"));
+//                                            bool settingAlreadyAdded = settingDict.TryGetValue(settingId, out Setting setting);
+//                                            if (!applicationAlreadyAdded)
+//                                            {
+//                                                setting = new Setting
+//                                                {
+//                                                    Id = settingId,    
+//                                                };
 
-            return permission;
-        }
+//                                                application.Setting = setting;
+//                                            }
+//                                        }
+//                                    }
+//                                }
+
+//                                permissionList.Add(permission);
+//                            }
+//                        }
+//                    }
+//                }
+//            });
+
+//            Permission permission = permissionList.SingleOrDefault();
+
+//            if (permission == null)
+//                throw new Exception("Objekat ne postoji u bazi podataka.");
+
+//            return permission;
+//        }
 
         public void DeletePermission(int id)
         {

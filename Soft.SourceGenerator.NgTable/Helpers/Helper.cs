@@ -1269,10 +1269,10 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
         public static ClassDeclarationSyntax ExtractEntityFromList(string input, IList<ClassDeclarationSyntax> entityClasses)
         {
-            string[] parts = input.Split('<'); // List, long>
+            string[] parts = input.Split('<'); // List, Role>
             string entityClassName = parts[1].Replace(">", "");
 
-            ClassDeclarationSyntax entityClass = GetClass(input, entityClasses);
+            ClassDeclarationSyntax entityClass = GetClass(entityClassName, entityClasses);
 
             return entityClass;
         }

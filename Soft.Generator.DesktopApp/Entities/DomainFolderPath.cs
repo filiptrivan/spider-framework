@@ -12,6 +12,6 @@ namespace Soft.Generator.DesktopApp.Entities
 
         public string Path { get; set; }
 
-        public List<Application> Applications { get; set; }
+        public List<WebApplication> Applications { get; set; }
     }
 }

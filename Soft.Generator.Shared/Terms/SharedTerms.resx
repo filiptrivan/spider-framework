@@ -131,7 +131,7 @@
   </data>
   <data name="UnauthorizedAccessExceptionMessage" xml:space="preserve">
     <value>You don't have the necessary rights to perform the operation.</value>
-    <comment>Nemate potrebna prava da biste izvršili operaciju.</comment>
+    <comment>Nemate potrebnu dozvolu da biste izvršili operaciju.</comment>
   </data>
   <data name="ExpiredVerificationCodeException" xml:space="preserve">
     <value>Your verification code has expired. Please request a new code to continue.</value>

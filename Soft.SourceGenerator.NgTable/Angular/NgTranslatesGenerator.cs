@@ -90,7 +90,7 @@ import { TranslocoService } from '@jsverse/transloco';
 export class TranslateLabels{{projectName}}Service {
 
     constructor(
-    private translocoService: TranslocoService
+        private translocoService: TranslocoService
     ) {
     }
 

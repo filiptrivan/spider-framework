@@ -182,7 +182,7 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [AuthGuard]
         public async Task<List<NamebookDTO<int>>> LoadPermissionListForDropdown()
         {
-            return await _securityBusinessService.LoadPermissionListForDropdown(_context.DbSet<Permission>());
+            return await _securityBusinessService.LoadPermissionListForDropdown(_context.DbSet<Permission>(), false); // FT: We don't have authorization of Permission, it will inherit from Role authorization
         }
 
         [HttpGet]

@@ -142,7 +142,7 @@
     <value>Notifikacije</value>
   </data>
   <data name="UnauthorizedAccessExceptionMessage" xml:space="preserve">
-    <value>Nemate potrebna prava da biste izvršili operaciju.</value>
+    <value>Nemate potrebnu dozvolu da biste izvršili operaciju.</value>
   </data>
   <data name="ExpiredVerificationCodeException" xml:space="preserve">
     <value>Vaš verifikacioni kod je istekao. Zatražite novi kod da biste nastavili.</value>

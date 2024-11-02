@@ -22,6 +22,6 @@ namespace Soft.Generator.DesktopApp.Entities
 
         public virtual Framework Framework { get; set; }
 
-        public virtual List<Application> Applications { get; set; }
+        public virtual List<WebApplication> Applications { get; set; }
     }
 }

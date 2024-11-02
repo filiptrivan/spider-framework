@@ -1,0 +1,14 @@
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\bin\Debug\netstandard2.0\Soft.PS.SourceGenerators.deps.json
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\bin\Debug\netstandard2.0\Soft.PS.SourceGenerators.dll
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\bin\Debug\netstandard2.0\Soft.PS.SourceGenerators.pdb
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\bin\Debug\netstandard2.0\Soft.SourceGenerators.dll
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\bin\Debug\netstandard2.0\Soft.SourceGenerators.pdb
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\obj\Debug\netstandard2.0\Soft.PS.SourceGenerators.csproj.AssemblyReference.cache
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\obj\Debug\netstandard2.0\Soft.PS.SourceGenerators.GeneratedMSBuildEditorConfig.editorconfig
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\obj\Debug\netstandard2.0\Soft.PS.SourceGenerators.AssemblyInfoInputs.cache
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\obj\Debug\netstandard2.0\Soft.PS.SourceGenerators.AssemblyInfo.cs
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\obj\Debug\netstandard2.0\Soft.PS.SourceGenerators.csproj.CoreCompileInputs.cache
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\obj\Debug\netstandard2.0\Soft.PS.SourceGenerators.sourcelink.json
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\obj\Debug\netstandard2.0\Soft.PS.SourceGenerators.csproj.CopyComplete
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\obj\Debug\netstandard2.0\Soft.PS.SourceGenerators.dll
+E:\Projects\Soft.Generator\Source\Soft.PS.SourceGenerators\obj\Debug\netstandard2.0\Soft.PS.SourceGenerators.pdb

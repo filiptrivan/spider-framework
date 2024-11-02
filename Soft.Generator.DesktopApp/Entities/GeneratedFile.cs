@@ -18,7 +18,7 @@ namespace Soft.Generator.DesktopApp.Entities
 
         public bool Regenerate { get; set; }
 
-        public virtual Application Application { get; set; }
+        public virtual WebApplication Application { get; set; }
 
         public virtual DomainFolderPath DomainFolderPath { get; set; }
     }

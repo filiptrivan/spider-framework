@@ -16,7 +16,7 @@ namespace Soft.Generator.DesktopApp.Entities
 
         public string Password { get; set; }
 
-        public virtual List<Application> Applications { get; set; }
+        public virtual List<WebApplication> Applications { get; set; }
 
         public virtual List<Permission> Permissions { get; set; }
     }
