@@ -1,0 +1,8 @@
+E:\Projects\Soft.Generator\Source\Soft.Generator.WebAPI\obj\Debug\net8.0\Soft.Generator.WebAPI.csproj.AssemblyReference.cache
+E:\Projects\Soft.Generator\Source\Soft.Generator.WebAPI\obj\Debug\net8.0\Soft.Generator.WebAPI.GeneratedMSBuildEditorConfig.editorconfig
+E:\Projects\Soft.Generator\Source\Soft.Generator.WebAPI\obj\Debug\net8.0\Soft.Generator.WebAPI.AssemblyInfoInputs.cache
+E:\Projects\Soft.Generator\Source\Soft.Generator.WebAPI\obj\Debug\net8.0\Soft.Generator.WebAPI.AssemblyInfo.cs
+E:\Projects\Soft.Generator\Source\Soft.Generator.WebAPI\obj\Debug\net8.0\Soft.Generator.WebAPI.csproj.CoreCompileInputs.cache
+E:\Projects\Soft.Generator\Source\Soft.Generator.WebAPI\obj\Debug\net8.0\Soft.Generator.WebAPI.MvcApplicationPartsAssemblyInfo.cs
+E:\Projects\Soft.Generator\Source\Soft.Generator.WebAPI\obj\Debug\net8.0\Soft.Generator.WebAPI.MvcApplicationPartsAssemblyInfo.cache
+E:\Projects\Soft.Generator\Source\Soft.Generator.WebAPI\obj\Debug\net8.0\Soft.Generator.WebAPI.sourcelink.json

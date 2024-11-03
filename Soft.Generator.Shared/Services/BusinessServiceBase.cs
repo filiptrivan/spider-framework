@@ -153,5 +153,26 @@ namespace Soft.Generator.Shared.Services
             }
         }
 
+        protected async Task<string> GetFileDataAsync(string key)
+        {
+            try
+            {
+                BlobClient blobClient = _blobContainerClient.GetBlobClient(key);
+
+                Azure.Response<BlobDownloadResult> blobDownloadInfo = await blobClient.DownloadContentAsync();
+
+                byte[] byteArray = blobDownloadInfo.Value.Content.ToArray();
+
+                string base64 = Convert.ToBase64String(byteArray);
+
+                return $"filename={key};base64,{base64}";
+            }
+            catch (Exception)
+            {
+                // TODO FT: Log
+                return null;
+            }
+        }
+
     }
 }

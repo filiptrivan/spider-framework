@@ -76,6 +76,8 @@ using Soft.Generator.Shared.Interfaces;
 using Soft.Generator.Shared.Services;
 using Soft.Generator.Shared.DTO;
 using Soft.Generator.Shared.Extensions;
+using Soft.Generator.Shared.SoftExceptions;
+using Soft.Generator.Shared.Terms;
 using Mapster;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -124,7 +126,10 @@ namespace {{basePartOfNamespace}}.Services
                     await _authorizationService.{{nameOfTheEntityClass}}SingleReadAuthorize(id);
                 }
 
-                {{nameOfTheEntityClass}}DTO dto = await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ProjectToConfig()).FirstOrDefaultAsync();
+                {{nameOfTheEntityClass}}DTO dto = await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ProjectToConfig()).SingleOrDefaultAsync();
+
+                if (dto == null)
+                    throw new BusinessException(SharedTerms.EntityDoesNotExistInDatabase);
 
 {{string.Join("\n", GetPopulateDTOWithBlobParts(entityClass, entityProperties))}}
 
@@ -254,10 +259,17 @@ namespace {{basePartOfNamespace}}.Services
                     await _authorizationService.{{nameOfTheEntityClass}}ListReadAuthorize();
                 }
 
-                return await {{nameOfTheEntityClassFirstLower}}Query
+                List<{{nameOfTheEntityClass}}DTO> dtoList = await {{nameOfTheEntityClassFirstLower}}Query
                     .AsNoTracking()
                     .ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ToDTOConfig())
                     .ToListAsync();
+
+                foreach ({{nameOfTheEntityClass}}DTO dto in dtoList)
+                {
+{{string.Join("\n", GetPopulateDTOWithBlobParts(entityClass, entityProperties))}}
+                }
+
+                return dtoList;
             });
         }
     
@@ -726,25 +738,10 @@ namespace {{basePartOfNamespace}}.Services
             foreach (SoftProperty property in blobProperies)
             {
                 result.Add($$"""
-                if (dto != null && !string.IsNullOrEmpty(dto.{{property.IdentifierText}}))
-                {
-                    try
+                    if (!string.IsNullOrEmpty(dto.{{property.IdentifierText}}))
                     {
-                        BlobClient blobClient = _blobContainerClient.GetBlobClient(dto.{{property.IdentifierText}});
-
-                        Azure.Response<BlobDownloadResult> blobDownloadInfo = await blobClient.DownloadContentAsync();
-
-                        byte[] byteArray = blobDownloadInfo.Value.Content.ToArray();
-
-                        string base64 = Convert.ToBase64String(byteArray);
-
-                        dto.{{property.IdentifierText}}Data = $"filename={dto.{{property.IdentifierText}}};base64,{base64}";
+                        dto.{{property.IdentifierText}}Data = await GetFileDataAsync(dto.{{property.IdentifierText}});
                     }
-                    catch
-                    {
-                        // TODO FT: Log
-                    }
-                }
 """);
             }
 

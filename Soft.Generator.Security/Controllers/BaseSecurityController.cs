@@ -44,40 +44,15 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         }
 
         [HttpPost]
-        public LoginResultDTO Login(VerificationTokenRequestDTO request)
-        {
-            return _securityBusinessService.Login(request);
-        }
-
-
-        [HttpPost]
         public async Task SendForgotPasswordVerificationEmail(ForgotPasswordDTO forgotPasswordDTO)
         {
             await _securityBusinessService.SendForgotPasswordVerificationEmail(forgotPasswordDTO);
         }
 
         [HttpPost]
-        public async Task<LoginResultDTO> ForgotPassword(VerificationTokenRequestDTO request)
-        {
-            return await _securityBusinessService.ForgotPassword(request);
-        }
-
-        [HttpPost]
-        public async Task<LoginResultDTO> LoginExternal(ExternalProviderDTO externalProviderDTO) // TODO FT: Add enum for which external provider you should login user
-        {
-            return await _securityBusinessService.LoginExternal(externalProviderDTO, SettingsProvider.Current.GoogleClientId);
-        }
-
-        [HttpPost]
         public async Task<RegistrationVerificationResultDTO> SendRegistrationVerificationEmail(RegistrationDTO registrationDTO)
         {
             return await _securityBusinessService.SendRegistrationVerificationEmail(registrationDTO);
-        }
-
-        [HttpPost]
-        public async Task<LoginResultDTO> Register(VerificationTokenRequestDTO request)
-        {
-            return await _securityBusinessService.Register(request);
         }
 
         [HttpGet]
@@ -94,7 +69,7 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         /// Here we would put [Authorize] attribute, because we don't validate life time of the access token, but we are not because deeper in the method we are validating it without life time also. 
         /// </summary>
         [HttpPost]
-        public async Task<LoginResultDTO> RefreshToken(RefreshTokenRequestDTO request)
+        public async Task<AuthResultDTO> RefreshToken(RefreshTokenRequestDTO request)
         {
             return await _securityBusinessService.RefreshToken(request);
         }

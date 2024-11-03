@@ -24,6 +24,7 @@ using Azure.Storage.Blobs;
 using Microsoft.IdentityModel.Tokens;
 using Soft.Generator.Shared.Terms;
 using Nucleus.Core.BusinessObject;
+using System;
 
 namespace Soft.Generator.Security.Services
 {
@@ -76,7 +77,7 @@ namespace Soft.Generator.Security.Services
             }
         }
 
-        public LoginResultDTO Login(VerificationTokenRequestDTO verificationRequestDTO)
+        public AuthResultDTO Login(VerificationTokenRequestDTO verificationRequestDTO)
         {
             VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
             validationRules.ValidateAndThrow(verificationRequestDTO);
@@ -84,11 +85,13 @@ namespace Soft.Generator.Security.Services
             LoginVerificationTokenDTO loginVerificationTokenDTO = _jwtAuthManagerService.ValidateAndGetLoginVerificationTokenDTO(
                 verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
             // TODO FT: Log somewhere good and bad request
+
             JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email, loginVerificationTokenDTO.BrowserId);
-            return GetLoginResultDTO(loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email, jwtAuthResultDTO);
+
+            return GetAuthResultDTO(loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email, jwtAuthResultDTO);
         }
 
-        public async Task<LoginResultDTO> LoginExternal(ExternalProviderDTO externalProviderDTO, string googleClientId)
+        public async Task<AuthResultDTO> LoginExternal(ExternalProviderDTO externalProviderDTO, string googleClientId)
         {
             GoogleJsonWebSignature.Payload payload = await ValidateGoogleToken(externalProviderDTO.IdToken, googleClientId);
 
@@ -96,6 +99,7 @@ namespace Soft.Generator.Security.Services
             {
                 TUser user = await GetUserByEmailAsync(payload.Email); // FT: Check if user already exist in the database
                 DbSet<TUser> userDbSet = _context.DbSet<TUser>();
+                bool isNewUser = false;
 
                 if (user == null)
                 {
@@ -107,6 +111,7 @@ namespace Soft.Generator.Security.Services
                     };
                     await userDbSet.AddAsync(user);
                     await _context.SaveChangesAsync(); // Adding the new user which is logged in first time
+                    isNewUser = true;
                 }
                 else
                 {
@@ -119,7 +124,7 @@ namespace Soft.Generator.Security.Services
 
                 JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(user.Id, user.Email, externalProviderDTO.BrowserId);
 
-                return GetLoginResultDTO(user.Id, user.Email, jwtAuthResultDTO);
+                return GetAuthResultDTO(user.Id, user.Email, jwtAuthResultDTO);
             });
         }
 
@@ -157,13 +162,14 @@ namespace Soft.Generator.Security.Services
             }
         }
 
-        public async Task<LoginResultDTO> ForgotPassword(VerificationTokenRequestDTO verificationRequestDTO)
+        public async Task<AuthResultDTO> ForgotPassword(VerificationTokenRequestDTO verificationRequestDTO)
         {
             VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
             validationRules.ValidateAndThrow(verificationRequestDTO);
 
             ForgotPasswordVerificationTokenDTO forgotPasswordVerificationTokenDTO = _jwtAuthManagerService.ValidateAndGetForgotPasswordVerificationTokenDTO(
                 verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
+
             await _context.WithTransactionAsync(async () =>
             {
                 TUser user = await LoadInstanceAsync<TUser, long>(forgotPasswordVerificationTokenDTO.UserId, null);
@@ -171,9 +177,11 @@ namespace Soft.Generator.Security.Services
                 _context.DbSet<TUser>().Update(user);
                 await _context.SaveChangesAsync();
             });
+
             // TODO FT: Log somewhere good and bad request
             JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(forgotPasswordVerificationTokenDTO.UserId, forgotPasswordVerificationTokenDTO.Email, forgotPasswordVerificationTokenDTO.BrowserId);
-            return GetLoginResultDTO(forgotPasswordVerificationTokenDTO.UserId, forgotPasswordVerificationTokenDTO.Email, jwtAuthResultDTO);
+
+            return GetAuthResultDTO(forgotPasswordVerificationTokenDTO.UserId, forgotPasswordVerificationTokenDTO.Email, jwtAuthResultDTO);
         }
 
         // Registration
@@ -215,14 +223,16 @@ namespace Soft.Generator.Security.Services
             return registrationResultDTO;
         }
 
-        public async Task<LoginResultDTO> Register(VerificationTokenRequestDTO verificationRequestDTO)
+        public async Task<AuthResultDTO> Register(VerificationTokenRequestDTO verificationRequestDTO)
         {
             VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
             validationRules.ValidateAndThrow(verificationRequestDTO);
 
             RegistrationVerificationTokenDTO registrationVerificationTokenDTO = _jwtAuthManagerService.ValidateAndGetRegistrationVerificationTokenDTO(
                 verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
+
             TUser user = null;
+
             await _context.WithTransactionAsync(async () =>
             {
                 user = new TUser
@@ -232,16 +242,18 @@ namespace Soft.Generator.Security.Services
                     HasLoggedInWithExternalProvider = false, // FT: He couldn't do this if already has account
                     NumberOfFailedAttemptsInARow = 0
                 };
+
                 await _context.DbSet<TUser>().AddAsync(user);
                 await _context.SaveChangesAsync();
             });
+
             JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(user.Id, user.Email, verificationRequestDTO.BrowserId); // FT: User can't be null, it would throw earlier if he is
             //await SaveLoginAndReturnDomainAsync(loginDTO); // FT: Is ipAddress == null is checked here // TODO FT: Log it
-            return GetLoginResultDTO(user.Id, user.Email, jwtAuthResultDTO);
+
+            return GetAuthResultDTO(user.Id, user.Email, jwtAuthResultDTO);
         }
 
-
-        public async Task<LoginResultDTO> RefreshToken(RefreshTokenRequestDTO refreshTokenRequestDTO)
+        public async Task<AuthResultDTO> RefreshToken(RefreshTokenRequestDTO refreshTokenRequestDTO)
         {
             if (string.IsNullOrWhiteSpace(refreshTokenRequestDTO.RefreshToken))
                 throw new SecurityTokenException(SharedTerms.ExpiredRefreshTokenException); // FT: It's not realy this reason, but it's easier then realy explaining the user what has happened, this could happen if he deleted the cache from the browser
@@ -258,7 +270,7 @@ namespace Soft.Generator.Security.Services
 
             JwtAuthResultDTO jwtResult = _jwtAuthManagerService.Refresh(refreshTokenRequestDTO, accesTokenUserId, emailFromTheDb);
 
-            return new LoginResultDTO
+            return new AuthResultDTO
             {
                 UserId = (long)jwtResult.UserId, // Here it will always be user, if there is not, it will break earlier
                 Email = jwtResult.UserEmail,
@@ -296,9 +308,9 @@ namespace Soft.Generator.Security.Services
             return jwtAuthResult;
         }
 
-        private LoginResultDTO GetLoginResultDTO(long userId, string userEmail, JwtAuthResultDTO jwtAuthResultDTO)
+        private AuthResultDTO GetAuthResultDTO(long userId, string userEmail, JwtAuthResultDTO jwtAuthResultDTO)
         {
-            return new LoginResultDTO
+            return new AuthResultDTO
             {
                 UserId = userId,
                 Email = userEmail,

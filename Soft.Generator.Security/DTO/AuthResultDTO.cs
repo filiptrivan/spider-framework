@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Soft.Generator.Security.DTO
 {
-    public class LoginResultDTO
+    public class AuthResultDTO
     {
         public long UserId { get; set; }
         public string Email { get; set; }
