@@ -85,13 +85,13 @@ namespace {{basePartOfNamespace}}.DataMappers
 
         #region {{entityClass.Identifier.Text}}
 
-        {{(entityClass.IsAbstract() ? "" : GetMapper($"{entityClass.Identifier.Text}DTOToEntityConfig", mapperClass, entityClass, entityClasses))}}
+{{(entityClass.IsAbstract() ? "" : GetMapper($"{entityClass.Identifier.Text}DTOToEntityConfig", mapperClass, entityClass, entityClasses))}}
 
-        {{GetMapperDTO($"{entityClass.Identifier.Text}ToDTOConfig", mapperClass, entityClass, entityClasses)}}
+{{GetMapperDTO($"{entityClass.Identifier.Text}ToDTOConfig", mapperClass, entityClass, entityClasses)}}
 
-        {{GetMapperDTO($"{entityClass.Identifier.Text}ProjectToConfig", mapperClass, entityClass, entityClasses)}}
+{{GetMapperDTO($"{entityClass.Identifier.Text}ProjectToConfig", mapperClass, entityClass, entityClasses)}}
 
-        {{GetMapperDTO($"{entityClass.Identifier.Text}ExcelProjectToConfig", mapperClass, entityClass, entityClasses)}}
+{{GetMapperDTO($"{entityClass.Identifier.Text}ExcelProjectToConfig", mapperClass, entityClass, entityClasses)}}
 
         #endregion
 
@@ -120,11 +120,10 @@ namespace {{basePartOfNamespace}}.DataMappers
         public static TypeAdapterConfig {{methodName}}()
         {
             TypeAdapterConfig config = new TypeAdapterConfig();
-            System.Text.ASCIIEncoding encoding = new System.Text.ASCIIEncoding();
 
             config
                 .NewConfig<{{entityClass.Identifier.Text}}DTO, {{entityClass.Identifier.Text}}>()
-                {{string.Join("\t\t\t\t\n", mappers)}}
+                {{string.Join("\n\t\t\t\t", mappers)}}
                 ;
 
             return config;
@@ -149,7 +148,13 @@ namespace {{basePartOfNamespace}}.DataMappers
                 {
                     result.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName} == null ? null : Convert.FromBase64String(src.{entityPropName}))");
                 }
+
+                if (Helper.GetGenericBaseType(entityClass) == null && entityPropName.EndsWith("Id"))
+                {
+                    result.Add($".Ignore(dest => dest.{entityPropName})");
+                }
             }
+
 
             return result;
         }
@@ -181,7 +186,7 @@ namespace {{basePartOfNamespace}}.DataMappers
 
             config
                 .NewConfig<{{entityClass.Identifier.Text}}, {{entityClass.Identifier.Text}}DTO>()
-                {{string.Join("\t\t\t\t\n", manyToOneMappers)}}
+                {{string.Join("\n\t\t\t\t", manyToOneMappers)}}
                 ;
 
             return config;

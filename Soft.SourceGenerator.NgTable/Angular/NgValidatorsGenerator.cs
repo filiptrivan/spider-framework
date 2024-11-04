@@ -90,7 +90,7 @@ export class Validator{{projectName}}Service {
                 string validationClassConstructorBody = GetValidationClassConstructorBody(DTOProperties, DTOAttributes, entityClass, entityClasses);
 
                 sb.AppendLine(GetAngularValidationCases(DTOClassGroup.Key, validationClassConstructorBody));
-                sbMethods.AppendLine(GenerateAngularValidationMethods(DTOClassGroup.Key, validationClassConstructorBody));
+                sbMethods.AppendLine(GenerateAngularValidationMethods(DTOClassGroup.Key, validationClassConstructorBody, DTOProperties));
             }
             sb.AppendLine($$"""
             default:
@@ -106,7 +106,7 @@ export class Validator{{projectName}}Service {
             Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-validation-rules.generated.ts");
         }
 
-        public static string GenerateAngularValidationMethods(string DTOClassName, string validationClassConstructorBody)
+        public static string GenerateAngularValidationMethods(string DTOClassName, string validationClassConstructorBody, List<SoftProperty> DTOProperties)
         {
             string validationClassName = DTOClassName.Replace("DTO", "");
 
@@ -115,12 +115,12 @@ export class Validator{{projectName}}Service {
             StringBuilder sb = new StringBuilder();
 
             foreach (string validationRulePropName in validationRulePropNames)
-                sb.AppendLine(GenerateAngularValidationMethod(validationRulePropName, validationClassName, validationClassConstructorBody));
+                sb.AppendLine(GenerateAngularValidationMethod(validationRulePropName, validationClassName, validationClassConstructorBody, DTOProperties));
 
             return sb.ToString();
         }
 
-        public static string GenerateAngularValidationMethod(string validationRulePropName, string classNameForValidation, string input)
+        public static string GenerateAngularValidationMethod(string validationRulePropName, string classNameForValidation, string input, List<SoftProperty> DTOProperties)
         {
             string parameterFirstLower = validationRulePropName.FirstCharToLower();
             string pattern = $@"RuleFor\(x => x\.{validationRulePropName}\)(.*?);";
@@ -139,7 +139,7 @@ export class Validator{{projectName}}Service {
             List<string> translationTags = new List<string>(); // eg. Length, IsEmpty
             List<string> ruleNames = new List<string>(); // eg. notEmptyRule
 
-            PopulateListOfStrings(rules, ruleStatements, validationMessages, translocoVariables, ruleNames, translationTags);
+            PopulateListOfStrings(rules, DTOProperties, validationRulePropName, ruleStatements, validationMessages, translocoVariables, ruleNames, translationTags);
 
             string allRules = string.Join(" && ", ruleNames);
 
@@ -161,9 +161,11 @@ export class Validator{{projectName}}Service {
             return result;
         }
 
-        public static void PopulateListOfStrings(string rules, List<string> ruleStatements, List<string> validationMessages, List<string> translocoVariables, List<string> ruleNames, List<string> translationTags)
+        public static void PopulateListOfStrings(string rules, List<SoftProperty> DTOProperties, string validationRulePropName, List<string> ruleStatements, List<string> validationMessages, List<string> translocoVariables, List<string> ruleNames, List<string> translationTags)
         {
-            if (rules.Contains("NotEmpty"))
+            SoftProperty property = DTOProperties.Where(x => x.IdentifierText == validationRulePropName).Single();
+
+            if (rules.Contains("NotEmpty") || property.Type == "int" || property.Type == "long" || property.Type == "byte")
             {
                 string ruleName = "notEmptyRule";
                 ruleStatements.Add($$"""
