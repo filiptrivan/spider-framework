@@ -65,7 +65,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
                     //properties.AddRange(parameterProperties);
                     string returnType = endpointMethod.ReturnType.ToString();
                     //properties.Add(new SoftProperty { Type = returnType });
-                    angularHttpMethods.Add(GetAngularHttpMethod(endpointMethod, Helper.GetAngularDataType(returnType), controllerName));
+                    angularHttpMethods.Add(GetAngularHttpMethod(endpointMethod, Helper.GetAngularType(returnType), controllerName));
                 }
             }
             List<string> importLines = new List<string>();
@@ -113,7 +113,7 @@ export class ApiGeneratedService extends ApiSecurityService {
         {
 
             string methodName = endpointMethod.Identifier.Text;
-            string inputParameters = string.Join(", ", endpointMethod.ParameterList.Parameters.Select(p => $"{p.Identifier.Text}: {Helper.GetAngularDataType(p.Type.ToString())}").ToList());
+            string inputParameters = string.Join(", ", endpointMethod.ParameterList.Parameters.Select(p => $"{p.Identifier.Text}: {Helper.GetAngularType(p.Type.ToString())}").ToList());
 
             string result = null;
 

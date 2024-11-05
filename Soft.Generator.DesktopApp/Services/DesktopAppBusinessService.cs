@@ -23,139 +23,167 @@ namespace Soft.Generator.DesktopApp.Services
             _connection = connection;
         }
 
-//        public Permission InsertPermission(Permission permission)
-//        {
-//            if (permission == null)
-//                throw new Exception("Ne možete da ubacite prazan objekat.");
+        public GeneratedFile InsertGeneratedFile(GeneratedFile entity)
+        {
+            if (entity == null)
+                throw new Exception("Ne možete da ubacite prazan objekat.");
 
-//            // FT: Not validating here property by property, because my sql will throw exception, we should already validate object on the form.
+            // FT: Not validating here property by property, because sql server will throw exception, we should already validate object on the form.
 
-//            string query = $"INSERT INTO Permission (Name, Code) VALUES (@Name, @Code);";
+            string query = $"UPDATE GeneratedFile SET Id = @Id, DisplayName, ClassName, Namespace, Regenerate, ApplicationId, DomainFolderPathId) VALUES (@Id, @DisplayName, @ClassName, @Namespace, @Regenerate, @ApplicationId, @DomainFolderPathId);";
 
-//            _connection.WithTransaction(() =>
-//            {
-//                using (SqlCommand cmd = new SqlCommand(query, _connection))
-//                {
-//                    cmd.Parameters.AddWithValue("@Name", permission.Name);
-//                    cmd.Parameters.AddWithValue("@Code", permission.Code);
+            _connection.WithTransaction(() =>
+            {
+                using (SqlCommand cmd = new SqlCommand(query, _connection))
+                {
+                    cmd.Parameters.AddWithValue("@Id", entity.Id);
+                    cmd.Parameters.AddWithValue("@DisplayName", entity.DisplayName);
+                    cmd.Parameters.AddWithValue("@ClassName", entity.ClassName);
+                    cmd.Parameters.AddWithValue("@Namespace", entity.Namespace);
+                    cmd.Parameters.AddWithValue("@Regenerate", entity.Regenerate);
+                    cmd.Parameters.AddWithValue("@ApplicationId", entity.Application.Id);
+                    cmd.Parameters.AddWithValue("@DomainFolderPathId", entity.DomainFolderPath.Id);
 
-//                    cmd.ExecuteNonQuery();
-//                }
-//            });
+                    cmd.ExecuteNonQuery();
+                }
+            });
 
-//            return permission;
-//        }
+            return entity;
+        }
 
-//        public List<Permission> GetPermissionList()
-//        {
-//            List<Permission> permissionList = new List<Permission>();
-//            Dictionary<int, Permission> permissionDict = new Dictionary<int, Permission>();
+        //        public Permission InsertPermission(Permission permission)
+        //        {
+        //            if (permission == null)
+        //                throw new Exception("Ne možete da ubacite prazan objekat.");
 
-//            string query = @$"
-//SELECT permission.Id AS PermissionId, permission.Name AS PermissionName, permission.Code AS PermissionCode, company.Id AS CompanyId, company.Name AS CompanyName
-//FROM Permission AS permission
-//LEFT JOIN CompanyPermission AS companypermission ON permission.Id = companypermission.PermissionId
-//LEFT JOIN Company AS company ON company.Id = companypermission.CompanyId
-//";
+        //            // FT: Not validating here property by property, because my sql will throw exception, we should already validate object on the form.
 
-//            _connection.WithTransaction(() =>
-//            {
-//                using (SqlCommand cmd = new SqlCommand(query, _connection))
-//                {
-//                    using (SqlDataReader reader = cmd.ExecuteReader())
-//                    {
-//                        while (reader.Read())
-//                        {
-//                            int permissionId = reader.GetInt32(reader.GetOrdinal("PermissionId"));
+        //            string query = $"INSERT INTO Permission (Name, Code) VALUES (@Name, @Code);";
 
-//                            if (!permissionDict.TryGetValue(permissionId, out Permission permission))
-//                            {
-//                                permission = new Permission
-//                                {
-//                                    Id = permissionId,
-//                                    Name = reader.GetString(reader.GetOrdinal("PermissionName")),
-//                                    Code = reader.GetString(reader.GetOrdinal("PermissionCode")),
-//                                    Companies = new List<Company>()
-//                                };
+        //            _connection.WithTransaction(() =>
+        //            {
+        //                using (SqlCommand cmd = new SqlCommand(query, _connection))
+        //                {
+        //                    cmd.Parameters.AddWithValue("@Name", permission.Name);
+        //                    cmd.Parameters.AddWithValue("@Code", permission.Code);
 
-//                                permissionDict[permissionId] = permission;
-//                                permissionList.Add(permission);
-//                            }
+        //                    cmd.ExecuteNonQuery();
+        //                }
+        //            });
 
-//                            if (!reader.IsDBNull(reader.GetOrdinal("CompanyId")))
-//                            {
-//                                Company company = new Company
-//                                {
-//                                    Id = reader.GetInt32(reader.GetOrdinal("CompanyId")),
-//                                    Name = reader.GetString(reader.GetOrdinal("CompanyName"))
-//                                };
+        //            return permission;
+        //        }
 
-//                                permission.Companies.Add(company);
-//                            }
-//                        }
-//                    }
-//                }
-//            });
+        //        public List<Permission> GetPermissionList()
+        //        {
+        //            List<Permission> permissionList = new List<Permission>();
+        //            Dictionary<int, Permission> permissionDict = new Dictionary<int, Permission>();
 
-//            return permissionList;
-//        }
+        //            string query = @$"
+        //SELECT permission.Id AS PermissionId, permission.Name AS PermissionName, permission.Code AS PermissionCode, company.Id AS CompanyId, company.Name AS CompanyName
+        //FROM Permission AS permission
+        //LEFT JOIN CompanyPermission AS companypermission ON permission.Id = companypermission.PermissionId
+        //LEFT JOIN Company AS company ON company.Id = companypermission.CompanyId
+        //";
 
-//        public List<Permission> GetPermissionListe(List<int> ids)
-//        {
-//            List<Permission> permissionList = new List<Permission>();
-//            Dictionary<int, Permission> permissionDict = new Dictionary<int, Permission>();
+        //            _connection.WithTransaction(() =>
+        //            {
+        //                using (SqlCommand cmd = new SqlCommand(query, _connection))
+        //                {
+        //                    using (SqlDataReader reader = cmd.ExecuteReader())
+        //                    {
+        //                        while (reader.Read())
+        //                        {
+        //                            int permissionId = reader.GetInt32(reader.GetOrdinal("PermissionId"));
 
-//            if (ids == null || ids.Count == 0)
-//                throw new ArgumentException("Lista koju želite da obrišete ne može da bude prazna.");
+        //                            if (!permissionDict.TryGetValue(permissionId, out Permission permission))
+        //                            {
+        //                                permission = new Permission
+        //                                {
+        //                                    Id = permissionId,
+        //                                    Name = reader.GetString(reader.GetOrdinal("PermissionName")),
+        //                                    Code = reader.GetString(reader.GetOrdinal("PermissionCode")),
+        //                                    Companies = new List<Company>()
+        //                                };
 
-//            List<string> parameters = new List<string>();
-//            for (int i = 0; i < ids.Count; i++)
-//            {
-//                parameters.Add($"@id{i}");
-//            }
+        //                                permissionDict[permissionId] = permission;
+        //                                permissionList.Add(permission);
+        //                            }
 
-//            string query = @$"
-//SELECT DISTINCT permission.Id AS PermissionId, permission.Name AS PermissionName, permission.Code AS PermissionCode
-//FROM Permission AS permission
-//LEFT JOIN Company AS company on company.PermissionId = permission.Id
-//WHERE company.Id IN ({string.Join(", ", parameters)});
-//";
+        //                            if (!reader.IsDBNull(reader.GetOrdinal("CompanyId")))
+        //                            {
+        //                                Company company = new Company
+        //                                {
+        //                                    Id = reader.GetInt32(reader.GetOrdinal("CompanyId")),
+        //                                    Name = reader.GetString(reader.GetOrdinal("CompanyName"))
+        //                                };
 
-//            _connection.WithTransaction(() =>
-//            {
-//                using (SqlCommand cmd = new SqlCommand(query, _connection))
-//                {
-//                    for (int i = 0; i < ids.Count; i++)
-//                    {
-//                        cmd.Parameters.AddWithValue($"@id{i}", ids[i]);
-//                    }
+        //                                permission.Companies.Add(company);
+        //                            }
+        //                        }
+        //                    }
+        //                }
+        //            });
 
-//                    using (SqlDataReader reader = cmd.ExecuteReader())
-//                    {
-//                        while (reader.Read())
-//                        {
-//                            int permissionId = reader.GetInt32(reader.GetOrdinal("PermissionId"));
+        //            return permissionList;
+        //        }
 
-//                            if (!permissionDict.TryGetValue(permissionId, out Permission permission))
-//                            {
-//                                permission = new Permission
-//                                {
-//                                    Id = permissionId,
-//                                    Name = reader.GetString(reader.GetOrdinal("PermissionName")),
-//                                    Code = reader.GetString(reader.GetOrdinal("PermissionCode")),
-//                                    Companies = new List<Company>()
-//                                };
+        //        public List<Permission> GetPermissionListe(List<int> ids)
+        //        {
+        //            List<Permission> permissionList = new List<Permission>();
+        //            Dictionary<int, Permission> permissionDict = new Dictionary<int, Permission>();
 
-//                                permissionDict[permissionId] = permission;
-//                                permissionList.Add(permission);
-//                            }
-//                        }
-//                    }
-//                }
-//            });
+        //            if (ids == null || ids.Count == 0)
+        //                throw new ArgumentException("Lista koju želite da obrišete ne može da bude prazna.");
 
-//            return permissionList;
-//        }
+        //            List<string> parameters = new List<string>();
+        //            for (int i = 0; i < ids.Count; i++)
+        //            {
+        //                parameters.Add($"@id{i}");
+        //            }
+
+        //            string query = @$"
+        //SELECT DISTINCT permission.Id AS PermissionId, permission.Name AS PermissionName, permission.Code AS PermissionCode
+        //FROM Permission AS permission
+        //LEFT JOIN Company AS company on company.PermissionId = permission.Id
+        //WHERE company.Id IN ({string.Join(", ", parameters)});
+        //";
+
+        //            _connection.WithTransaction(() =>
+        //            {
+        //                using (SqlCommand cmd = new SqlCommand(query, _connection))
+        //                {
+        //                    for (int i = 0; i < ids.Count; i++)
+        //                    {
+        //                        cmd.Parameters.AddWithValue($"@id{i}", ids[i]);
+        //                    }
+
+        //                    using (SqlDataReader reader = cmd.ExecuteReader())
+        //                    {
+        //                        while (reader.Read())
+        //                        {
+        //                            int permissionId = reader.GetInt32(reader.GetOrdinal("PermissionId"));
+
+        //                            if (!permissionDict.TryGetValue(permissionId, out Permission permission))
+        //                            {
+        //                                permission = new Permission
+        //                                {
+        //                                    Id = permissionId,
+        //                                    Name = reader.GetString(reader.GetOrdinal("PermissionName")),
+        //                                    Code = reader.GetString(reader.GetOrdinal("PermissionCode")),
+        //                                    Companies = new List<Company>()
+        //                                };
+
+        //                                permissionDict[permissionId] = permission;
+        //                                permissionList.Add(permission);
+        //                            }
+        //                        }
+        //                    }
+        //                }
+        //            });
+
+        //            return permissionList;
+        //        }
 
         //        public Permission GetPermission(int id)
         //        {

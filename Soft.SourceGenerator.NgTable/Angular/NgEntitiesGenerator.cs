@@ -106,7 +106,7 @@ export class {{angularClassIdentifier}} extends BaseEntity
             {
                 string DTOPropLowerCase = DTOProp.IdentifierText.FirstCharToLower();
 
-                string angularDataType = Helper.GetAngularDataType(DTOProp.Type);
+                string angularDataType = Helper.GetAngularType(DTOProp.Type);
                 result.Add($"{DTOPropLowerCase}?: {angularDataType};");
             }
 

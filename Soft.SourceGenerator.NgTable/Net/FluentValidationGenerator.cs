@@ -44,8 +44,6 @@ namespace Soft.SourceGenerator.NgTable.Net
             List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
             List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
 
-            string outputPath = Helper.GetGeneratorOutputPath(nameof(FluentValidationGenerator), classes);
-
             StringBuilder sb = new StringBuilder();
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0]);
@@ -67,9 +65,9 @@ namespace {{basePartOfNamespace}}.ValidationRules
 
                 ClassDeclarationSyntax nonGeneratedDTOClass = classes.Where(x => x.Identifier.Text == DTOClassGroup.Key).SingleOrDefault();
                 List<SoftAttribute> softAttributes = Helper.GetAllAttributesOfTheClass(nonGeneratedDTOClass, classes);
+
                 if (softAttributes != null)
                     DTOAttributes.AddRange(softAttributes); // FT: Its okay to add only for non generated because we will not have any attributes on the generated DTOs
-
 
                 foreach (SoftClass DTOClass in DTOClassGroup)
                     DTOProperties.AddRange(DTOClass.Properties);
@@ -91,7 +89,6 @@ namespace {{basePartOfNamespace}}.ValidationRules
 }
 """);
 
-            //Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
             context.AddSource($"{projectName}ValidationRules.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 

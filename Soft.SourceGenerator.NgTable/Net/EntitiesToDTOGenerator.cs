@@ -39,10 +39,8 @@ namespace Soft.SourceGenerator.NgTable.Net
         private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
-            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
-            List<ClassDeclarationSyntax> uninheritedEntityClasses = Helper.GetUninheritedClasses(entityClasses);
 
-            string outputPath = Helper.GetGeneratorOutputPath(nameof(EntitiesToDTOGenerator), classes);
+            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
 
             StringBuilder sb = new StringBuilder();
 
@@ -52,22 +50,19 @@ namespace Soft.SourceGenerator.NgTable.Net
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
             sb.AppendLine($$"""
-using Microsoft.AspNetCore.Http;
-using Soft.Generator.Shared.DTO;
-using Soft.Generator.Security.DTO;
-using Soft.Generator.Shared.Helpers;
+{{GetUsings()}}
 
-namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator, it's mandatory for partial classes
+namespace {{basePartOfNamespace}}.DTO
 {
 """);
-            foreach (ClassDeclarationSyntax c in entityClasses)
+            foreach (ClassDeclarationSyntax entityClass in entityClasses)
             {
-                string baseClass = c.GetDTOBaseType();
+                string baseClass = entityClass.GetDTOBaseType();
 
                 sb.AppendLine($$"""
-    public partial class {{c.Identifier.Text}}DTO {{(baseClass == null ? "" : $": {baseClass}")}}
+    public partial class {{entityClass.Identifier.Text}}DTO {{(baseClass == null ? "" : $": {baseClass}")}}
     {
-        {{string.Join("\n\t\t", GetDTOWithoutBaseProps(c, entityClasses))}}
+        {{string.Join("\n\t\t", GetDTOPropertiesWithoutBaseType(entityClass, entityClasses))}}
     }
 """);
             }
@@ -80,35 +75,40 @@ namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator
         }
 
         /// <summary>
+        /// Getting the properties of the DTO based on the entity class, we don't include base type properties because of the inheritance
         /// </summary>
-        /// <param name="c"></param>
-        /// <param name="classes">Passing this just to pass it further to the GetGenericIdType method</param>
-        /// <returns></returns>
-        private static List<string> GetDTOWithoutBaseProps(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        private static List<string> GetDTOPropertiesWithoutBaseType(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
         {
-            List<string> props = new List<string>(); // public string Email { get; set; }
-            List<SoftProperty> properties = Helper.GetPropsOfCurrentClass(entityClass);
+            List<string> DTOproperties = new List<string>(); // public string Email { get; set; }
 
-            foreach (SoftProperty prop in properties)
+            List<SoftProperty> propertiesEntityClass = Helper.GetPropsOfCurrentClass(entityClass);
+
+            foreach (SoftProperty prop in propertiesEntityClass)
             {
                 string propType = prop.Type;
                 string propName = prop.IdentifierText;
 
                 if (propType.PropTypeIsManyToOne())
                 {
-                    props.Add($"public string {propName}DisplayName {{ get; set; }}");
+                    DTOproperties.Add($"public string {propName}DisplayName {{ get; set; }}");
                     ClassDeclarationSyntax manyToOneClass = entityClasses.Where(x => x.Identifier.Text == propType).Single();
-                    props.Add($"public {Helper.GetGenericIdType(manyToOneClass, entityClasses)}? {propName}Id {{ get; set; }}");
+                    DTOproperties.Add($"public {Helper.GetGenericIdType(manyToOneClass, entityClasses)}? {propName}Id {{ get; set; }}");
                     continue;
                 }
                 else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
                 {
-                    props.Add($"public string {propName}CommaSeparated {{ get; set; }}");
+                    DTOproperties.Add($"public string {propName}CommaSeparated {{ get; set; }}");
                     continue;
                 }
                 else if (propType == "byte[]")
                 {
-                    props.Add($"public string {propName} {{ get; set; }}");
+                    DTOproperties.Add($"public string {propName} {{ get; set; }}");
+                    continue;
+                }
+                else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "Map"))
+                {
+                    string DTOListPropType = propType.Replace(">", "DTO>");
+                    DTOproperties.Add($"public {DTOListPropType} {propName} {{ get; set; }}");
                     continue;
                 }
                 else if (propType.IsEnumerable())
@@ -121,18 +121,27 @@ namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator
                 }
                 else if (prop.Attributes.Any(x => x.Name == "BlobName"))
                 {
-                    props.Add($"public string {propName}Data {{ get; set; }}");
+                    DTOproperties.Add($"public string {propName}Data {{ get; set; }}");
                 }
                 else if (propType != "string")
                 {
                     propType = "UNSUPPORTED TYPE";
                 }
 
-                props.Add($"public {propType} {propName} {{ get; set; }}");
+                DTOproperties.Add($"public {propType} {propName} {{ get; set; }}"); // string
             }
 
-            return props;
+            return DTOproperties;
         }
 
+        private static string GetUsings()
+        {
+            return $$"""
+using Microsoft.AspNetCore.Http;
+using Soft.Generator.Shared.DTO;
+using Soft.Generator.Security.DTO;
+using Soft.Generator.Shared.Helpers;
+""";
+        }
     }
 }

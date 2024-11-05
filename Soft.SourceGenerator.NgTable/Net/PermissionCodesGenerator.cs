@@ -38,8 +38,8 @@ namespace Soft.SourceGenerator.NgTable.Net
         private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
+
             List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
-            List<ClassDeclarationSyntax> uninheritedEntityClasses = Helper.GetUninheritedClasses(entityClasses.ToList());
 
             StringBuilder sb = new StringBuilder();
 

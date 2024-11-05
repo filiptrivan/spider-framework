@@ -39,35 +39,25 @@ namespace Soft.SourceGenerator.NgTable.Net
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="classes">Only EF classes</param>
-        /// <param name="context"></param>
         private static void Execute(IList<ClassDeclarationSyntax> classes, IEnumerable<INamedTypeSymbol> referencedClassesEntities, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
+
             List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
 
             StringBuilder sb = new StringBuilder();
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0]);
 
-            string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
+            string basePartOfTheNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
             bool generateAuthorizationMethods = projectName != "Security";
 
             sb.AppendLine($$"""
-using {{basePartOfNamespace}}.Entities;
-using {{basePartOfNamespace}}.Enums;
-using {{basePartOfNamespace}}.DTO;
-using Azure.Storage.Blobs;
-using Soft.Generator.Security.Services;
-using Soft.Generator.Shared.Extensions;
-using Soft.Generator.Shared.Interfaces;
+{{GetUsings(basePartOfTheNamespace)}}
 
-namespace {{basePartOfNamespace}}.Services
+namespace {{basePartOfTheNamespace}}.Services
 {
     public class AuthorizationBusinessServiceGenerated : AuthorizationService
     {
@@ -91,6 +81,11 @@ namespace {{basePartOfNamespace}}.Services
                 string nameOfTheEntityClass = entityClass.Identifier.Text;
                 string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
                 string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, entityClasses);
+
+                sb.AppendLine($$"""
+        #region {{nameOfTheEntityClass}}
+
+""");
 
                 sb.AppendLine($$"""
         public virtual async Task {{nameOfTheEntityClass}}SingleReadAuthorize({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
@@ -169,6 +164,12 @@ namespace {{basePartOfNamespace}}.Services
 """
             : "")}}
         }
+
+""");
+
+                sb.AppendLine($$"""
+        #endregion
+
 """);
             }
 
@@ -180,5 +181,17 @@ namespace {{basePartOfNamespace}}.Services
             context.AddSource($"AuthorizationBusinessService.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
+        private static string GetUsings(string basePartOfTheNamespace)
+        {
+            return $$"""
+using {{basePartOfTheNamespace}}.Entities;
+using {{basePartOfTheNamespace}}.Enums;
+using {{basePartOfTheNamespace}}.DTO;
+using Azure.Storage.Blobs;
+using Soft.Generator.Security.Services;
+using Soft.Generator.Shared.Extensions;
+using Soft.Generator.Shared.Interfaces;
+""";
+        }
     }
 }

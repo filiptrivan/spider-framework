@@ -38,8 +38,10 @@ namespace Soft.SourceGenerator.NgTable.NgTable
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
-            if (classes.Count() == 0) return;
+            if (classes.Count == 0) return;
+
             IList<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
+
             List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
 
             StringBuilder sb = new StringBuilder();

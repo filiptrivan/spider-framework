@@ -604,6 +604,46 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
         #endregion
 
+        #region Angular
+
+        /// <summary>
+        /// cSharp type could be enumerable or class
+        /// List<long> -> number
+        /// </summary>
+        private static string ExtractAngularTypeFromGenericCSharpType(string cSharpType)
+        {
+            string result;
+
+            string[] parts = cSharpType.Split('<'); // List, long>
+
+            parts[parts.Length-1] = parts[parts.Length-1].Replace(">", ""); // long
+
+            if (cSharpType.Contains("TableResponseDTO"))
+            {
+                result = "TableResponse";
+            }
+            else if (cSharpType.Contains("NamebookDTO"))
+            {
+                result = "Namebook";
+            }
+            else if (cSharpType.Contains("CodebookDTO"))
+            {
+                result = "Codebook";
+            }
+            else if (parts[parts.Length-1].IsBaseType())
+            {
+                result = GetAngularType(parts[parts.Length-1]); // List<long>
+            }
+            else
+            {
+                result = parts[parts.Length-1]; // List<UserDTO>
+            }
+
+            return result.Replace(DTONamespaceEnding, "").Replace("[]", "");
+        }
+
+        #endregion
+
         /// <summary>
         /// Getting all properties of the single class <paramref name="c"/>, including inherited ones.
         /// The inherited properties doesn't have any attributes
@@ -658,93 +698,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             return properties;
         }
-
-        // FT HACK, FT TODO: Make this with all project references
-        public static List<SoftProperty> GetRoleProperties()
-        {
-            List<SoftProperty> properties = new List<SoftProperty>
-            {
-                new SoftProperty
-                {
-                    IdentifierText="Name", Type="string", Attributes=new List<SoftAttribute>
-                    {
-                        new SoftAttribute { Name="SoftDisplayName" },
-                        new SoftAttribute { Name="Required" },
-                        new SoftAttribute { Name="StringLength", Value="255, MinimumLength = 1" },
-                    }
-                },
-                new SoftProperty 
-                {
-                    IdentifierText="Description", Type="string", Attributes=new List<SoftAttribute>
-                    {
-                        new SoftAttribute { Name="StringLength", Value="400, MinimumLength = 1" },
-                    }
-                },
-                new SoftProperty 
-                {
-                    IdentifierText="Permissions", Type="List<Permission>"
-                }
-            };
-
-            properties.AddRange(GetPropertiesForBaseClasses(BusinessObject, "int"));
-
-            return properties;
-        }
-
-        public static List<SoftProperty> GetRoleDTOProperties()
-        {
-            List<SoftProperty> properties = new List<SoftProperty>
-            {
-                new SoftProperty
-                {
-                    IdentifierText="Name", Type="string",
-                },
-                new SoftProperty
-                {
-                    IdentifierText="Description", Type="string"
-                },
-                new SoftProperty
-                {
-                    IdentifierText="Permissions", Type="List<PermissionDTO>"
-                }
-            };
-
-            properties.AddRange(GetPropertiesForBaseClasses($"{BusinessObject}DTO", "int"));
-
-            return properties;
-        }
-
-        public static List<SoftAttribute> GetAllAttributesOfTheMember(MemberDeclarationSyntax prop)
-        {
-            List<SoftAttribute> softAttributes = new List<SoftAttribute>();
-            softAttributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
-            {
-                return GetSoftAttribute(x);
-            })
-            .ToList();
-            return softAttributes;
-        }
-
-        // FT: Maybe ill need it in the future, for now im using only for the current class
-        //public static List<SoftMethod> GetAllMethodsOfTheClass(ClassDeclarationSyntax c, IEnumerable<ClassDeclarationSyntax> allClasses,)
-        //{
-        //    TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
-        //    ClassDeclarationSyntax baseClass = GetClass(baseType, allClasses);
-
-        //    string s = c.Identifier.Text;
-
-        //    List<SoftMethod> properties = GetMethodsOfCurrentClass(c);
-
-        //    TypeSyntax typeGeneric = null;
-
-        //    while (baseType != null)
-        //    {
-        //        baseType = baseClass.BaseList?.Types.FirstOrDefault()?.Type;
-        //        baseClass = GetClass(baseType, allClasses);
-        //    }
-
-        //    return properties;
-        //}
 
         public static SoftAttribute GetSoftAttribute(AttributeSyntax a)
         {
@@ -1000,66 +953,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return result;
         }
 
-        public static List<SoftProperty> GetPropertiesForBaseClasses(string typeName, string idType)
-        {
-            if (typeName.StartsWith($"{BusinessObject}"))
-            {
-                if (typeName.Contains("DTO"))
-                {
-                    return new List<SoftProperty>()
-                    {
-                        new SoftProperty{ Type = "int?", IdentifierText = "Version" },
-                        new SoftProperty{ Type = idType, IdentifierText = "Id" },
-                        new SoftProperty{ Type = "DateTime?", IdentifierText = "CreatedAt" },
-                        new SoftProperty{ Type = "DateTime?", IdentifierText = "ModifiedAt" },
-                    };
-                }
-                else
-                {
-                    return new List<SoftProperty>()
-                    {
-                        new SoftProperty{ Type = "int", IdentifierText = "Version" },
-                        new SoftProperty{ Type = idType, IdentifierText = "Id" },
-                        new SoftProperty{ Type = "DateTime", IdentifierText = "CreatedAt" },
-                        new SoftProperty{ Type = "DateTime", IdentifierText = "ModifiedAt" },
-                    };
-                }
-            }
-            else if (typeName.StartsWith($"{ReadonlyObject}"))
-            {
-                if (typeName.Contains("DTO"))
-                {
-                    return new List<SoftProperty>()
-                    {
-                        new SoftProperty { Type = idType, IdentifierText = "Id" },
-                        //new SoftProperty { Type = "DateTime?", IdentifierText = "CreatedAt" },
-                    };
-                }
-                else
-                {
-                    return new List<SoftProperty>()
-                    {
-                        new SoftProperty { Type = idType, IdentifierText = "Id" },
-                        //new SoftProperty { Type = "DateTime", IdentifierText = "CreatedAt" },
-                    };
-                }
-            }
-            else if (typeName.StartsWith($"TableSelectionDTO")) // TODO FT: Put inside variable
-            {
-                return new List<SoftProperty>()
-                {
-                    new SoftProperty { Type = $"TableFilterDTO", IdentifierText = "TableFilter" },
-                    new SoftProperty { Type = $"List<{idType}>", IdentifierText = "SelectedIds" },
-                    new SoftProperty { Type = $"List<{idType}>", IdentifierText = "UnselectedIds" },
-                    new SoftProperty { Type = "bool?", IdentifierText = "IsAllSelected" },
-                };
-            }
-            else
-            {
-                return new List<SoftProperty>() { };
-            }
-        }
-
         /// <summary>
         /// Pass the properties with the C# data types
         /// </summary>
@@ -1073,6 +966,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 if (cSharpDataType.IsBaseType() == false)
                 {
                     string angularDataType = GetAngularDataTypeForImport(cSharpDataType);
+
                     if (generateClassImports && cSharpDataType.Contains($"{DTONamespaceEnding}"))
                     {
                         result.Add($"import {{ {angularDataType} }} from \"./{importPath}{projectName.FromPascalToKebabCase()}-entities.generated\";");
@@ -1087,9 +981,9 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return result.Distinct().ToList();
         }
 
-        public static string GetAngularDataType(string CSharpDataType)
+        public static string GetAngularType(string cSharpType)
         {
-            switch (CSharpDataType)
+            switch (cSharpType)
             {
                 case "string":
                     return "string";
@@ -1116,30 +1010,30 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     break;
             }
 
-            if (CSharpDataType.IsEnumerable())
-                return $"{ExtractAngularClassNameFromGenericType(CSharpDataType)}[]";
+            if (cSharpType.IsEnumerable())
+                return $"{ExtractAngularTypeFromGenericCSharpType(cSharpType)}[]";
 
-            if (CSharpDataType.EndsWith("Codes") || CSharpDataType.EndsWith("Codes>")) // Enum
-                return CSharpDataType;
+            if (cSharpType.EndsWith("Codes") || cSharpType.EndsWith("Codes>")) // Enum
+                return cSharpType;
 
-            if (CSharpDataType.EndsWith("MimeTypes") || CSharpDataType.EndsWith("MimeTypes>"))
-                return CSharpDataType;
+            if (cSharpType.EndsWith("MimeTypes") || cSharpType.EndsWith("MimeTypes>"))
+                return cSharpType;
 
-            if (CSharpDataType.Contains(DTONamespaceEnding) || (CSharpDataType.Contains("Task<") && CSharpDataType.Contains("ActionResult") == false)) // FT: We don't want to handle "ActionResult"
-                return ExtractAngularClassNameFromGenericType(CSharpDataType); // ManyToOne
+            if (cSharpType.Contains(DTONamespaceEnding) || (cSharpType.Contains("Task<") && cSharpType.Contains("ActionResult") == false)) // FT: We don't want to handle "ActionResult"
+                return ExtractAngularTypeFromGenericCSharpType(cSharpType); // ManyToOne
 
             return "any"; // eg. "ActionResult", "Task"...
         }
 
-        public static string GetAngularDataTypeForImport(string CSharpDataType)
+        private static string GetAngularDataTypeForImport(string CSharpDataType)
         {
-            if (ExtractAngularClassNameFromGenericType(CSharpDataType).IsBaseType())
-                return null;
+            //if (ExtractAngularTypeFromGenericCSharpType(CSharpDataType).IsBaseType()) // TODO FT: We were checking for the C# type, which wasn't correct, but add correct code here if we need in the future
+            //    return null;
 
-            if (ExtractAngularClassNameFromGenericType(CSharpDataType).EndsWith("Codes"))
+            if (ExtractAngularTypeFromGenericCSharpType(CSharpDataType).EndsWith("Codes"))
                 return CSharpDataType;
 
-            return ExtractAngularClassNameFromGenericType(CSharpDataType);
+            return ExtractAngularTypeFromGenericCSharpType(CSharpDataType);
         }
 
         public static string GetGenericIdType(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
@@ -1232,41 +1126,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         }
 
         /// <summary>
-        /// List<long>
-        /// </summary>
-        public static string ExtractAngularClassNameFromGenericType(string input)
-        {
-            string result;
-
-            string[] parts = input.Split('<'); // List, long>
-
-            parts[parts.Length-1] = parts[parts.Length-1].Replace(">", ""); // long
-
-            if (input.Contains("TableResponseDTO"))
-            {
-                result = "TableResponse";
-            }
-            else if (input.Contains("NamebookDTO"))
-            {
-                result = "Namebook";
-            }
-            else if (input.Contains("CodebookDTO"))
-            {
-                result = "Codebook";
-            }
-            else if (parts[parts.Length-1].IsBaseType())
-            {
-                result = GetAngularDataType(parts[parts.Length-1]); // List<long>
-            }
-            else
-            {
-                result = parts[parts.Length-1]; // List<UserDTO>
-            }
-
-            return result.Replace(DTONamespaceEnding, "").Replace("[]", "");
-        }
-
-        /// <summary>
         /// List<long> -> long
         /// </summary>
         public static string ExtractTypeFromGenericType(string input)
@@ -1308,6 +1167,157 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 sw.Close();
             }
         }
+
+        #region Populate hacks
+
+        // FT HACK, FT TODO: Make this with all project references
+        private static List<SoftProperty> GetRoleProperties()
+        {
+            List<SoftProperty> properties = new List<SoftProperty>
+            {
+                new SoftProperty
+                {
+                    IdentifierText="Name", Type="string", Attributes=new List<SoftAttribute>
+                    {
+                        new SoftAttribute { Name="SoftDisplayName" },
+                        new SoftAttribute { Name="Required" },
+                        new SoftAttribute { Name="StringLength", Value="255, MinimumLength = 1" },
+                    }
+                },
+                new SoftProperty
+                {
+                    IdentifierText="Description", Type="string", Attributes=new List<SoftAttribute>
+                    {
+                        new SoftAttribute { Name="StringLength", Value="400, MinimumLength = 1" },
+                    }
+                },
+                new SoftProperty
+                {
+                    IdentifierText="Permissions", Type="List<Permission>"
+                }
+            };
+
+            properties.AddRange(GetPropertiesForBaseClasses(BusinessObject, "int"));
+
+            return properties;
+        }
+
+        private static List<SoftProperty> GetRoleDTOProperties()
+        {
+            List<SoftProperty> properties = new List<SoftProperty>
+            {
+                new SoftProperty
+                {
+                    IdentifierText="Name", Type="string",
+                },
+                new SoftProperty
+                {
+                    IdentifierText="Description", Type="string"
+                },
+                new SoftProperty
+                {
+                    IdentifierText="Permissions", Type="List<PermissionDTO>"
+                }
+            };
+
+            properties.AddRange(GetPropertiesForBaseClasses($"{BusinessObject}DTO", "int"));
+
+            return properties;
+        }
+
+        private static List<SoftAttribute> GetAllAttributesOfTheMember(MemberDeclarationSyntax prop)
+        {
+            List<SoftAttribute> softAttributes = new List<SoftAttribute>();
+            softAttributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
+            {
+                return GetSoftAttribute(x);
+            })
+            .ToList();
+            return softAttributes;
+        }
+
+        // FT: Maybe ill need it in the future, for now im using only for the current class
+        //private static List<SoftMethod> GetAllMethodsOfTheClass(ClassDeclarationSyntax c, IEnumerable<ClassDeclarationSyntax> allClasses,)
+        //{
+        //    TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
+        //    ClassDeclarationSyntax baseClass = GetClass(baseType, allClasses);
+
+        //    string s = c.Identifier.Text;
+
+        //    List<SoftMethod> properties = GetMethodsOfCurrentClass(c);
+
+        //    TypeSyntax typeGeneric = null;
+
+        //    while (baseType != null)
+        //    {
+        //        baseType = baseClass.BaseList?.Types.FirstOrDefault()?.Type;
+        //        baseClass = GetClass(baseType, allClasses);
+        //    }
+
+        //    return properties;
+        //}
+
+        private static List<SoftProperty> GetPropertiesForBaseClasses(string typeName, string idType)
+        {
+            if (typeName.StartsWith($"{BusinessObject}"))
+            {
+                if (typeName.Contains("DTO"))
+                {
+                    return new List<SoftProperty>()
+                    {
+                        new SoftProperty{ Type = "int?", IdentifierText = "Version" },
+                        new SoftProperty{ Type = idType, IdentifierText = "Id" },
+                        new SoftProperty{ Type = "DateTime?", IdentifierText = "CreatedAt" },
+                        new SoftProperty{ Type = "DateTime?", IdentifierText = "ModifiedAt" },
+                    };
+                }
+                else
+                {
+                    return new List<SoftProperty>()
+                    {
+                        new SoftProperty{ Type = "int", IdentifierText = "Version" },
+                        new SoftProperty{ Type = idType, IdentifierText = "Id" },
+                        new SoftProperty{ Type = "DateTime", IdentifierText = "CreatedAt" },
+                        new SoftProperty{ Type = "DateTime", IdentifierText = "ModifiedAt" },
+                    };
+                }
+            }
+            else if (typeName.StartsWith($"{ReadonlyObject}"))
+            {
+                if (typeName.Contains("DTO"))
+                {
+                    return new List<SoftProperty>()
+                    {
+                        new SoftProperty { Type = idType, IdentifierText = "Id" },
+                        //new SoftProperty { Type = "DateTime?", IdentifierText = "CreatedAt" },
+                    };
+                }
+                else
+                {
+                    return new List<SoftProperty>()
+                    {
+                        new SoftProperty { Type = idType, IdentifierText = "Id" },
+                        //new SoftProperty { Type = "DateTime", IdentifierText = "CreatedAt" },
+                    };
+                }
+            }
+            else if (typeName.StartsWith($"TableSelectionDTO")) // TODO FT: Put inside variable
+            {
+                return new List<SoftProperty>()
+                {
+                    new SoftProperty { Type = $"TableFilterDTO", IdentifierText = "TableFilter" },
+                    new SoftProperty { Type = $"List<{idType}>", IdentifierText = "SelectedIds" },
+                    new SoftProperty { Type = $"List<{idType}>", IdentifierText = "UnselectedIds" },
+                    new SoftProperty { Type = "bool?", IdentifierText = "IsAllSelected" },
+                };
+            }
+            else
+            {
+                return new List<SoftProperty>() { };
+            }
+        }
+
+        #endregion
     }
 }
 

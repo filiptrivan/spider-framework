@@ -103,6 +103,19 @@ namespace {{basePartOfNamespace}}.Services
 
                 List<SoftProperty> entityPropertiesWithoutEnumerable = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, false);
 
+                List<SoftProperty> entityPropertiesWithoutEnumerableAndId = entityPropertiesWithoutEnumerable
+                    .Where(x => x.IdentifierText != "Id")
+                    .ToList();
+
+                List<string> entityPropertiesForInsertAndUpdate = entityPropertiesWithoutEnumerableAndId
+                    .Select(x => x.Type.PropTypeIsManyToOne() ? $"{x.IdentifierText}Id" : $"{x.IdentifierText}")
+                    .ToList();
+
+                string insertColumnNames = string.Join(", ", entityPropertiesForInsertAndUpdate.Select(x => $"[{x}]"));
+                string insertParameterNames = string.Join(", ", entityPropertiesForInsertAndUpdate.Select(x => $"@{x}"));
+
+                string updateParameterNames = string.Join(", ", entityPropertiesForInsertAndUpdate.Select(x => $"[{x}] = @{x}"));
+
                 sb.AppendLine($$"""
         #region {{nameOfTheEntityClass}}
 
@@ -179,13 +192,36 @@ FROM {{nameOfTheEntityClass}} AS {{nameOfTheEntityClassFirstLower}}
 
             // FT: Not validating here property by property, because sql server will throw exception, we should already validate object on the form.
 
-            string query = $"INSERT INTO {{nameOfTheEntityClass}} ({{string.Join(", ", entityPropertiesWithoutEnumerable.Select(x => x.Type.PropTypeIsManyToOne() ? $"{x.IdentifierText}Id" : $"{x.IdentifierText}"))}}) VALUES ({{string.Join(", ", entityPropertiesWithoutEnumerable.Select(x => x.Type.PropTypeIsManyToOne() ? $"@{x.IdentifierText}Id" : $"@{x.IdentifierText}"))}});";
+            string query = $"INSERT INTO [{{nameOfTheEntityClass}}] ({{insertColumnNames}}) OUTPUT INSERTED.[Id] VALUES ({{insertParameterNames}});";
 
             _connection.WithTransaction(() =>
             {
                 using (SqlCommand cmd = new SqlCommand(query, _connection))
                 {
-                    {{string.Join("\n\t\t\t\t\t", entityPropertiesWithoutEnumerable.Select(x => x.Type.PropTypeIsManyToOne() ? $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}Id\", entity.{x.IdentifierText}.Id);" : $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}\", entity.{x.IdentifierText});"))}}
+                    {{string.Join("\n\t\t\t\t\t", entityPropertiesWithoutEnumerableAndId.Select(x => x.Type.PropTypeIsManyToOne() ? $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}Id\", entity.{x.IdentifierText}.Id);" : $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}\", entity.{x.IdentifierText});"))}}
+
+                    {{idTypeOfTheEntityClass}} newId = ({{idTypeOfTheEntityClass}})cmd.ExecuteScalar();
+                    entity.Id = newId;
+                }
+            });
+
+            return entity;
+        }
+
+        public {{nameOfTheEntityClass}} Update{{nameOfTheEntityClass}}({{nameOfTheEntityClass}} entity)
+        {
+            if (entity == null)
+                throw new Exception("Ne možete da ažurirate prazan objekat.");
+
+            // FT: Not validating here property by property, because sql server will throw exception, we should already validate object on the form.
+
+            string query = $"UPDATE [{{nameOfTheEntityClass}}] SET {{updateParameterNames}};";
+
+            _connection.WithTransaction(() =>
+            {
+                using (SqlCommand cmd = new SqlCommand(query, _connection))
+                {
+                    {{string.Join("\n\t\t\t\t\t", entityPropertiesWithoutEnumerableAndId.Select(x => x.Type.PropTypeIsManyToOne() ? $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}Id\", entity.{x.IdentifierText}.Id);" : $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}\", entity.{x.IdentifierText});"))}}
 
                     cmd.ExecuteNonQuery();
                 }
@@ -198,7 +234,8 @@ FROM {{nameOfTheEntityClass}} AS {{nameOfTheEntityClassFirstLower}}
         {
             _connection.WithTransaction(() =>
             {
-{{string.Join("\n", GetManyToOneDeleteQueries(entityClass, entityClasses, 0))}}
+{{string.Join("\n", GetManyToOneDeleteQueries(entityClass, entityClasses, null, 0))}}
+
                 DeleteEntity<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>(id);
             });
         }
@@ -433,11 +470,11 @@ LEFT JOIN {{extractedEntityClass.Identifier.Text}} AS {{extractedEntityClass.Ide
             }
         }
 
-        private static List<string> GetManyToOneDeleteQueries(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, int recursiveIteration)
+        private static List<string> GetManyToOneDeleteQueries(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, string parentNameOfTheEntityClass, int recursiveIteration)
         {
             if (recursiveIteration > 5000)
             {
-                GetManyToOneDeleteQueries(null, null, int.MaxValue);
+                GetManyToOneDeleteQueries(null, null, null, int.MaxValue);
                 return new List<string> { "You made cascade delete infinite loop." };
             }
 
@@ -460,20 +497,20 @@ LEFT JOIN {{extractedEntityClass.Identifier.Text}} AS {{extractedEntityClass.Ide
                 if (recursiveIteration == 0)
                 {
                     result.Add($$"""
-                List<{{nestedEntityClassIdType}}> {{nestedEntityClassNameLowerCase}}ListToDelete = Get{{nestedEntityClassName}}ListFor{{nameOfTheEntityClass}}(id).Select(x => x.Id).ToList();
+                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = Get{{nestedEntityClassName}}ListFor{{nameOfTheEntityClass}}(id).Select(x => x.Id).ToList();
 """);
                 }
                 else
                 {
                     result.Add($$"""
-                List<{{nestedEntityClassIdType}}> {{nestedEntityClassNameLowerCase}}ListToDelete = Get{{nestedEntityClassName}}List().Where(x => {{nameOfTheEntityClassFirstLower}}ListToDelete.Contains(x.{{prop.IdentifierText}}.Id)).Select(x => x.Id).ToList();
+                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = Get{{nestedEntityClassName}}List().Where(x => {{parentNameOfTheEntityClass.FirstCharToLower()}}{{nameOfTheEntityClass}}ListToDelete.Contains(x.{{prop.IdentifierText}}.Id)).Select(x => x.Id).ToList();
 """);
                 }
 
-                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, entityClasses, recursiveIteration + 1));
+                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, entityClasses, nameOfTheEntityClass, recursiveIteration + 1));
 
                 result.Add($$"""
-                DeleteEntities<{{nestedEntityClassName}}, {{nestedEntityClassIdType}}>({{nestedEntityClassNameLowerCase}}ListToDelete);
+                DeleteEntities<{{nestedEntityClassName}}, {{nestedEntityClassIdType}}>({{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete);
 """);
             }
 

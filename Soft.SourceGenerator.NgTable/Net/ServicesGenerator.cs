@@ -39,52 +39,26 @@ namespace Soft.SourceGenerator.NgTable.Net
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="classes">Only EF classes</param>
-        /// <param name="context"></param>
         private static void Execute(IList<ClassDeclarationSyntax> classes, IEnumerable<INamedTypeSymbol> referencedClassesEntities, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
+
             List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
-            List<ClassDeclarationSyntax> uninheritedEntityClasses = Helper.GetUninheritedClasses(entityClasses);
 
             StringBuilder sb = new StringBuilder();
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0]);
 
-            string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
+            string basePartOfTheNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
             bool isSecurityProject = projectName == "Security";
 
             sb.AppendLine($$"""
-using {{basePartOfNamespace}}.ValidationRules;
-using {{basePartOfNamespace}}.DataMappers;
-using {{basePartOfNamespace}}.DTO;
-using {{basePartOfNamespace}}.Entities;
-using {{basePartOfNamespace}}.Enums;
-using {{basePartOfNamespace}}.ExcelProperties;
-using {{basePartOfNamespace}}.TableFiltering;
-using Microsoft.EntityFrameworkCore;
-using System.Data;
-using FluentValidation;
-using Soft.Generator.Security.Services;
-using Soft.Generator.Shared.Excel;
-using Soft.Generator.Shared.Interfaces;
-using Soft.Generator.Shared.Services;
-using Soft.Generator.Shared.DTO;
-using Soft.Generator.Shared.Extensions;
-using Soft.Generator.Shared.SoftExceptions;
-using Soft.Generator.Shared.Terms;
-using Mapster;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
-using Microsoft.AspNetCore.Http;
+{{GetUsings(basePartOfTheNamespace)}}
 {{(isSecurityProject ? "using Soft.Generator.Security.Interface;" : "")}}
 
-namespace {{basePartOfNamespace}}.Services
+namespace {{basePartOfTheNamespace}}.Services
 {
     {{(isSecurityProject ? $"public class {projectName}BusinessServiceGenerated<TUser> : BusinessServiceBase where TUser : class, IUser, new()" : $"public class {projectName}BusinessServiceGenerated : BusinessServiceBase")}}
     {
@@ -101,6 +75,7 @@ namespace {{basePartOfNamespace}}.Services
             _authorizationService = authorizationService;
             _blobContainerClient = blobContainerClient;
         }
+
 """);
             foreach (ClassDeclarationSyntax entityClass in entityClasses)
             {
@@ -117,6 +92,10 @@ namespace {{basePartOfNamespace}}.Services
                 List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
 
                 sb.AppendLine($$"""
+        #region {{nameOfTheEntityClass}}
+
+        #region Read
+
         public async Task<{{nameOfTheEntityClass}}DTO> Get{{nameOfTheEntityClass}}DTOAsync({{idTypeOfTheEntityClass}} id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
@@ -169,31 +148,6 @@ namespace {{basePartOfNamespace}}.Services
             return new TableResponseDTO<{{nameOfTheEntityClass}}DTO> { Data = data, TotalRecords = paginationResult.TotalRecords };
         }
 
-        public async Task<byte[]> Export{{nameOfTheEntityClass}}ListToExcel(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query, bool authorize = true)
-        {
-            PaginationResult<{{nameOfTheEntityClass}}> paginationResult = new PaginationResult<{{nameOfTheEntityClass}}>();
-            List<{{nameOfTheEntityClass}}DTO> data = null;
-
-            await _context.WithTransactionAsync(async () =>
-            {
-                if (authorize)
-                {
-                    await _authorizationService.{{nameOfTheEntityClass}}ListReadAuthorize();
-                }
-
-                paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload, query);
-
-                data = await paginationResult.Query.ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ExcelProjectToConfig()).ToListAsync();
-            });
-
-            string[] excelPropertiesToExclude = ExcelPropertiesToExclude.GetHeadersToExclude(new {{nameOfTheEntityClass}}DTO());
-            return _excelService.FillReportTemplate<{{nameOfTheEntityClass}}DTO>(data, paginationResult.TotalRecords, excelPropertiesToExclude).ToArray();
-        }
-
-{{(entityClass.IsAbstract() || entityClass.IsEntityReadonlyObject() ? "" : GetSavingData(entityClass, idTypeOfTheEntityClass, entityClasses, entityProperties))}}
-        
-{{(entityClass.IsAbstract() || entityClass.IsEntityReadonlyObject() ? "" : GetDeletingData(entityClass, idTypeOfTheEntityClass, entityClasses))}}
-
         public async virtual Task<List<NamebookDTO<{{idTypeOfTheEntityClass}}>>> Load{{nameOfTheEntityClass}}ListForAutocomplete(int limit, string query, IQueryable<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
@@ -207,6 +161,7 @@ namespace {{basePartOfNamespace}}.Services
                     {{nameOfTheEntityClassFirstLower}}Query = {{nameOfTheEntityClassFirstLower}}Query.Where(x => x.{{displayNameProperty}}.Contains(query));
 
                 return await {{nameOfTheEntityClassFirstLower}}Query
+                    .AsNoTracking()
                     .Take(limit)
                     .Select(x => new NamebookDTO<{{idTypeOfTheEntityClass}}>
                     {
@@ -227,6 +182,7 @@ namespace {{basePartOfNamespace}}.Services
                 }
 
                 return await {{nameOfTheEntityClassFirstLower}}Query
+                    .AsNoTracking()
                     .Select(x => new NamebookDTO<{{idTypeOfTheEntityClass}}>
                     {
                         Id = x.Id,
@@ -272,11 +228,43 @@ namespace {{basePartOfNamespace}}.Services
                 return dtoList;
             });
         }
-    
+
+        #endregion
+
+        #region Save
+
+{{(entityClass.IsAbstract() || entityClass.IsEntityReadonlyObject() ? "" : GetSavingData(entityClass, idTypeOfTheEntityClass, entityClasses, entityProperties))}}
+
 {{string.Join("\n", GetUploadBlobMethods(entityClass, idTypeOfTheEntityClass, entityProperties))}}
+        
+        #endregion
+
+{{(entityClass.IsAbstract() || entityClass.IsEntityReadonlyObject() ? "" : GetDeletingData(entityClass, idTypeOfTheEntityClass, entityClasses))}}
 
 {{string.Join("\n", GetEnumerableGeneratedMethods(entityClass, entityClasses, referencedClassesEntities))}}
 
+        public async Task<byte[]> Export{{nameOfTheEntityClass}}ListToExcel(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query, bool authorize = true)
+        {
+            PaginationResult<{{nameOfTheEntityClass}}> paginationResult = new PaginationResult<{{nameOfTheEntityClass}}>();
+            List<{{nameOfTheEntityClass}}DTO> data = null;
+
+            await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    await _authorizationService.{{nameOfTheEntityClass}}ListReadAuthorize();
+                }
+
+                paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload, query);
+
+                data = await paginationResult.Query.ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ExcelProjectToConfig()).ToListAsync();
+            });
+
+            string[] excelPropertiesToExclude = ExcelPropertiesToExclude.GetHeadersToExclude(new {{nameOfTheEntityClass}}DTO());
+            return _excelService.FillReportTemplate<{{nameOfTheEntityClass}}DTO>(data, paginationResult.TotalRecords, excelPropertiesToExclude).ToArray();
+        }
+
+        #endregion
 """);
             }
 
@@ -288,12 +276,88 @@ namespace {{basePartOfNamespace}}.Services
             context.AddSource($"{projectName}BusinessService.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="c"></param>
-        /// <param name="classes">Used just to pass to GetIdTypeOfManyToOneProperty method</param>
-        /// <returns></returns>
+        #region Save
+
+        static string GetSavingData(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses, List<SoftProperty> propertiesEntityClass)
+        {
+            string nameOfTheEntityClass = entityClass.Identifier.Text;
+
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append($$"""
+        protected virtual void OnBefore{{nameOfTheEntityClass}}IsMapped({{nameOfTheEntityClass}}DTO dto) { }
+
+        public async Task<{{nameOfTheEntityClass}}> Save{{nameOfTheEntityClass}}AndReturnDomainAsync({{nameOfTheEntityClass}}DTO dto, bool authorizeUpdate = true, bool authorizeInsert = true)
+        {
+            {{nameOfTheEntityClass}}DTOValidationRules validationRules = new {{nameOfTheEntityClass}}DTOValidationRules();
+            validationRules.ValidateAndThrow(dto);
+
+            {{nameOfTheEntityClass}} poco = null;
+            await _context.WithTransactionAsync(async () =>
+            {
+                OnBefore{{nameOfTheEntityClass}}IsMapped(dto);
+                DbSet<{{nameOfTheEntityClass}}> dbSet = _context.DbSet<{{nameOfTheEntityClass}}>();
+""");
+            if (entityClass.IsEntityReadonlyObject())
+            {
+                sb.AppendLine($$"""
+
+                poco = dto.Adapt<{{nameOfTheEntityClass}}>(Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
+                await dbSet.AddAsync(poco);
+""");
+            }
+            else
+            {
+                sb.AppendLine($$"""
+
+                if (dto.Id > 0)
+                {
+                    if (authorizeUpdate)
+                    {
+                        await _authorizationService.{{nameOfTheEntityClass}}SingleUpdateAuthorize(dto);
+                    }
+
+                    poco = await LoadInstanceAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>(dto.Id, dto.Version);
+                    dto.Adapt(poco, Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
+                    dbSet.Update(poco);
+                }
+                else
+                {
+                    if (authorizeInsert)
+                    {
+                        await _authorizationService.{{nameOfTheEntityClass}}SingleInsertAuthorize(dto);
+                    }
+
+                    poco = dto.Adapt<{{nameOfTheEntityClass}}>(Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
+                    await dbSet.AddAsync(poco);
+                }
+""");
+            }
+            sb.AppendLine($$"""
+
+{{string.Join("\n", GetManyToOneInstancesForSave(entityClass, entityClasses))}}
+
+                await _context.SaveChangesAsync();
+
+                {{string.Join("\n\t\t\t\t", GetNonActiveDeleteBlobMethods(entityClass, propertiesEntityClass))}}
+            });
+
+            return poco;
+        }
+
+        public async Task<{{nameOfTheEntityClass}}DTO> Save{{nameOfTheEntityClass}}AndReturnDTOAsync({{nameOfTheEntityClass}}DTO dto, bool authorizeUpdate = true, bool authorizeInsert = true)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                {{nameOfTheEntityClass}} poco = await Save{{nameOfTheEntityClass}}AndReturnDomainAsync(dto, authorizeUpdate, authorizeInsert);
+
+                return poco.Adapt<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ToDTOConfig());
+            });
+        }
+""");
+            return sb.ToString();
+        }
+
         static List<string> GetManyToOneInstancesForSave(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> classes)
         {
             List<string> result = new List<string>();
@@ -313,7 +377,7 @@ namespace {{basePartOfNamespace}}.Services
                 {
                     result.Add($$"""
             if (dto.{{prop.IdentifierText}}Id > 0)
-                poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{GetIdTypeOfManyToOneProperty(prop.Type, classes)}}>(dto.{{prop.IdentifierText}}Id.Value, null);
+                poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{Helper.GetGenericIdType(classOfManyToOneProperty, classes)}}>(dto.{{prop.IdentifierText}}Id.Value, null);
             else
                 poco.{{prop.IdentifierText}} = null;
 """);
@@ -322,7 +386,7 @@ namespace {{basePartOfNamespace}}.Services
                 {
                     result.Add($$"""
             if (dto.{{prop.IdentifierText}}Id > 0)
-                poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{GetIdTypeOfManyToOneProperty(prop.Type, classes)}}>(dto.{{prop.IdentifierText}}Id.Value);
+                poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{Helper.GetGenericIdType(classOfManyToOneProperty, classes)}}>(dto.{{prop.IdentifierText}}Id.Value);
             else
                 poco.{{prop.IdentifierText}} = null;
 """);
@@ -331,6 +395,185 @@ namespace {{basePartOfNamespace}}.Services
 
             return result;
         }
+
+        static ClassDeclarationSyntax GetClassOfManyToOneProperty(string propType, IList<ClassDeclarationSyntax> classes)
+        {
+            ClassDeclarationSyntax manyToOneclass = classes.Where(x => x.Identifier.Text == propType).SingleOrDefault();
+
+            if (manyToOneclass == null)
+                return null;
+
+            return manyToOneclass;
+        }
+
+        private static List<string> GetNonActiveDeleteBlobMethods(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
+        {
+            List<string> result = new List<string>();
+
+            List<SoftProperty> blobProperies = Helper.GetBlobProperties(propertiesEntityClass);
+
+            foreach (SoftProperty property in blobProperies)
+                result.Add($"await DeleteNonActiveBlobs(dto.{property.IdentifierText}, nameof({entityClass.Identifier.Text}), nameof({entityClass.Identifier.Text}.{property.IdentifierText}), poco.Id.ToString());");
+
+            return result;
+        }
+
+        private static List<string> GetUploadBlobMethods(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, List<SoftProperty> entityProperties)
+        {
+            List<string> result = new List<string>();
+
+            List<SoftProperty> blobProperies = Helper.GetBlobProperties(entityProperties);
+
+            string nameOfTheEntityClass = entityClass.Identifier.Text;
+            string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
+
+            foreach (SoftProperty property in blobProperies)
+            {
+                result.Add($$"""
+        public async Task<string> Upload{{nameOfTheEntityClass}}{{property.IdentifierText}}Async(IFormFile file, bool authorizeUpdate = true, bool authorizeInsert = true) // FT: It doesn't work without interface
+        {
+            using Stream stream = file.OpenReadStream();
+
+            {{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id = GetObjectIdFromFileName<{{idTypeOfTheEntityClass}}>(file.FileName);
+
+            if ({{nameOfTheEntityClassFirstLower}}Id > 0)
+            {
+                if (authorizeUpdate)
+                {
+                    await _authorizationService.{{nameOfTheEntityClass}}SingleUpdateAuthorize({{nameOfTheEntityClassFirstLower}}Id);
+                }
+            }
+            else
+            {
+                if (authorizeInsert)
+                {
+                    await _authorizationService.{{nameOfTheEntityClass}}SingleInsertAuthorize();
+                }
+            }
+
+            OnBefore{{nameOfTheEntityClass}}{{property.IdentifierText}}BlobIsUploaded({{nameOfTheEntityClassFirstLower}}Id); // FT: Authorize access for this id...
+
+            string fileName = await UploadFileAsync(file.FileName, nameof({{nameOfTheEntityClass}}), nameof({{nameOfTheEntityClass}}.{{property.IdentifierText}}), {{nameOfTheEntityClassFirstLower}}Id.ToString(), stream);
+
+            return fileName;
+        }
+
+        public virtual async Task OnBefore{{nameOfTheEntityClass}}{{property.IdentifierText}}BlobIsUploaded ({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id) { }
+"""
+);
+            }
+
+            return result;
+        }
+
+        #endregion
+
+        #region Delete
+
+        private static string GetDeletingData(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses)
+        {
+            string nameOfTheEntityClass = entityClass.Identifier.Text;
+            string nameOfTheEntityClassFirstLower = nameOfTheEntityClass.FirstCharToLower();
+
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append($$"""
+        public virtual async Task OnBefore{{nameOfTheEntityClass}}AsyncDelete({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id) { }
+
+        public async Task Delete{{nameOfTheEntityClass}}Async({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
+        {
+            await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    await _authorizationService.{{nameOfTheEntityClass}}DeleteAuthorize({{nameOfTheEntityClassFirstLower}}Id);
+                }
+
+                await OnBefore{{nameOfTheEntityClass}}AsyncDelete({{nameOfTheEntityClassFirstLower}}Id);
+
+{{string.Join("\n", GetManyToOneDeleteQueries(entityClass, entityClasses, null, 0))}}
+
+                await DeleteEntityAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>({{nameOfTheEntityClassFirstLower}}Id);
+            });
+        }
+""");
+
+            return sb.ToString();
+        }
+
+        private static List<string> GetManyToOneDeleteQueries(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, string parentNameOfTheEntityClass, int recursiveIteration)
+        {
+            if (recursiveIteration > 5000) 
+            {
+                GetManyToOneDeleteQueries(null, null, null, int.MaxValue);
+                return new List<string> { "You made cascade delete infinite loop." };
+            }
+
+            List<string> result = new List<string>();
+
+            string nameOfTheEntityClass = entityClass.Identifier.Text;
+            string nameOfTheEntityClassFirstLower = nameOfTheEntityClass.FirstCharToLower();
+
+            List<SoftClass> softEntityClasses = Helper.GetSoftEntityClasses(entityClasses);
+
+            List<SoftProperty> manyToOneRequiredProperties = Helper.GetManyToOneRequiredProperties(nameOfTheEntityClass, softEntityClasses);
+
+            foreach (SoftProperty prop in manyToOneRequiredProperties)
+            {
+                ClassDeclarationSyntax nestedEntityClass = Helper.GetClass(prop.ClassIdentifierText, entityClasses);
+                string nestedEntityClassName = nestedEntityClass.Identifier.Text;
+                string nestedEntityClassNameLowerCase = nestedEntityClassName.FirstCharToLower();
+                string nestedEntityClassIdType = Helper.GetGenericIdType(nestedEntityClass, entityClasses);
+
+                if (recursiveIteration == 0)
+                {
+                    result.Add($$"""
+                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => x.{{prop.IdentifierText}}.Id == {{nameOfTheEntityClassFirstLower}}Id).Select(x => x.Id).ToListAsync();
+""");
+                }
+                else
+                {
+                    result.Add($$"""
+                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{parentNameOfTheEntityClass.FirstCharToLower()}}{{nameOfTheEntityClass}}ListToDelete.Contains(x.{{prop.IdentifierText}}.Id)).Select(x => x.Id).ToListAsync();
+""");
+                }
+
+                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, entityClasses, nameOfTheEntityClass, recursiveIteration + 1));
+
+                    result.Add($$"""
+                await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete.Contains(x.Id)).ExecuteDeleteAsync();
+""");
+            }
+
+            return result;
+        }
+
+        #endregion
+
+        #region Read
+
+        private static List<string> GetPopulateDTOWithBlobParts(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
+        {
+            List<string> result = new List<string>();
+
+            List<SoftProperty> blobProperies = Helper.GetBlobProperties(propertiesEntityClass);
+
+            foreach (SoftProperty property in blobProperies)
+            {
+                result.Add($$"""
+                    if (!string.IsNullOrEmpty(dto.{{property.IdentifierText}}))
+                    {
+                        dto.{{property.IdentifierText}}Data = await GetFileDataAsync(dto.{{property.IdentifierText}});
+                    }
+""");
+            }
+
+            return result;
+        }
+
+        #endregion
+
+        #region Enumerable
 
         static List<string> GetEnumerableGeneratedMethods(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> classes, IEnumerable<INamedTypeSymbol> referencedClassesEntities)
         {
@@ -531,270 +774,45 @@ namespace {{basePartOfNamespace}}.Services
             return result;
         }
 
-        static string GetIdTypeOfManyToOneProperty(string propType, IList<ClassDeclarationSyntax> classes)
-        {
-            ClassDeclarationSyntax manyToOneclass = classes.Where(x => x.Identifier.Text == propType).SingleOrDefault();
-
-            if (manyToOneclass == null)
-                return "THERE IS NO MANY TO ONE CLASS FOR THE PROPERTY";
-
-            return Helper.GetGenericIdType(manyToOneclass, classes);
-        }
-
-        static ClassDeclarationSyntax GetClassOfManyToOneProperty(string propType, IList<ClassDeclarationSyntax> classes)
-        {
-            ClassDeclarationSyntax manyToOneclass = classes.Where(x => x.Identifier.Text == propType).SingleOrDefault();
-
-            if (manyToOneclass == null)
-                return null;
-
-            return manyToOneclass;
-        }
-
         static string GetClassNameFromTheList(string propType)
         {
             string[] parts = propType.Split('<');
             return parts[parts.Length-1].Replace(">", "");
         }
 
-        static string GetSavingData(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses, List<SoftProperty> propertiesEntityClass)
+        #endregion
+
+        #region Helpers
+
+        private static string GetUsings(string basePartOfTheNamespace)
         {
-            string nameOfTheEntityClass = entityClass.Identifier.Text;
-
-            StringBuilder sb = new StringBuilder();
-
-            sb.Append($$"""
-        protected virtual void OnBefore{{nameOfTheEntityClass}}IsMapped({{nameOfTheEntityClass}}DTO dto) { }
-
-        public async Task<{{nameOfTheEntityClass}}> Save{{nameOfTheEntityClass}}AndReturnDomainAsync({{nameOfTheEntityClass}}DTO dto, bool authorizeUpdate = true, bool authorizeInsert = true)
-        {
-            {{nameOfTheEntityClass}}DTOValidationRules validationRules = new {{nameOfTheEntityClass}}DTOValidationRules();
-            validationRules.ValidateAndThrow(dto);
-
-            {{nameOfTheEntityClass}} poco = null;
-            await _context.WithTransactionAsync(async () =>
-            {
-                OnBefore{{nameOfTheEntityClass}}IsMapped(dto);
-                DbSet<{{nameOfTheEntityClass}}> dbSet = _context.DbSet<{{nameOfTheEntityClass}}>();
-""");
-            if (entityClass.IsEntityReadonlyObject())
-            {
-                sb.AppendLine($$"""
-
-                poco = dto.Adapt<{{nameOfTheEntityClass}}>(Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
-                await dbSet.AddAsync(poco);
-""");
-            }
-            else
-            {
-                sb.AppendLine($$"""
-
-                if (dto.Id > 0)
-                {
-                    if (authorizeUpdate)
-                    {
-                        await _authorizationService.{{nameOfTheEntityClass}}SingleUpdateAuthorize(dto);
-                    }
-
-                    poco = await LoadInstanceAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>(dto.Id, dto.Version);
-                    dto.Adapt(poco, Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
-                    dbSet.Update(poco);
-                }
-                else
-                {
-                    if (authorizeInsert)
-                    {
-                        await _authorizationService.{{nameOfTheEntityClass}}SingleInsertAuthorize(dto);
-                    }
-
-                    poco = dto.Adapt<{{nameOfTheEntityClass}}>(Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
-                    await dbSet.AddAsync(poco);
-                }
-""");
-            }
-            sb.AppendLine($$"""
-
-{{string.Join("\n", GetManyToOneInstancesForSave(entityClass, entityClasses))}}
-
-                await _context.SaveChangesAsync();
-
-                {{string.Join("\n\t\t\t\t", GetNonActiveDeleteBlobMethods(entityClass, propertiesEntityClass))}}
-            });
-
-            return poco;
+            return $$"""
+using {{basePartOfTheNamespace}}.ValidationRules;
+using {{basePartOfTheNamespace}}.DataMappers;
+using {{basePartOfTheNamespace}}.DTO;
+using {{basePartOfTheNamespace}}.Entities;
+using {{basePartOfTheNamespace}}.Enums;
+using {{basePartOfTheNamespace}}.ExcelProperties;
+using {{basePartOfTheNamespace}}.TableFiltering;
+using Microsoft.EntityFrameworkCore;
+using System.Data;
+using FluentValidation;
+using Soft.Generator.Security.Services;
+using Soft.Generator.Shared.Excel;
+using Soft.Generator.Shared.Interfaces;
+using Soft.Generator.Shared.Services;
+using Soft.Generator.Shared.DTO;
+using Soft.Generator.Shared.Extensions;
+using Soft.Generator.Shared.SoftExceptions;
+using Soft.Generator.Shared.Terms;
+using Mapster;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Microsoft.AspNetCore.Http;
+""";
         }
 
-        public async Task<{{nameOfTheEntityClass}}DTO> Save{{nameOfTheEntityClass}}AndReturnDTOAsync({{nameOfTheEntityClass}}DTO dto, bool authorizeUpdate = true, bool authorizeInsert = true)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                {{nameOfTheEntityClass}} poco = await Save{{nameOfTheEntityClass}}AndReturnDomainAsync(dto, authorizeUpdate, authorizeInsert);
-
-                return poco.Adapt<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ToDTOConfig());
-            });
-        }
-""");
-            return sb.ToString();
-        }
-
-        private static List<string> GetNonActiveDeleteBlobMethods(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
-        {
-            List<string> result = new List<string>();
-
-            List<SoftProperty> blobProperies = Helper.GetBlobProperties(propertiesEntityClass);
-
-            foreach (SoftProperty property in blobProperies)
-            {
-                result.Add($"await DeleteNonActiveBlobs(dto.{property.IdentifierText}, nameof({entityClass.Identifier.Text}), nameof({entityClass.Identifier.Text}.{property.IdentifierText}), poco.Id.ToString());");
-            }
-
-            return result;
-        }
-
-        private static string GetDeletingData(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses)
-        {
-            string nameOfTheEntityClass = entityClass.Identifier.Text;
-            string nameOfTheEntityClassFirstLower = nameOfTheEntityClass.FirstCharToLower();
-
-            StringBuilder sb = new StringBuilder();
-
-            sb.Append($$"""
-        public virtual async Task OnBefore{{nameOfTheEntityClass}}AsyncDelete({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id) { }
-
-        public async Task Delete{{nameOfTheEntityClass}}Async({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
-        {
-            await _context.WithTransactionAsync(async () =>
-            {
-                if (authorize)
-                {
-                    await _authorizationService.{{nameOfTheEntityClass}}DeleteAuthorize({{nameOfTheEntityClassFirstLower}}Id);
-                }
-
-                await OnBefore{{nameOfTheEntityClass}}AsyncDelete({{nameOfTheEntityClassFirstLower}}Id);
-
-{{string.Join("\n", GetManyToOneDeleteQueries(entityClass, entityClasses, 0))}}
-
-                await DeleteEntityAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>({{nameOfTheEntityClassFirstLower}}Id);
-            });
-        }
-""");
-
-            return sb.ToString();
-        }
-
-        private static List<string> GetManyToOneDeleteQueries(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, int recursiveIteration)
-        {
-            if (recursiveIteration > 5000) 
-            {
-                GetManyToOneDeleteQueries(null, null, int.MaxValue);
-                return new List<string> { "You made cascade delete infinite loop." };
-            }
-
-            List<string> result = new List<string>();
-
-            string nameOfTheEntityClass = entityClass.Identifier.Text;
-            string nameOfTheEntityClassFirstLower = nameOfTheEntityClass.FirstCharToLower();
-
-            List<SoftClass> softEntityClasses = Helper.GetSoftEntityClasses(entityClasses);
-
-            List<SoftProperty> manyToOneRequiredProperties = Helper.GetManyToOneRequiredProperties(nameOfTheEntityClass, softEntityClasses);
-
-            foreach (SoftProperty prop in manyToOneRequiredProperties)
-            {
-                ClassDeclarationSyntax nestedEntityClass = Helper.GetClass(prop.ClassIdentifierText, entityClasses);
-                string nestedEntityClassName = nestedEntityClass.Identifier.Text;
-                string nestedEntityClassNameLowerCase = nestedEntityClassName.FirstCharToLower();
-                string nestedEntityClassIdType = Helper.GetGenericIdType(nestedEntityClass, entityClasses);
-
-                if (recursiveIteration == 0)
-                {
-                    result.Add($$"""
-                List<{{nestedEntityClassIdType}}> {{nestedEntityClassNameLowerCase}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => x.{{prop.IdentifierText}}.Id == {{nameOfTheEntityClassFirstLower}}Id).Select(x => x.Id).ToListAsync();
-""");
-                }
-                else
-                {
-                    result.Add($$"""
-                List<{{nestedEntityClassIdType}}> {{nestedEntityClassNameLowerCase}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{nameOfTheEntityClassFirstLower}}ListToDelete.Contains(x.{{prop.IdentifierText}}.Id)).Select(x => x.Id).ToListAsync();
-""");
-                }
-
-                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, entityClasses, recursiveIteration + 1));
-
-                    result.Add($$"""
-                await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{nestedEntityClassNameLowerCase}}ListToDelete.Contains(x.Id)).ExecuteDeleteAsync();
-""");
-            }
-
-            return result;
-        }
-
-        private static List<string> GetPopulateDTOWithBlobParts(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
-        {
-            List<string> result = new List<string>();
-
-            List<SoftProperty> blobProperies = Helper.GetBlobProperties(propertiesEntityClass);
-
-            foreach (SoftProperty property in blobProperies)
-            {
-                result.Add($$"""
-                    if (!string.IsNullOrEmpty(dto.{{property.IdentifierText}}))
-                    {
-                        dto.{{property.IdentifierText}}Data = await GetFileDataAsync(dto.{{property.IdentifierText}});
-                    }
-""");
-            }
-
-            return result;
-        }
-
-        private static List<string> GetUploadBlobMethods(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, List<SoftProperty> entityProperties)
-        {
-            List<string> result = new List<string>();
-
-            List<SoftProperty> blobProperies = Helper.GetBlobProperties(entityProperties);
-
-            string nameOfTheEntityClass = entityClass.Identifier.Text;
-            string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
-
-            foreach (SoftProperty property in blobProperies)
-            {
-                result.Add($$"""
-        public async Task<string> Upload{{nameOfTheEntityClass}}{{property.IdentifierText}}Async(IFormFile file, bool authorizeUpdate = true, bool authorizeInsert = true) // FT: It doesn't work without interface
-        {
-            using Stream stream = file.OpenReadStream();
-
-            {{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id = GetObjectIdFromFileName<{{idTypeOfTheEntityClass}}>(file.FileName);
-
-            if ({{nameOfTheEntityClassFirstLower}}Id > 0)
-            {
-                if (authorizeUpdate)
-                {
-                    await _authorizationService.{{nameOfTheEntityClass}}SingleUpdateAuthorize({{nameOfTheEntityClassFirstLower}}Id);
-                }
-            }
-            else
-            {
-                if (authorizeInsert)
-                {
-                    await _authorizationService.{{nameOfTheEntityClass}}SingleInsertAuthorize();
-                }
-            }
-
-            OnBefore{{nameOfTheEntityClass}}{{property.IdentifierText}}BlobIsUploaded({{nameOfTheEntityClassFirstLower}}Id); // FT: Authorize access for this id...
-
-            string fileName = await UploadFileAsync(file.FileName, nameof({{nameOfTheEntityClass}}), nameof({{nameOfTheEntityClass}}.{{property.IdentifierText}}), {{nameOfTheEntityClassFirstLower}}Id.ToString(), stream);
-
-            return fileName;
-        }
-
-        public virtual async Task OnBefore{{nameOfTheEntityClass}}{{property.IdentifierText}}BlobIsUploaded ({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id) { }
-"""
-);
-            }
-
-            return result;
-        }
+        #endregion
 
     }
 }
