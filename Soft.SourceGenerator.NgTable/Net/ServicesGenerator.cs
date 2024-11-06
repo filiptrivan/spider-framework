@@ -265,6 +265,7 @@ namespace {{basePartOfTheNamespace}}.Services
         }
 
         #endregion
+
 """);
             }
 

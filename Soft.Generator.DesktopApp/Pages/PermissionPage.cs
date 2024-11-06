@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Microsoft.Data.SqlClient;
+using Soft.Generator.DesktopApp.Entities;
+using Soft.Generator.DesktopApp.Services;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -12,9 +15,19 @@ namespace Soft.Generator.DesktopApp.Pages
 {
     public partial class PermissionPage : UserControl
     {
-        public PermissionPage()
+        private readonly SqlConnection _connection;
+        private readonly DesktopAppBusinessService _desktopAppService;
+
+        public PermissionPage(SqlConnection connection, DesktopAppBusinessService desktopAppService)
         {
+            _connection = connection;
+            _desktopAppService = desktopAppService;
+
             InitializeComponent();
+
+            dataGridView1.DataSource = new BindingList<Permission>(_desktopAppService.GetPermissionList());
         }
+
+
     }
 }

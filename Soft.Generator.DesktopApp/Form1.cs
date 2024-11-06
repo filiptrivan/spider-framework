@@ -9,11 +9,33 @@ namespace Soft.Generator.DesktopApp
 {
     public partial class Form1 : Form
     {
+        #region Pages
+
+        private readonly ApplicationPage _applicationPage;
+        private readonly CompanyPage _companyPage;
+        private readonly FrameworkPage _frameworkPage;
+        private readonly HomePage _homePage;
+        private readonly PathToDomainFolderPage _pathToDomainFolderPage;
+        private readonly PermissionPage _permissionPage;
+        private readonly SettingPage _settingPage;
+
+        #endregion
+
         private readonly SqlConnection _connection;
         private readonly DesktopAppBusinessService _desktopAppService;
 
-        public Form1(SqlConnection connection, DesktopAppBusinessService desktopAppService)
-        {
+        public Form1(SqlConnection connection, DesktopAppBusinessService desktopAppService, ApplicationPage applicationPage, CompanyPage companyPage, FrameworkPage frameworkPage, HomePage homePage,
+            PathToDomainFolderPage pathToDomainFolderPage, PermissionPage permissionPage, SettingPage settingPage)
+        {                                                                                   
+            _applicationPage = applicationPage;                                             
+            _companyPage = companyPage;                                                     
+            _frameworkPage = frameworkPage;                                                 
+            _homePage = homePage;                                                           
+            _pathToDomainFolderPage = pathToDomainFolderPage;                               
+            _permissionPage = permissionPage;
+            _settingPage = settingPage;
+
+
             _connection = connection;
             _desktopAppService = desktopAppService;
 
@@ -34,48 +56,46 @@ namespace Soft.Generator.DesktopApp
             });
 
 
-            NavigateToPage<HomePage>();
+            NavigateToPage(_homePage);
         }
 
         private void applicationToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            NavigateToPage<ApplicationPage>();
+            NavigateToPage(_applicationPage);
         }
 
         private void companyToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            NavigateToPage<CompanyPage>();
+            NavigateToPage(_companyPage);
         }
 
         private void settingToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            NavigateToPage<SettingPage>();
+            NavigateToPage(_settingPage);
         }
 
         private void frameworkToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            NavigateToPage<FrameworkPage>();
+            NavigateToPage(_frameworkPage);
         }
 
         private void permissionToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            NavigateToPage<PermissionPage>();
+            NavigateToPage(_permissionPage);
         }
 
         private void pathToDomainFolderToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            NavigateToPage<PathToDomainFolderPage>();
+            NavigateToPage(_pathToDomainFolderPage);
         }
 
-        private void NavigateToPage<T>() where T : UserControl, new()
+        private void NavigateToPage(UserControl userControl)
         {
             pnl_Main.Controls.Clear();
 
-            T page = new T();
+            userControl.Dock = DockStyle.Fill;
 
-            page.Dock = DockStyle.Fill;
-
-            pnl_Main.Controls.Add(page);
+            pnl_Main.Controls.Add(userControl);
         }
 
     }

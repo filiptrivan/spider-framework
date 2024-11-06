@@ -1,5 +1,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
+using Soft.Generator.DesktopApp.Pages;
 using Soft.Generator.DesktopApp.Services;
 using System;
 using System.Windows.Forms.Design;
@@ -36,6 +37,13 @@ namespace Soft.Generator.DesktopApp
             services.AddScoped<DesktopAppBusinessService>();
 
             services.AddTransient<Form1>();
+            services.AddTransient<ApplicationPage>();
+            services.AddTransient<CompanyPage>();
+            services.AddTransient<FrameworkPage>();
+            services.AddTransient<HomePage>();
+            services.AddTransient<PathToDomainFolderPage>();
+            services.AddTransient<PermissionPage>();
+            services.AddTransient<SettingPage>();
         }
     }
 }
