@@ -10,16 +10,11 @@ using System.Windows.Forms;
 
 namespace Soft.Generator.DesktopApp.Pages
 {
-    public partial class ApplicationPage : UserControl
+    public partial class SettingListPage : UserControl
     {
-        public ApplicationPage()
+        public SettingListPage()
         {
             InitializeComponent();
-        }
-
-        private void softTextbox1_Load(object sender, EventArgs e)
-        {
-            softTextbox1.LabelValue = "Ime aplikacije";
         }
     }
 }

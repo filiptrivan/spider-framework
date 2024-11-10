@@ -11,36 +11,39 @@ namespace Soft.Generator.DesktopApp
     {
         #region Pages
 
-        private readonly ApplicationPage _applicationPage;
-        private readonly CompanyPage _companyPage;
-        private readonly FrameworkPage _frameworkPage;
+        private readonly ApplicationListPage _applicationPage;
+        private readonly CompanyListPage _companyPage;
+        private readonly FrameworkListPage _frameworkPage;
         private readonly HomePage _homePage;
-        private readonly PathToDomainFolderPage _pathToDomainFolderPage;
-        private readonly PermissionPage _permissionPage;
-        private readonly SettingPage _settingPage;
+        private readonly PathToDomainFolderListPage _pathToDomainFolderPage;
+        private readonly PermissionListPage _permissionPage;
+        private readonly SettingListPage _settingPage;
 
         #endregion
 
-        private readonly SqlConnection _connection;
         private readonly DesktopAppBusinessService _desktopAppService;
+        private readonly PageNavigator _pageNavigator;
 
-        public Form1(SqlConnection connection, DesktopAppBusinessService desktopAppService, ApplicationPage applicationPage, CompanyPage companyPage, FrameworkPage frameworkPage, HomePage homePage,
-            PathToDomainFolderPage pathToDomainFolderPage, PermissionPage permissionPage, SettingPage settingPage)
-        {                                                                                   
-            _applicationPage = applicationPage;                                             
-            _companyPage = companyPage;                                                     
-            _frameworkPage = frameworkPage;                                                 
-            _homePage = homePage;                                                           
-            _pathToDomainFolderPage = pathToDomainFolderPage;                               
+        public Form1(
+            DesktopAppBusinessService desktopAppService, PageNavigator pageNavigator, ApplicationListPage applicationPage, CompanyListPage companyPage,
+            FrameworkListPage frameworkPage, HomePage homePage, PathToDomainFolderListPage pathToDomainFolderPage, PermissionListPage permissionPage,
+            SettingListPage settingPage
+            )
+        {
+            _applicationPage = applicationPage;
+            _companyPage = companyPage;
+            _frameworkPage = frameworkPage;
+            _homePage = homePage;
+            _pathToDomainFolderPage = pathToDomainFolderPage;
             _permissionPage = permissionPage;
             _settingPage = settingPage;
 
-
-            _connection = connection;
             _desktopAppService = desktopAppService;
+            _pageNavigator = pageNavigator;
 
             InitializeComponent();
 
+            _pageNavigator.InitializeMainPanel(pnl_Main);
             homeToolStripMenuItem_Click(null, null);
             //System.Windows.Forms.Form.WindowState = FormWindowState.Maximized;
             //Form1.WindowState = FormWindowState.Maximized;
@@ -48,54 +51,37 @@ namespace Soft.Generator.DesktopApp
 
         private void homeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
-            _connection.WithTransaction(() =>
-            {
-                List<Permission> permissions = _desktopAppService.GetPermissionList();
-                List<Permission> permissionsForCompany = _desktopAppService.GetPermissionListForCompanyList([1, 2]);
-            });
-
-
-            NavigateToPage(_homePage);
+            _pageNavigator.NavigateToPage(_homePage);
         }
 
         private void applicationToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            NavigateToPage(_applicationPage);
+            _pageNavigator.NavigateToPage(_applicationPage);
         }
 
         private void companyToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            NavigateToPage(_companyPage);
+            _pageNavigator.NavigateToPage(_companyPage);
         }
 
         private void settingToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            NavigateToPage(_settingPage);
+            _pageNavigator.NavigateToPage(_settingPage);
         }
 
         private void frameworkToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            NavigateToPage(_frameworkPage);
+            _pageNavigator.NavigateToPage(_frameworkPage);
         }
 
         private void permissionToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            NavigateToPage(_permissionPage);
+            _pageNavigator.NavigateToPage(_permissionPage);
         }
 
         private void pathToDomainFolderToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            NavigateToPage(_pathToDomainFolderPage);
-        }
-
-        private void NavigateToPage(UserControl userControl)
-        {
-            pnl_Main.Controls.Clear();
-
-            userControl.Dock = DockStyle.Fill;
-
-            pnl_Main.Controls.Add(userControl);
+            _pageNavigator.NavigateToPage(_pathToDomainFolderPage);
         }
 
     }

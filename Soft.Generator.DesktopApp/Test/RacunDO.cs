@@ -15,9 +15,6 @@ namespace Soft.Generator.DesktopApp.Test
 
         public void PovecajBrojRacuna(int broj)
         {
-            UbaciSO ubaciSO = new UbaciSO();
-
-            ubaciSO.
         }
 
         public string VratiVrednostiAtributa()

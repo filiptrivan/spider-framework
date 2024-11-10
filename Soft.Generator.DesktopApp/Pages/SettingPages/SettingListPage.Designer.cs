@@ -1,6 +1,6 @@
 ﻿namespace Soft.Generator.DesktopApp.Pages
 {
-    partial class FrameworkPage
+    partial class SettingListPage
     {
         /// <summary> 
         /// Required designer variable.

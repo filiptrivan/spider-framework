@@ -1,6 +1,6 @@
 ﻿namespace Soft.Generator.DesktopApp.Pages
 {
-    partial class ApplicationPage
+    partial class FrameworkListPage
     {
         /// <summary> 
         /// Required designer variable.
@@ -28,31 +28,36 @@
         /// </summary>
         private void InitializeComponent()
         {
-            softTextbox1 = new SoftTextbox();
+            components = new System.ComponentModel.Container();
+            frameworkBindingSource = new BindingSource(components);
+            softDataGridView1 = new Controls.SoftDataGridView();
+            ((System.ComponentModel.ISupportInitialize)frameworkBindingSource).BeginInit();
             SuspendLayout();
             // 
-            // softTextbox1
+            // frameworkBindingSource
             // 
-            softTextbox1.LabelValue = "label1e";
-            softTextbox1.Location = new Point(0, 0);
-            softTextbox1.Name = "softTextbox1";
-            softTextbox1.Size = new Size(238, 63);
-            softTextbox1.TabIndex = 1;
-            softTextbox1.TextBoxValue = "";
-            softTextbox1.Load += softTextbox1_Load;
+            frameworkBindingSource.DataSource = typeof(Entities.Framework);
             // 
-            // ApplicationPage
+            // softDataGridView1
+            // 
+            softDataGridView1.Location = new Point(0, 0);
+            softDataGridView1.Name = "softDataGridView1";
+            softDataGridView1.Size = new Size(600, 181);
+            softDataGridView1.TabIndex = 0;
+            // 
+            // FrameworkPage
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            Controls.Add(softTextbox1);
-            Name = "ApplicationPage";
-            Size = new Size(666, 150);
+            Controls.Add(softDataGridView1);
+            Name = "FrameworkPage";
+            Size = new Size(600, 200);
+            ((System.ComponentModel.ISupportInitialize)frameworkBindingSource).EndInit();
             ResumeLayout(false);
         }
 
         #endregion
-
-        private SoftTextbox softTextbox1;
+        private BindingSource frameworkBindingSource;
+        private Controls.SoftDataGridView softDataGridView1;
     }
 }

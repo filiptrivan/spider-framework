@@ -1,6 +1,6 @@
 ﻿namespace Soft.Generator.DesktopApp.Pages
 {
-    partial class CompanyPage
+    partial class PathToDomainFolderListPage
     {
         /// <summary> 
         /// Required designer variable.

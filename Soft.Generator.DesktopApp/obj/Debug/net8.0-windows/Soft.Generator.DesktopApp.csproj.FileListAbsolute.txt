@@ -1,13 +1,7 @@
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.csproj.AssemblyReference.cache
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.SoftTextbox.resources
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Form1.resources
-E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.ApplicationPage.resources
-E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.CompanyPage.resources
-E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.FrameworkPage.resources
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.HomePage.resources
-E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.PathToDomainFolderPage.resources
-E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.PermissionPage.resources
-E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.SettingPage.resources
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.csproj.GenerateResource.cache
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.GeneratedMSBuildEditorConfig.editorconfig
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.AssemblyInfoInputs.cache
@@ -65,3 +59,11 @@ E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-win
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.pdb
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.genruntimeconfig.cache
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\ref\Soft.Generator.DesktopApp.dll
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Controls.SoftDataGridView.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.ApplicationListPage.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.CompanyListPage.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.FrameworkListPage.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.PathToDomainFolderListPage.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.PermissionListPage.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.SettingListPage.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.FrameworkPages.FrameworkDetailsPage.resources

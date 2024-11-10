@@ -10,9 +10,9 @@ using System.Windows.Forms;
 
 namespace Soft.Generator.DesktopApp.Pages
 {
-    public partial class FrameworkPage : UserControl
+    public partial class CompanyListPage : UserControl
     {
-        public FrameworkPage()
+        public CompanyListPage()
         {
             InitializeComponent();
         }

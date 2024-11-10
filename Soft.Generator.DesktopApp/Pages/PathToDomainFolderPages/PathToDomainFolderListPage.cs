@@ -10,9 +10,9 @@ using System.Windows.Forms;
 
 namespace Soft.Generator.DesktopApp.Pages
 {
-    public partial class PathToDomainFolderPage : UserControl
+    public partial class PathToDomainFolderListPage : UserControl
     {
-        public PathToDomainFolderPage()
+        public PathToDomainFolderListPage()
         {
             InitializeComponent();
         }
