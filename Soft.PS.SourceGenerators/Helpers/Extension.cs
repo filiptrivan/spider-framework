@@ -53,25 +53,6 @@ namespace Soft.SourceGenerators.Helpers
             return true;
         }
 
-        public static bool IsAbstract(this ClassDeclarationSyntax c)
-        {
-            return c.Modifiers.Any(x => x.Text == "abstract");
-        }
-
-        /// <summary>
-        /// User : BusinessObject<long> -> true
-        /// User : ReadonlyObject<long> -> false
-        /// </summary>
-        public static bool IsEntityBusinessObject(this ClassDeclarationSyntax c)
-        {
-            return c.BaseList?.Types.FirstOrDefault()?.Type?.ToString()?.Contains($"{Helper.BusinessObject}<") == true;
-        }
-
-        public static bool IsEntityReadonlyObject(this ClassDeclarationSyntax c)
-        {
-            return c.BaseList?.Types.FirstOrDefault()?.Type?.ToString()?.Contains($"{Helper.ReadonlyObject}<") == true;
-        }
-
         public static bool IsEnumerable(this string propType)
         {
             return propType.Contains("List") || propType.Contains("IList") || propType.Contains("[]");
@@ -100,14 +81,9 @@ namespace Soft.SourceGenerators.Helpers
                 propType == "Guid";
         }
 
-        public static bool HasBlobProperty(this SoftClass c)
+        public static bool IsIdentifier(this SoftProperty property)
         {
-            return c.Properties.SelectMany(x => x.Attributes).Any(x => x.Name == "BlobName");
-        }
-
-        public static bool HasBlobProperty(this List<SoftProperty> properties)
-        {
-            return properties.SelectMany(x => x.Attributes).Any(x => x.Name == "BlobName");
+            return property.Attributes.Any(x => x.Name == "Identifier");
         }
 
         /// <summary>
@@ -116,16 +92,6 @@ namespace Soft.SourceGenerators.Helpers
         public static IEnumerable<T> DistinctBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> property)
         {
             return items.GroupBy(property).Select(x => x.First());
-        }
-
-        public static string ToCommaSeparatedString<T>(this List<T> input)
-        {
-            List<string> stringList = input.Select(item => item?.ToString() ?? string.Empty).ToList();
-
-            if (stringList.Count > 1)
-                return $"{string.Join(", ", stringList.Take(stringList.Count - 1))} and {stringList.Last()}";
-            else
-                return stringList.FirstOrDefault();
         }
 
         public static string FromPascalToKebabCase(this string pascalCaseString)
@@ -141,25 +107,6 @@ namespace Soft.SourceGenerators.Helpers
             return kebabCaseString;
         }
 
-        public static bool IsTypeNullable(this string dataType)
-        {
-            if (dataType.Contains("?"))
-                return true;
-            else
-                return false;
-        }
-
-        public static string GetDTOBaseType(this ClassDeclarationSyntax c)
-        {
-            string baseClass = c.GetBaseType();
-            if (baseClass == null)
-                return null;
-            else if (baseClass.Contains("<"))
-                return baseClass.Replace("<", "DTO<");
-            else
-                return $"{baseClass}DTO";
-        }
-
         public static string GetBaseType(this ClassDeclarationSyntax c)
         {
             TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
@@ -168,15 +115,6 @@ namespace Soft.SourceGenerators.Helpers
                 return baseType.ToString();
 
             return null; // FT: many to many doesn't have base class
-        }
-
-        public static SoftClass ToSoftClass(this ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
-        {
-            return new SoftClass
-            {
-                Name = c.Identifier.Text,
-                Properties = Helper.GetAllPropertiesOfTheClass(c, classes)
-            };
         }
     }
 }

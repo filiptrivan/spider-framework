@@ -20,12 +20,12 @@ namespace Soft.SourceGenerator.NgTable.Angular
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//#if DEBUG
-//            if (!Debugger.IsAttached)
-//            {
-//                Debugger.Launch();
-//            }
-//#endif
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntitiesAndDTO(s),
@@ -122,7 +122,8 @@ export class Validator{{projectName}}Service {
 
         public static string GenerateAngularValidationMethod(string validationRulePropName, string classNameForValidation, string input, List<SoftProperty> DTOProperties)
         {
-            string parameterFirstLower = validationRulePropName.FirstCharToLower();
+            string validationRulePropNameFirstLower = AdjustManyToOnePropertyNameForValidation(validationRulePropName);
+
             string pattern = $@"RuleFor\(x => x\.{validationRulePropName}\)(.*?);";
             Match match = Regex.Match(input, pattern, RegexOptions.Singleline);
 
@@ -144,15 +145,15 @@ export class Validator{{projectName}}Service {
             string allRules = string.Join(" && ", ruleNames);
 
             string result = $@"
-    {parameterFirstLower}{classNameForValidation}Validator(control: SoftFormControl): SoftValidatorFn {{
+    {validationRulePropNameFirstLower}{classNameForValidation}Validator(control: SoftFormControl): SoftValidatorFn {{
         const validator: SoftValidatorFn = (): ValidationErrors | null => {{
             const value = control.value;
 
     {string.Join("\n", ruleStatements)}
 
-            const {parameterFirstLower}Valid = {allRules};
+            const {validationRulePropNameFirstLower}Valid = {allRules};
 
-            return {parameterFirstLower}Valid ? null : {{ _ : this.translocoService.translate('{string.Join("", translationTags)}', {{{string.Join(", ", translocoVariables)}}}) }};
+            return {validationRulePropNameFirstLower}Valid ? null : {{ _ : this.translocoService.translate('{string.Join("", translationTags)}', {{{string.Join(", ", translocoVariables)}}}) }};
         }};
         {(ruleNames.Any(x => x == "notEmptyRule") ? "validator.hasNotEmptyRule = true;" : "")}
         return validator;
@@ -195,7 +196,7 @@ export class Validator{{projectName}}Service {
                     validationMessages.Add($"must have a minimum of ${{min}} and a maximum of ${{max}} characters");
                     translocoVariables.AddRange(["min", "max"]);
                     translationTags.Add("Length");
-                } 
+                }
                 else if (singleLengthMatch.Success)
                 {
                     string ruleName = "stringSingleLengthRule";
@@ -305,13 +306,31 @@ export class Validator{{projectName}}Service {
 
             foreach (string validationRulePropName in validationRulePropNames)
             {
+                string validationRulePropNameFirstLower = AdjustManyToOnePropertyNameForValidation(validationRulePropName);
+
                 validationCases.AppendLine($$"""
-        case '{{validationRulePropName.FirstCharToLower()}}{{validationClassName}}':
-            return this.{{validationRulePropName.FirstCharToLower()}}{{validationClassName}}Validator(formControl);
+        case '{{validationRulePropNameFirstLower}}{{validationClassName}}':
+            return this.{{validationRulePropNameFirstLower}}{{validationClassName}}Validator(formControl);
 """);
             }
 
             return validationCases.ToString();
+        }
+
+        private static string AdjustManyToOnePropertyNameForValidation(string validationRulePropName)
+        {
+            string validationRulePropNameFirstLower = validationRulePropName.FirstCharToLower();
+
+            if (validationRulePropNameFirstLower.EndsWith("Id") && validationRulePropNameFirstLower.Length > 2)
+            {
+                validationRulePropNameFirstLower = validationRulePropNameFirstLower.Substring(0, validationRulePropNameFirstLower.Length - 2);
+            }
+            else if (validationRulePropNameFirstLower.EndsWith("DisplayName"))
+            {
+                validationRulePropNameFirstLower = validationRulePropNameFirstLower.Replace("DisplayName", "");
+            }
+
+            return validationRulePropNameFirstLower;
         }
 
         private static string GetValidationClassConstructorBody(List<SoftProperty> DTOProperties, List<SoftAttribute> DTOAttributes, ClassDeclarationSyntax entityClass, List<ClassDeclarationSyntax> entityClasses)

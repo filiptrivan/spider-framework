@@ -9,6 +9,7 @@ namespace Soft.Generator.DesktopApp.Entities
 {
     public class WebApplication
     {
+        [Identifier]
         public long Id { get; set; }
 
         public string Name { get; set; }

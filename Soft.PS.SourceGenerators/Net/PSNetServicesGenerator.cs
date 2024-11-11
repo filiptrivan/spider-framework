@@ -99,12 +99,13 @@ namespace {{basePartOfNamespace}}.Services
 
                 string nameOfTheEntityClass = entityClass.Identifier.Text;
                 string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
-                string idTypeOfTheEntityClass = GetIdType(entityClass, entityClasses);
+                SoftProperty idPropertyOfTheEntityClass = GetIdentifierProperty(entityClass, entityClasses);
+                string idTypeOfTheEntityClass = idPropertyOfTheEntityClass.Type;
 
                 List<SoftProperty> entityPropertiesWithoutEnumerable = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, false);
 
                 List<SoftProperty> entityPropertiesWithoutEnumerableAndId = entityPropertiesWithoutEnumerable
-                    .Where(x => x.IdentifierText != "Id")
+                    .Where(x => x.Attributes.Any(x => x.Name == "Identifier") == false)
                     .ToList();
 
                 List<string> entityPropertiesForInsertAndUpdate = entityPropertiesWithoutEnumerableAndId
@@ -127,8 +128,8 @@ namespace {{basePartOfNamespace}}.Services
             string query = @$"
 SELECT 
 {{string.Join(", ", GetAllSelectProperties(entityClass, entityClasses, new HashSet<string>(), null))}}
-FROM {{nameOfTheEntityClass}} AS {{nameOfTheEntityClassFirstLower}}
-WHERE {{nameOfTheEntityClassFirstLower}}.Id = @id
+FROM [{{nameOfTheEntityClass}}] AS [{{nameOfTheEntityClassFirstLower}}]
+WHERE [{{nameOfTheEntityClassFirstLower}}].[{{idPropertyOfTheEntityClass.IdentifierText}}] = @id
 ";
 
             _connection.WithTransaction(() =>
@@ -163,7 +164,7 @@ WHERE {{nameOfTheEntityClassFirstLower}}.Id = @id
             string query = @$"
 SELECT 
 {{string.Join(", ", GetAllSelectProperties(entityClass, entityClasses, new HashSet<string>(), null))}}
-FROM {{nameOfTheEntityClass}} AS {{nameOfTheEntityClassFirstLower}}
+FROM [{{nameOfTheEntityClass}}] AS [{{nameOfTheEntityClassFirstLower}}]
 ";
 
             _connection.WithTransaction(() =>
@@ -192,16 +193,19 @@ FROM {{nameOfTheEntityClass}} AS {{nameOfTheEntityClassFirstLower}}
 
             // FT: Not validating here property by property, because sql server will throw exception, we should already validate object on the form.
 
-            string query = $"INSERT INTO [{{nameOfTheEntityClass}}] ({{insertColumnNames}}) OUTPUT INSERTED.[Id] VALUES ({{insertParameterNames}});";
+            string query = $"INSERT INTO [{{nameOfTheEntityClass}}] ({{insertColumnNames}}) OUTPUT INSERTED.[{{idPropertyOfTheEntityClass.IdentifierText}}] VALUES ({{insertParameterNames}});";
 
             _connection.WithTransaction(() =>
             {
                 using (SqlCommand cmd = new SqlCommand(query, _connection))
                 {
-                    {{string.Join("\n\t\t\t\t\t", entityPropertiesWithoutEnumerableAndId.Select(x => x.Type.PropTypeIsManyToOne() ? $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}Id\", entity.{x.IdentifierText}.Id);" : $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}\", entity.{x.IdentifierText});"))}}
+                    {{string.Join("\n\t\t\t\t\t", entityPropertiesWithoutEnumerableAndId
+                        .Select(x => x.Type.PropTypeIsManyToOne() ? 
+                            $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}Id\", entity.{x.IdentifierText}.{GetIdentifierProperty(x.Type, entityClasses).IdentifierText});" : 
+                            $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}\", entity.{x.IdentifierText});"))}}
 
                     {{idTypeOfTheEntityClass}} newId = ({{idTypeOfTheEntityClass}})cmd.ExecuteScalar();
-                    entity.Id = newId;
+                    entity.{{idPropertyOfTheEntityClass.IdentifierText}} = newId;
                 }
             });
 
@@ -221,7 +225,7 @@ FROM {{nameOfTheEntityClass}} AS {{nameOfTheEntityClassFirstLower}}
             {
                 using (SqlCommand cmd = new SqlCommand(query, _connection))
                 {
-                    {{string.Join("\n\t\t\t\t\t", entityPropertiesWithoutEnumerableAndId.Select(x => x.Type.PropTypeIsManyToOne() ? $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}Id\", entity.{x.IdentifierText}.Id);" : $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}\", entity.{x.IdentifierText});"))}}
+                    {{string.Join("\n\t\t\t\t\t", entityPropertiesWithoutEnumerableAndId.Select(x => x.Type.PropTypeIsManyToOne() ? $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}Id\", entity.{x.IdentifierText}.{GetIdentifierProperty(x.Type, entityClasses).IdentifierText});" : $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}\", entity.{x.IdentifierText});"))}}
 
                     cmd.ExecuteNonQuery();
                 }
@@ -268,10 +272,10 @@ FROM {{nameOfTheEntityClass}} AS {{nameOfTheEntityClassFirstLower}}
                 if (entityProperty.Type.IsEnumerable())
                 {
                     ClassDeclarationSyntax extractedEntityClass = Helper.ExtractEntityFromList(entityProperty.Type, entityClasses);
-                    string extractedEntityIdType = GetIdType(extractedEntityClass, entityClasses);
+                    SoftProperty extractedEntityIdProperty = GetIdentifierProperty(extractedEntityClass, entityClasses);
 
                     result.Add($$"""
-        public List<{{nameOfTheEntityClass}}> Get{{nameOfTheEntityClass}}ListFor{{extractedEntityClass.Identifier.Text}}List(List<{{extractedEntityIdType}}> ids)
+        public List<{{nameOfTheEntityClass}}> Get{{nameOfTheEntityClass}}ListFor{{extractedEntityClass.Identifier.Text}}List(List<{{extractedEntityIdProperty.Type}}> ids)
         {
             List<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}List = new List<{{nameOfTheEntityClass}}>();
             Dictionary<{{idTypeOfTheEntityClass}}, {{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Dict = new Dictionary<{{idTypeOfTheEntityClass}}, {{nameOfTheEntityClass}}>();
@@ -288,9 +292,9 @@ FROM {{nameOfTheEntityClass}} AS {{nameOfTheEntityClassFirstLower}}
             string query = @$"
 SELECT DISTINCT
 {{string.Join(", ", GetAllSelectProperties(entityClass, entityClasses, new HashSet<string>(), null))}}
-FROM {{nameOfTheEntityClass}} AS {{nameOfTheEntityClassFirstLower}}
+FROM [{{nameOfTheEntityClass}}] AS [{{nameOfTheEntityClassFirstLower}}]
 {{GetJoinBasedOnPropertyListType(entityProperty, entityClass, entityClasses)}}
-WHERE {{extractedEntityClass.Identifier.Text.FirstCharToLower()}}.Id IN ({string.Join(", ", parameters)});
+WHERE [{{extractedEntityClass.Identifier.Text.FirstCharToLower()}}].[{{extractedEntityIdProperty.IdentifierText}}] IN ({string.Join(", ", parameters)});
 ";
 
             _connection.WithTransaction(() =>
@@ -330,8 +334,8 @@ WHERE {{extractedEntityClass.Identifier.Text.FirstCharToLower()}}.Id IN ({string
             string query = @$"
 SELECT
 {{string.Join(", ", GetAllSelectProperties(entityClass, entityClasses, new HashSet<string>(), null))}}
-FROM {{nameOfTheEntityClass}} AS {{nameOfTheEntityClassFirstLower}}
-WHERE {{nameOfTheEntityClassFirstLower}}.{{extractedEntityClass.Identifier.Text}}Id = @id;
+FROM [{{nameOfTheEntityClass}}] AS [{{nameOfTheEntityClassFirstLower}}]
+WHERE [{{nameOfTheEntityClassFirstLower}}].[{{extractedEntityClass.Identifier.Text}}Id] = @id;
 ";
 
             _connection.WithTransaction(() =>
@@ -403,7 +407,7 @@ WHERE {{nameOfTheEntityClassFirstLower}}.{{extractedEntityClass.Identifier.Text}
 
             foreach (SoftProperty entityProperty in entityProperties)
             {
-                if (entityProperty.IdentifierText == "Id")
+                if (entityProperty.IsIdentifier())
                 {
                     result.Add($"{entityProperty.IdentifierText} = {nameOfTheEntityClassFirstLower}Id");
                 }
@@ -439,7 +443,7 @@ WHERE {{nameOfTheEntityClassFirstLower}}.{{extractedEntityClass.Identifier.Text}
             foreach (SoftProperty property in entityProperties)
             {
                 if (!property.Type.PropTypeIsManyToOne())
-                    result.Add($"{nameOfTheEntityClassFirstLower}.{property.IdentifierText} AS {nameOfTheEntityClass}{property.IdentifierText}");
+                    result.Add($"[{nameOfTheEntityClassFirstLower}].[{property.IdentifierText}] AS [{nameOfTheEntityClass}{property.IdentifierText}]");
             }
 
             return result;
@@ -450,22 +454,24 @@ WHERE {{nameOfTheEntityClassFirstLower}}.{{extractedEntityClass.Identifier.Text}
             ClassDeclarationSyntax extractedEntityClass = Helper.ExtractEntityFromList(entityProperty.Type, entityClasses);
             string nameOfTheEntityClass = entityClass.Identifier.Text;
             string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
+            SoftProperty identifierPropertyOfTheEntityClass = GetIdentifierProperty(entityClass, entityClasses);
 
-            string extractedEntityIdType = GetIdType(extractedEntityClass, entityClasses);
+            //string extractedEntityIdType = GetIdType(extractedEntityClass, entityClasses);
+            SoftProperty extractedEntityIdentifierProperty = GetIdentifierProperty(extractedEntityClass, entityClasses);
 
             string manyToManyValue = entityProperty.Attributes.Where(x => x.Name == "ManyToMany").Select(x => x.Value).SingleOrDefault();
 
             if (manyToManyValue == null)
             {
                 return $$"""
-LEFT JOIN {{extractedEntityClass.Identifier.Text}} AS {{extractedEntityClass.Identifier.Text.FirstCharToLower()}} on {{extractedEntityClass.Identifier.Text.FirstCharToLower()}}.{{nameOfTheEntityClass}}Id = {{nameOfTheEntityClassFirstLower}}.Id
+LEFT JOIN [{{extractedEntityClass.Identifier.Text}}] AS [{{extractedEntityClass.Identifier.Text.FirstCharToLower()}}] on [{{extractedEntityClass.Identifier.Text.FirstCharToLower()}}].[{{nameOfTheEntityClass}}Id] = [{{nameOfTheEntityClassFirstLower}}].[{{identifierPropertyOfTheEntityClass.IdentifierText}}]
 """;
             }
             else
             {
                 return $$"""
-LEFT JOIN {{manyToManyValue}} AS {{manyToManyValue.FirstCharToLower()}} on {{manyToManyValue.FirstCharToLower()}}.{{nameOfTheEntityClass}}Id = {{nameOfTheEntityClassFirstLower}}.Id
-LEFT JOIN {{extractedEntityClass.Identifier.Text}} AS {{extractedEntityClass.Identifier.Text.FirstCharToLower()}} on {{extractedEntityClass.Identifier.Text.FirstCharToLower()}}.Id = {{manyToManyValue.FirstCharToLower()}}.{{extractedEntityClass.Identifier.Text}}Id
+LEFT JOIN [{{manyToManyValue}}] AS [{{manyToManyValue.FirstCharToLower()}}] on [{{manyToManyValue.FirstCharToLower()}}].[{{nameOfTheEntityClass}}Id] = [{{nameOfTheEntityClassFirstLower}}].[{{identifierPropertyOfTheEntityClass.IdentifierText}}]
+LEFT JOIN [{{extractedEntityClass.Identifier.Text}}] AS [{{extractedEntityClass.Identifier.Text.FirstCharToLower()}}] on [{{extractedEntityClass.Identifier.Text.FirstCharToLower()}}].[{{extractedEntityIdentifierProperty.IdentifierText}}] = [{{manyToManyValue.FirstCharToLower()}}].[{{extractedEntityClass.Identifier.Text}}Id]
 """;
             }
         }
@@ -482,6 +488,7 @@ LEFT JOIN {{extractedEntityClass.Identifier.Text}} AS {{extractedEntityClass.Ide
 
             string nameOfTheEntityClass = entityClass.Identifier.Text;
             string nameOfTheEntityClassFirstLower = nameOfTheEntityClass.FirstCharToLower();
+            SoftProperty identifierPropertyOfTheEntityClass = GetIdentifierProperty(entityClass, entityClasses);
 
             List<SoftClass> softEntityClasses = Helper.GetSoftEntityClasses(entityClasses);
 
@@ -492,25 +499,27 @@ LEFT JOIN {{extractedEntityClass.Identifier.Text}} AS {{extractedEntityClass.Ide
                 ClassDeclarationSyntax nestedEntityClass = Helper.GetClass(prop.ClassIdentifierText, entityClasses);
                 string nestedEntityClassName = nestedEntityClass.Identifier.Text;
                 string nestedEntityClassNameLowerCase = nestedEntityClassName.FirstCharToLower();
-                string nestedEntityClassIdType = GetIdType(nestedEntityClass, entityClasses);
+                SoftProperty nestedEntityClassIdentifierProperty = GetIdentifierProperty(nestedEntityClass, entityClasses);
 
                 if (recursiveIteration == 0)
                 {
                     result.Add($$"""
-                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = Get{{nestedEntityClassName}}ListFor{{nameOfTheEntityClass}}(id).Select(x => x.Id).ToList();
+                List<{{nestedEntityClassIdentifierProperty.Type}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = Get{{nestedEntityClassName}}ListFor{{nameOfTheEntityClass}}(id).Select(x => x.{{identifierPropertyOfTheEntityClass.IdentifierText}}).ToList();
 """);
                 }
                 else
                 {
+                    SoftProperty parentEntityClassIdentifierProperty = GetIdentifierProperty(parentNameOfTheEntityClass, entityClasses);
+
                     result.Add($$"""
-                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = Get{{nestedEntityClassName}}List().Where(x => {{parentNameOfTheEntityClass.FirstCharToLower()}}{{nameOfTheEntityClass}}ListToDelete.Contains(x.{{prop.IdentifierText}}.Id)).Select(x => x.Id).ToList();
+                List<{{nestedEntityClassIdentifierProperty.Type}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = Get{{nestedEntityClassName}}List().Where(x => {{parentNameOfTheEntityClass.FirstCharToLower()}}{{nameOfTheEntityClass}}ListToDelete.Contains(x.{{prop.IdentifierText}}.{{nestedEntityClassIdentifierProperty.IdentifierText}})).Select(x => x.{{parentEntityClassIdentifierProperty.IdentifierText}}).ToList();
 """);
                 }
 
                 result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, entityClasses, nameOfTheEntityClass, recursiveIteration + 1));
 
                 result.Add($$"""
-                DeleteEntities<{{nestedEntityClassName}}, {{nestedEntityClassIdType}}>({{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete);
+                DeleteEntities<{{nestedEntityClassName}}, {{nestedEntityClassIdentifierProperty.Type}}>({{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete);
 """);
             }
 
@@ -543,6 +552,43 @@ LEFT JOIN {{extractedEntityClass.Identifier.Text}} AS {{extractedEntityClass.Ide
                 return "YouNeedToSpecifyIdInsideEntity";
 
             return idType;
+        }
+
+        public static SoftProperty GetIdentifierProperty(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        {
+            List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
+
+            SoftProperty idProperty = entityProperties.Where(x => x.Attributes.Any(x => x.Name == "Identifier")).SingleOrDefault();
+
+            if (idProperty == null)
+            {
+                return new SoftProperty
+                {
+                    IdentifierText = "YouNeedToSpecifyIdentifierInsideEntity",
+                    Type = "NoType"
+                };
+            }
+
+            return idProperty;
+        }
+
+        public static SoftProperty GetIdentifierProperty(string nameOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses)
+        {
+            ClassDeclarationSyntax entityClass = Helper.GetClass(nameOfTheEntityClass, entityClasses);
+            List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
+
+            SoftProperty idProperty = entityProperties.Where(x => x.Attributes.Any(x => x.Name == "Identifier")).SingleOrDefault();
+
+            if (idProperty == null)
+            {
+                return new SoftProperty
+                {
+                    IdentifierText = "YouNeedToSpecifyIdentifierInsideEntity",
+                    Type = "NoType"
+                };
+            }
+
+            return idProperty;
         }
     }
 }

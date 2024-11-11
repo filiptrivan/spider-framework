@@ -9,6 +9,7 @@ namespace Soft.Generator.DesktopApp.Entities
 {
     public class GeneratedFile 
     {
+        [Identifier]
         public long Id { get; set; }
 
         public string DisplayName { get; set; }
