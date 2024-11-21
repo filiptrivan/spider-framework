@@ -1163,10 +1163,16 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             string argumentValue = a?.ArgumentList?.Arguments != null && a.ArgumentList.Arguments.Any()
                     ? string.Join(", ", a.ArgumentList.Arguments.Select(arg => arg?.ToString()))
                     : null; ; // FT: Doing this because of Range(0, 5) (long tail because of null pointer exception)
+
+            argumentValue = argumentValue?.Replace("\"", "").Replace("@", "");
+
+            string pattern = @"nameof\(([^)]*)\)";
+            argumentValue = argumentValue != null ? Regex.Replace(argumentValue, pattern, "$1") : null;
+
             return new SoftAttribute
             {
                 Name = a.Name.ToString(),
-                Value = argumentValue?.Replace("\"", "").Replace("@", "")
+                Value = argumentValue,
             };
         }
 

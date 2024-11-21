@@ -133,8 +133,8 @@ namespace {{basePartOfNamespace}}.DataMappers
                 if (entityPropType == "byte[]")
                     result.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName} == null ? null : Convert.FromBase64String(src.{entityPropName}))");
 
-                if (Helper.GetGenericBaseType(entityClass) == null && entityPropName.EndsWith("Id"))
-                    result.Add($".Ignore(dest => dest.{entityPropName})");
+                //if (Helper.GetGenericBaseType(entityClass) == null && entityPropName.EndsWith("Id")) // FT: I don't know why i did this for M2M
+                //    result.Add($".Ignore(dest => dest.{entityPropName})");
             }
 
             return result;

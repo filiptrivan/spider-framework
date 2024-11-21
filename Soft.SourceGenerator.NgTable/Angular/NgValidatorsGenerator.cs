@@ -321,14 +321,14 @@ export class Validator{{projectName}}Service {
         {
             string validationRulePropNameFirstLower = validationRulePropName.FirstCharToLower();
 
-            if (validationRulePropNameFirstLower.EndsWith("Id") && validationRulePropNameFirstLower.Length > 2)
-            {
-                validationRulePropNameFirstLower = validationRulePropNameFirstLower.Substring(0, validationRulePropNameFirstLower.Length - 2);
-            }
-            else if (validationRulePropNameFirstLower.EndsWith("DisplayName"))
-            {
-                validationRulePropNameFirstLower = validationRulePropNameFirstLower.Replace("DisplayName", "");
-            }
+            //if (validationRulePropNameFirstLower.EndsWith("Id") && validationRulePropNameFirstLower.Length > 2)
+            //{
+            //    validationRulePropNameFirstLower = validationRulePropNameFirstLower.Substring(0, validationRulePropNameFirstLower.Length - 2);
+            //}
+            //else if (validationRulePropNameFirstLower.EndsWith("DisplayName"))
+            //{
+            //    validationRulePropNameFirstLower = validationRulePropNameFirstLower.Replace("DisplayName", "");
+            //}
 
             return validationRulePropNameFirstLower;
         }

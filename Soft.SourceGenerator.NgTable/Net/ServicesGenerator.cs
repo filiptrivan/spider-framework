@@ -81,10 +81,22 @@ namespace {{basePartOfTheNamespace}}.Services
             {
                 string baseType = entityClass.GetBaseType();
 
-                if (baseType == null) // FT: Handling many to many, maybe you should do something else in the future
-                    continue;
-
                 string nameOfTheEntityClass = entityClass.Identifier.Text;
+
+                if (baseType == null) // FT: Handling many to many
+                {
+                    sb.AppendLine($$"""
+        #region {{nameOfTheEntityClass}}
+
+{{HandleManyToManyData(entityClass, entityClasses)}}
+
+        #endregion
+
+""");
+
+                    continue;
+                }
+
                 string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
                 string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, entityClasses);
                 string displayNameProperty = Helper.GetDisplayNamePropForClass(entityClass, entityClasses);
@@ -110,7 +122,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 if (dto == null)
                     throw new BusinessException(SharedTerms.EntityDoesNotExistInDatabase);
 
-{{string.Join("\n", GetPopulateDTOWithBlobParts(entityClass, entityProperties))}}
+{{GetPopulateDTOWithBlobPartsForDTO(entityClass, entityProperties)}}
 
                 return dto;
             });
@@ -220,10 +232,7 @@ namespace {{basePartOfTheNamespace}}.Services
                     .ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ToDTOConfig())
                     .ToListAsync();
 
-                foreach ({{nameOfTheEntityClass}}DTO dto in dtoList)
-                {
-{{string.Join("\n", GetPopulateDTOWithBlobParts(entityClass, entityProperties))}}
-                }
+{{GetPopulateDTOWithBlobPartsForDTOList(entityClass, entityProperties)}}
 
                 return dtoList;
             });
@@ -504,7 +513,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static List<string> GetManyToOneDeleteQueries(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, string parentNameOfTheEntityClass, int recursiveIteration)
         {
-            if (recursiveIteration > 5000) 
+            if (recursiveIteration > 5000)
             {
                 GetManyToOneDeleteQueries(null, null, null, int.MaxValue);
                 return new List<string> { "You made cascade delete infinite loop." };
@@ -541,7 +550,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
                 result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, entityClasses, nameOfTheEntityClass, recursiveIteration + 1));
 
-                    result.Add($$"""
+                result.Add($$"""
                 await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete.Contains(x.Id)).ExecuteDeleteAsync();
 """);
             }
@@ -553,15 +562,42 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Read
 
+        private static string GetPopulateDTOWithBlobPartsForDTO(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
+        {
+            List<string> blobParts = GetPopulateDTOWithBlobParts(entityClass, propertiesEntityClass);
+
+            if (blobParts.Count == 0)
+                return null;
+
+            return $$"""
+                {{string.Join("\n", blobParts)}}
+""";
+        }
+
+        private static string GetPopulateDTOWithBlobPartsForDTOList(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
+        {
+            List<string> blobParts = GetPopulateDTOWithBlobParts(entityClass, propertiesEntityClass);
+
+            if (blobParts.Count == 0)
+                return null;
+
+            return $$"""
+                foreach ({{entityClass.Identifier.Text}}DTO dto in dtoList)
+                {
+                    {{string.Join("\n", blobParts)}}
+                }
+""";
+        }
+
         private static List<string> GetPopulateDTOWithBlobParts(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
         {
-            List<string> result = new List<string>();
+            List<string> blobParts = new List<string>();
 
             List<SoftProperty> blobProperies = Helper.GetBlobProperties(propertiesEntityClass);
 
             foreach (SoftProperty property in blobProperies)
             {
-                result.Add($$"""
+                blobParts.Add($$"""
                     if (!string.IsNullOrEmpty(dto.{{property.IdentifierText}}))
                     {
                         dto.{{property.IdentifierText}}Data = await GetFileDataAsync(dto.{{property.IdentifierText}});
@@ -569,7 +605,7 @@ namespace {{basePartOfTheNamespace}}.Services
 """);
             }
 
-            return result;
+            return blobParts;
         }
 
         #endregion
@@ -779,6 +815,91 @@ namespace {{basePartOfTheNamespace}}.Services
         {
             string[] parts = propType.Split('<');
             return parts[parts.Length-1].Replace(">", "");
+        }
+
+        #endregion
+
+        #region M2M
+
+        private static string HandleManyToManyData(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        {
+            string nameOfTheEntityClass = entityClass.Identifier.Text;
+            string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
+
+            List<SoftProperty> manyToManyProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses);
+
+            SoftProperty extendPrimaryKeyProperty = manyToManyProperties.Where(x => x.Attributes.Any(x => x.Name == "ExtendManyToMany")).SingleOrDefault();
+            SoftProperty mainEntityPrimaryKeyProperty = manyToManyProperties.Where(x => x.Attributes.Any(x => x.Name == "MainEntityManyToMany")).SingleOrDefault();
+
+            if (extendPrimaryKeyProperty == null)
+                return null;
+
+            if (mainEntityPrimaryKeyProperty == null)
+                return "YouNeedToDefineMainEntityAlso";
+
+            List<SoftProperty> manyToManyAdditionalProperties = manyToManyProperties.Where(x => x.IdentifierText != extendPrimaryKeyProperty.IdentifierText && x.IdentifierText != mainEntityPrimaryKeyProperty.IdentifierText).ToList();
+
+            string extendEntityClassName = extendPrimaryKeyProperty.Attributes.Where(x => x.Name == "ExtendManyToMany").Select(x => x.Value).SingleOrDefault();
+            ClassDeclarationSyntax extendEntityClass = Helper.GetClass(extendEntityClassName, entityClasses);
+            string extendEntityIdType = Helper.GetGenericIdType(extendEntityClass, entityClasses);
+
+            string mainEntityClassName = mainEntityPrimaryKeyProperty.Attributes.Where(x => x.Name == "MainEntityManyToMany").Select(x => x.Value).SingleOrDefault();
+            ClassDeclarationSyntax mainEntityClass = Helper.GetClass(mainEntityClassName, entityClasses);
+            string mainEntityIdType = Helper.GetGenericIdType(mainEntityClass, entityClasses);
+
+            return $$"""
+        /// <summary>
+        /// Call this method when you have additional fields in M2M association
+        /// </summary>
+        public async Task Update{{extendEntityClassName}}ListFor{{mainEntityClassName}}({{mainEntityIdType}} {{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}}, List<{{extendEntityClassName}}DTO> selected{{extendEntityClassName}}DTOList)
+        {
+            if (selected{{extendEntityClassName}}DTOList == null)
+                return;
+
+            List<{{nameOfTheEntityClass}}DTO> selectedDTOListHelper = selected{{extendEntityClassName}}DTOList
+                .Select(x => new {{nameOfTheEntityClass}}DTO
+                {
+                    {{mainEntityPrimaryKeyProperty.IdentifierText}} = {{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}},
+                    {{extendPrimaryKeyProperty.IdentifierText}} = x.Id,
+                    {{string.Join(",\n\t\t\t\t\t", manyToManyAdditionalProperties.Select(property => $"{property.IdentifierText} = x.{property.IdentifierText}"))}}
+                })
+                .ToList();
+
+            await _context.WithTransactionAsync(async () =>
+            {
+                // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
+
+                DbSet<{{nameOfTheEntityClass}}> dbSet = _context.DbSet<{{nameOfTheEntityClass}}>();
+                List<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}List = await dbSet.Where(x => x.{{mainEntityPrimaryKeyProperty.IdentifierText}} == {{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}}).ToListAsync();
+
+                foreach ({{nameOfTheEntityClass}}DTO selected{{nameOfTheEntityClass}}DTO in selectedDTOListHelper)
+                {
+                    {{nameOfTheEntityClass}}DTOValidationRules validationRules = new {{nameOfTheEntityClass}}DTOValidationRules();
+                    DefaultValidatorExtensions.ValidateAndThrow(validationRules, selected{{nameOfTheEntityClass}}DTO);
+
+                    {{nameOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}} = {{nameOfTheEntityClassFirstLower}}List.Where(x => x.{{extendPrimaryKeyProperty.IdentifierText}} == selected{{nameOfTheEntityClass}}DTO.{{extendPrimaryKeyProperty.IdentifierText}}).SingleOrDefault();
+
+                    if ({{nameOfTheEntityClassFirstLower}} == null)
+                    {
+                        {{nameOfTheEntityClassFirstLower}} = TypeAdapter.Adapt<{{nameOfTheEntityClass}}>(selected{{nameOfTheEntityClass}}DTO, Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
+                        {{nameOfTheEntityClassFirstLower}}.{{mainEntityPrimaryKeyProperty.IdentifierText}} = {{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}};
+                        dbSet.Add({{nameOfTheEntityClassFirstLower}});
+                    }
+                    else
+                    {
+                        selected{{nameOfTheEntityClass}}DTO.Adapt({{nameOfTheEntityClassFirstLower}}, Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
+                        dbSet.Update({{nameOfTheEntityClassFirstLower}});
+
+                        {{nameOfTheEntityClassFirstLower}}List.Remove({{nameOfTheEntityClassFirstLower}});
+                    }
+                }
+
+                dbSet.RemoveRange({{nameOfTheEntityClassFirstLower}}List);
+
+                await _context.SaveChangesAsync();
+            });
+        }
+""";
         }
 
         #endregion
