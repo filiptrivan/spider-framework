@@ -64,6 +64,8 @@ import { MimeTypes } from "src/app/core/entities/mime-type";
                 foreach (SoftClass DTOClass in DTOClassGroup) // It can only be 2 here
                     DTOProperties.AddRange(DTOClass.Properties);
 
+                DTOProperties = DTOProperties.Where(x => x.Attributes.Any(x => x.Name == "IgnorePropertyInDTO") == false).ToList();
+
                 List<string> angularPropertyDefinitions = GetAllAngularPropertyDefinitions(DTOProperties); // FT: If, in some moment, we want to make another aproach set this to false, now it doesn't matter
                 string angularClassIdentifier = DTOClassGroup.Key.Replace("DTO", "");
 

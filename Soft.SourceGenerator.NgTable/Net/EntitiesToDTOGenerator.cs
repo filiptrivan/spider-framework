@@ -85,6 +85,9 @@ namespace {{basePartOfNamespace}}.DTO
 
             foreach (SoftProperty prop in propertiesEntityClass)
             {
+                if (prop.Attributes.Any(x => x.Name == "IgnorePropertyInDTO"))
+                    continue;
+
                 string propType = prop.Type;
                 string propName = prop.IdentifierText;
 

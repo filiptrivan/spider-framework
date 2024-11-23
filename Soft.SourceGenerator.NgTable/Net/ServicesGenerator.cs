@@ -851,38 +851,32 @@ namespace {{basePartOfTheNamespace}}.Services
         /// <summary>
         /// Call this method when you have additional fields in M2M association
         /// </summary>
-        public async Task Update{{extendEntityClassName}}ListFor{{mainEntityClassName}}({{mainEntityIdType}} {{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}}, List<{{extendEntityClassName}}DTO> selected{{extendEntityClassName}}DTOList)
+        public async Task Update{{extendEntityClassName}}ListFor{{mainEntityClassName}}({{mainEntityIdType}} {{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}}Id, List<{{nameOfTheEntityClass}}DTO> selected{{nameOfTheEntityClass}}DTOList)
         {
-            if (selected{{extendEntityClassName}}DTOList == null)
+            if (selected{{nameOfTheEntityClass}}DTOList == null)
                 return;
 
-            List<{{nameOfTheEntityClass}}DTO> selectedDTOListHelper = selected{{extendEntityClassName}}DTOList
-                .Select(x => new {{nameOfTheEntityClass}}DTO
-                {
-                    {{mainEntityPrimaryKeyProperty.IdentifierText}} = {{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}},
-                    {{extendPrimaryKeyProperty.IdentifierText}} = x.Id,
-                    {{string.Join(",\n\t\t\t\t\t", manyToManyAdditionalProperties.Select(property => $"{property.IdentifierText} = x.{property.IdentifierText}"))}}
-                })
-                .ToList();
+            List<{{nameOfTheEntityClass}}DTO> selectedDTOListHelper = selected{{nameOfTheEntityClass}}DTOList.ToList();
 
             await _context.WithTransactionAsync(async () =>
             {
                 // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
 
                 DbSet<{{nameOfTheEntityClass}}> dbSet = _context.DbSet<{{nameOfTheEntityClass}}>();
-                List<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}List = await dbSet.Where(x => x.{{mainEntityPrimaryKeyProperty.IdentifierText}} == {{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}}).ToListAsync();
+                List<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}List = await dbSet.Where(x => x.{{mainEntityPrimaryKeyProperty.IdentifierText}}.Id == {{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}}Id).ToListAsync();
 
                 foreach ({{nameOfTheEntityClass}}DTO selected{{nameOfTheEntityClass}}DTO in selectedDTOListHelper)
                 {
                     {{nameOfTheEntityClass}}DTOValidationRules validationRules = new {{nameOfTheEntityClass}}DTOValidationRules();
                     DefaultValidatorExtensions.ValidateAndThrow(validationRules, selected{{nameOfTheEntityClass}}DTO);
 
-                    {{nameOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}} = {{nameOfTheEntityClassFirstLower}}List.Where(x => x.{{extendPrimaryKeyProperty.IdentifierText}} == selected{{nameOfTheEntityClass}}DTO.{{extendPrimaryKeyProperty.IdentifierText}}).SingleOrDefault();
+                    {{nameOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}} = {{nameOfTheEntityClassFirstLower}}List.Where(x => x.{{extendPrimaryKeyProperty.IdentifierText}}.Id == selected{{nameOfTheEntityClass}}DTO.{{extendPrimaryKeyProperty.IdentifierText}}Id).SingleOrDefault();
 
                     if ({{nameOfTheEntityClassFirstLower}} == null)
                     {
                         {{nameOfTheEntityClassFirstLower}} = TypeAdapter.Adapt<{{nameOfTheEntityClass}}>(selected{{nameOfTheEntityClass}}DTO, Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
-                        {{nameOfTheEntityClassFirstLower}}.{{mainEntityPrimaryKeyProperty.IdentifierText}} = {{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}};
+                        {{nameOfTheEntityClassFirstLower}}.{{mainEntityPrimaryKeyProperty.IdentifierText}} = await LoadInstanceAsync<{{mainEntityClassName}}, {{mainEntityIdType}}>({{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}}Id, null);
+                        {{nameOfTheEntityClassFirstLower}}.{{extendPrimaryKeyProperty.IdentifierText}} = await LoadInstanceAsync<{{extendEntityClassName}}, {{extendEntityIdType}}>((long)selected{{nameOfTheEntityClass}}DTO.{{extendPrimaryKeyProperty.IdentifierText}}Id, null);
                         dbSet.Add({{nameOfTheEntityClassFirstLower}});
                     }
                     else

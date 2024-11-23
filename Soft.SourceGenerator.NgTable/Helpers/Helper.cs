@@ -528,6 +528,9 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             foreach (SoftProperty prop in properties)
             {
+                if (prop.Attributes.Any(x => x.Name == "IgnorePropertyInDTO"))
+                    continue;
+
                 string propType = prop.Type;
                 string propName = prop.IdentifierText;
                 // FT: Not adding attributes because they are not the same
