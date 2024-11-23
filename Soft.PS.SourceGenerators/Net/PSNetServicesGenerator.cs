@@ -1,4 +1,4 @@
-using Microsoft.CodeAnalysis;
+Ôªøusing Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Helpers;
@@ -186,10 +186,10 @@ FROM [{{nameOfTheEntityClass}}] AS [{{nameOfTheEntityClassFirstLower}}]
 
 {{string.Join("\n\n", GetListMethodsWithFilters(entityClass, entityClasses))}}
 
-        public {{nameOfTheEntityClass}} Insert{{nameOfTheEntityClass}}({{nameOfTheEntityClass}} entity)
+        private {{nameOfTheEntityClass}} Insert{{nameOfTheEntityClass}}({{nameOfTheEntityClass}} entity)
         {
             if (entity == null)
-                throw new Exception("Ne moûete da ubacite prazan objekat.");
+                throw new Exception("Ne mo≈æete da ubacite prazan objekat.");
 
             // FT: Not validating here property by property, because sql server will throw exception, we should already validate object on the form.
 
@@ -212,19 +212,20 @@ FROM [{{nameOfTheEntityClass}}] AS [{{nameOfTheEntityClassFirstLower}}]
             return entity;
         }
 
-        public {{nameOfTheEntityClass}} Update{{nameOfTheEntityClass}}({{nameOfTheEntityClass}} entity)
+        private {{nameOfTheEntityClass}} Update{{nameOfTheEntityClass}}({{nameOfTheEntityClass}} entity)
         {
             if (entity == null)
-                throw new Exception("Ne moûete da aûurirate prazan objekat.");
+                throw new Exception("Ne mo≈æete da a≈æurirate prazan objekat.");
 
             // FT: Not validating here property by property, because sql server will throw exception, we should already validate object on the form.
 
-            string query = $"UPDATE [{{nameOfTheEntityClass}}] SET {{updateParameterNames}};";
+            string query = $"UPDATE [{{nameOfTheEntityClass}}] SET {{updateParameterNames}} where [{{idPropertyOfTheEntityClass.IdentifierText}}] = @{{idPropertyOfTheEntityClass.IdentifierText}};";
 
             _connection.WithTransaction(() =>
             {
                 using (SqlCommand cmd = new SqlCommand(query, _connection))
                 {
+                    cmd.Parameters.AddWithValue("@{{idPropertyOfTheEntityClass.IdentifierText}}", entity.{{idPropertyOfTheEntityClass.IdentifierText}});
                     {{string.Join("\n\t\t\t\t\t", entityPropertiesWithoutEnumerableAndId.Select(x => x.Type.PropTypeIsManyToOne() ? $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}Id\", entity.{x.IdentifierText}.{GetIdentifierProperty(x.Type, entityClasses).IdentifierText});" : $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}\", entity.{x.IdentifierText});"))}}
 
                     cmd.ExecuteNonQuery();
@@ -232,6 +233,25 @@ FROM [{{nameOfTheEntityClass}}] AS [{{nameOfTheEntityClassFirstLower}}]
             });
 
             return entity;
+        }
+
+        public {{nameOfTheEntityClass}} Save{{nameOfTheEntityClass}}({{nameOfTheEntityClass}} entity)
+        {
+            if (entity == null)
+                throw new Exception("Ne mo≈æete da saƒçuvate prazan objekat.");
+
+            if (entity.Id > 0)
+            {
+                return Update{{nameOfTheEntityClass}}(entity);
+            }
+            else if (entity.Id == 0)
+            {
+                return Insert{{nameOfTheEntityClass}}(entity);
+            }
+            else
+            {
+                throw new InvalidOperationException("Vrednost identifikatora ne sme biti negativna.");
+            }
         }
 
         public void Delete{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} id)
@@ -281,7 +301,7 @@ FROM [{{nameOfTheEntityClass}}] AS [{{nameOfTheEntityClassFirstLower}}]
             Dictionary<{{idTypeOfTheEntityClass}}, {{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}Dict = new Dictionary<{{idTypeOfTheEntityClass}}, {{nameOfTheEntityClass}}>();
 
             if (ids == null || ids.Count == 0)
-                throw new ArgumentException("Lista po kojoj ûelite da filtrirate ne moûe da bude prazna.");
+                throw new ArgumentException("Lista po kojoj ≈æelite da filtrirate ne mo≈æe da bude prazna.");
 
             List<string> parameters = new List<string>();
             for (int i = 0; i < ids.Count; i++)

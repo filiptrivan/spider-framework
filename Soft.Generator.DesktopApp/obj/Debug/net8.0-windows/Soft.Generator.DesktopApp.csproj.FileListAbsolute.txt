@@ -67,3 +67,5 @@ E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-win
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.PermissionListPage.resources
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.SettingListPage.resources
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.FrameworkPages.FrameworkDetailsPage.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Controls.SoftReturnButton.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Controls.SoftSaveButton.resources

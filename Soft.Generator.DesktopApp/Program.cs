@@ -39,18 +39,25 @@ namespace Soft.Generator.DesktopApp
             //services.AddMySqlDataSource(Settings.ConnectionString);
             services.AddScoped<SqlConnection>(_ => new SqlConnection(Settings.ConnectionString));
             services.AddScoped<DesktopAppBusinessService>();
-            services.AddScoped<PermissionController>();
+            services.AddScoped<ClientSharedService>();
+
+            services.AddScoped<ApplicationController>();
+            services.AddScoped<CompanyController>();
             services.AddScoped<FrameworkController>();
+            services.AddScoped<HomeController>();
+            services.AddScoped<PathToDomainFolderController>();
+            services.AddScoped<PermissionController>();
+            services.AddScoped<SettingController>();
 
             services.AddTransient<Form1>();
-            services.AddTransient<ApplicationListPage>();
-            services.AddTransient<CompanyListPage>();
-            services.AddTransient<FrameworkListPage>();
-            services.AddTransient<FrameworkDetailsPage>();
-            services.AddTransient<HomePage>();
-            services.AddTransient<PathToDomainFolderListPage>();
-            services.AddTransient<PermissionListPage>();
-            services.AddTransient<SettingListPage>();
+            //services.AddTransient<ApplicationListPage>();
+            //services.AddTransient<CompanyListPage>();
+            //services.AddTransient<FrameworkListPage>();
+            //services.AddTransient<FrameworkDetailsPage>();
+            //services.AddTransient<HomePage>();
+            //services.AddTransient<PathToDomainFolderListPage>();
+            //services.AddTransient<PermissionListPage>();
+            //services.AddTransient<SettingListPage>();
         }
     }
 }

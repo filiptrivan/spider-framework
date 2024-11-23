@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Soft.Generator.DesktopApp.Controllers;
+using Soft.Generator.DesktopApp.Pages;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,10 +10,36 @@ namespace Soft.Generator.DesktopApp.Services
 {
     public class PageNavigator
     {
+        private readonly ApplicationController _applicationController;
+        private readonly CompanyController _companyController;
+        private readonly FrameworkController _frameworkController;
+        private readonly HomeController _homeController;
+        private readonly PathToDomainFolderController _pathToDomainFolderController;
+        private readonly PermissionController _permissionController;
+        private readonly SettingController _settingController;
+
+        private readonly ClientSharedService _clientSharedService;
+
         private Stack<UserControl> _pageStack = new Stack<UserControl>();
         private Panel _pnl_Main;
 
-        public PageNavigator() { }
+        public PageNavigator(
+            ClientSharedService clientSharedService,
+            ApplicationController applicationController, CompanyController companyController, FrameworkController frameworkController, HomeController homeController,
+            PathToDomainFolderController pathToDomainFolderController, PermissionController permissionController, SettingController settingController
+            )
+        {
+            _applicationController = applicationController;
+            _companyController = companyController;
+            _frameworkController = frameworkController;
+            _homeController = homeController;
+            _pathToDomainFolderController = pathToDomainFolderController;
+            _permissionController = permissionController;
+            _settingController = settingController;
+
+            _clientSharedService = clientSharedService;
+
+        }
 
         public void InitializeMainPanel(Panel pnl_Main)
         {
@@ -21,9 +49,11 @@ namespace Soft.Generator.DesktopApp.Services
         /// <summary>
         /// Pass <paramref name="currentPage"/> if you want to have the return button on the page which you are navigating to.
         /// </summary>
-        public void NavigateToPage(UserControl page, UserControl currentPage = null)
+        public T NavigateToPage<T>(UserControl currentPage = null) where T : UserControl
         {
             _pnl_Main.Controls.Clear();
+
+            T page = InstantiatePage<T>();
 
             page.Dock = DockStyle.Fill;
 
@@ -33,6 +63,8 @@ namespace Soft.Generator.DesktopApp.Services
             {
                 _pageStack.Push(currentPage);
             }
+
+            return page;
         }
 
         public void NavigateBack()
@@ -43,10 +75,39 @@ namespace Soft.Generator.DesktopApp.Services
 
                 _pnl_Main.Controls.Clear();
 
-                previousPage.Dock = DockStyle.Fill;
+                UserControl reInstantiatedPreviousPage = InstantiatePage(previousPage.Name);
 
-                _pnl_Main.Controls.Add(previousPage);
+                reInstantiatedPreviousPage.Dock = DockStyle.Fill;
+
+                _pnl_Main.Controls.Add(reInstantiatedPreviousPage);
             }
+        }
+
+        public T InstantiatePage<T>() where T : UserControl
+        {
+            if (typeof(T) == typeof(HomePage))
+            {
+                return new HomePage() as T;
+            }
+            else if (typeof(T) == typeof(FrameworkListPage))
+            {
+                return new FrameworkListPage(_frameworkController, this, _clientSharedService) as T;
+            }
+
+            return null;
+        }
+
+        public UserControl InstantiatePage(string pageName)
+        {
+            switch (pageName)
+            {
+                case nameof(HomePage):
+                    return new HomePage();
+                case nameof(FrameworkListPage):
+                    return new FrameworkListPage(_frameworkController, this, _clientSharedService);
+            }
+
+            return null;
         }
     }
 }

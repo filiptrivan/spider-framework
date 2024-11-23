@@ -1,6 +1,6 @@
-﻿namespace Soft.Generator.DesktopApp.Pages
+﻿namespace Soft.Generator.DesktopApp.Controls
 {
-    partial class FrameworkListPage
+    partial class SoftReturnButton
     {
         /// <summary> 
         /// Required designer variable.
@@ -28,36 +28,31 @@
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
-            frameworkBindingSource = new BindingSource(components);
-            softDataGridView1 = new Controls.SoftDataGridView();
-            ((System.ComponentModel.ISupportInitialize)frameworkBindingSource).BeginInit();
+            btn_Return = new Button();
             SuspendLayout();
             // 
-            // frameworkBindingSource
+            // btn_Return
             // 
-            frameworkBindingSource.DataSource = typeof(Entities.Framework);
+            btn_Return.Location = new Point(3, 3);
+            btn_Return.Name = "btn_Return";
+            btn_Return.Size = new Size(75, 23);
+            btn_Return.TabIndex = 0;
+            btn_Return.Text = "Vrati se";
+            btn_Return.UseVisualStyleBackColor = true;
+            btn_Return.Click += btn_Return_Click;
             // 
-            // softDataGridView1
-            // 
-            softDataGridView1.Location = new Point(0, 0);
-            softDataGridView1.Name = "softDataGridView1";
-            softDataGridView1.Size = new Size(600, 181);
-            softDataGridView1.TabIndex = 0;
-            // 
-            // FrameworkPage
+            // SoftReturnButton
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            Controls.Add(softDataGridView1);
-            Name = "FrameworkListPage";
-            Size = new Size(600, 200);
-            ((System.ComponentModel.ISupportInitialize)frameworkBindingSource).EndInit();
+            Controls.Add(btn_Return);
+            Name = "SoftReturnButton";
+            Size = new Size(81, 30);
             ResumeLayout(false);
         }
 
         #endregion
-        private BindingSource frameworkBindingSource;
-        private Controls.SoftDataGridView softDataGridView1;
+
+        private Button btn_Return;
     }
 }

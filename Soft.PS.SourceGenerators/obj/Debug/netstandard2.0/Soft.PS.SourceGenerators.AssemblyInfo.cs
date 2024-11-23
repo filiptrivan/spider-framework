@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Soft.PS.SourceGenerators")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+58ba938ee22f759a359f1516f9bb656d676100af")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e5615220ce4831db2c49e8583a68a024a41649da")]
 [assembly: System.Reflection.AssemblyProductAttribute("Soft.PS.SourceGenerators")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Soft.PS.SourceGenerators")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

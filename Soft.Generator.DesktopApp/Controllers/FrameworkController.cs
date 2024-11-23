@@ -17,6 +17,11 @@ namespace Soft.Generator.DesktopApp.Controllers
             _desktopAppBusinessService = desktopAppBusinessService;
         }
 
+        public Framework SaveFramework(Framework framework)
+        {
+            return _desktopAppBusinessService.SaveFramework(framework);
+        }
+
         public List<Framework> GetFrameworkList()
         {
             return _desktopAppBusinessService.GetFrameworkList();

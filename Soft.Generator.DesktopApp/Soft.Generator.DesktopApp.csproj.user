@@ -4,6 +4,12 @@
     <Compile Update="Controls\SoftDataGridView.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Update="Controls\SoftReturnButton.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Controls\SoftSaveButton.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Update="Controls\SoftTextbox.cs">
       <SubType>UserControl</SubType>
     </Compile>

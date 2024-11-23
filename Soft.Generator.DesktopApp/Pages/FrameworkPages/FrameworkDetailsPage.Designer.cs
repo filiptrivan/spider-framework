@@ -28,57 +28,58 @@
         /// </summary>
         private void InitializeComponent()
         {
-            softTextbox1 = new SoftTextbox();
-            softTextbox2 = new SoftTextbox();
-            softTextbox3 = new SoftTextbox();
-            button1 = new Button();
+            tb_Name = new SoftTextbox();
+            tb_Code = new SoftTextbox();
+            btn_Save = new Button();
+            btn_Return = new Button();
             SuspendLayout();
             // 
-            // softTextbox1
+            // tb_Name
             // 
-            softTextbox1.LabelValue = "label1";
-            softTextbox1.Location = new Point(3, 3);
-            softTextbox1.Name = "softTextbox1";
-            softTextbox1.Size = new Size(238, 63);
-            softTextbox1.TabIndex = 0;
-            softTextbox1.TextBoxValue = "";
+            tb_Name.LabelValue = "Name";
+            tb_Name.Location = new Point(3, 3);
+            tb_Name.Name = "tb_Name";
+            tb_Name.Size = new Size(238, 63);
+            tb_Name.TabIndex = 0;
+            tb_Name.TextBoxValue = "";
             // 
-            // softTextbox2
+            // tb_Code
             // 
-            softTextbox2.LabelValue = "label1";
-            softTextbox2.Location = new Point(247, 3);
-            softTextbox2.Name = "softTextbox2";
-            softTextbox2.Size = new Size(238, 63);
-            softTextbox2.TabIndex = 1;
-            softTextbox2.TextBoxValue = "";
+            tb_Code.LabelValue = "Code";
+            tb_Code.Location = new Point(247, 3);
+            tb_Code.Name = "tb_Code";
+            tb_Code.Size = new Size(238, 63);
+            tb_Code.TabIndex = 1;
+            tb_Code.TextBoxValue = "";
             // 
-            // softTextbox3
+            // btn_Save
             // 
-            softTextbox3.LabelValue = "label1";
-            softTextbox3.Location = new Point(3, 72);
-            softTextbox3.Name = "softTextbox3";
-            softTextbox3.Size = new Size(238, 63);
-            softTextbox3.TabIndex = 2;
-            softTextbox3.TextBoxValue = "";
+            btn_Save.Location = new Point(16, 72);
+            btn_Save.Name = "btn_Save";
+            btn_Save.Size = new Size(75, 23);
+            btn_Save.TabIndex = 3;
+            btn_Save.Text = "Sačuvaj";
+            btn_Save.UseVisualStyleBackColor = true;
+            btn_Save.Click += btn_Save_Click;
             // 
-            // button1
+            // btn_Return
             // 
-            button1.Location = new Point(17, 152);
-            button1.Name = "button1";
-            button1.Size = new Size(75, 23);
-            button1.TabIndex = 3;
-            button1.Text = "button1";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click;
+            btn_Return.Location = new Point(106, 72);
+            btn_Return.Name = "btn_Return";
+            btn_Return.Size = new Size(75, 23);
+            btn_Return.TabIndex = 4;
+            btn_Return.Text = "Vrati se";
+            btn_Return.UseVisualStyleBackColor = true;
+            btn_Return.Click += btn_Return_Click;
             // 
             // FrameworkDetailsPage
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            Controls.Add(button1);
-            Controls.Add(softTextbox3);
-            Controls.Add(softTextbox2);
-            Controls.Add(softTextbox1);
+            Controls.Add(btn_Return);
+            Controls.Add(btn_Save);
+            Controls.Add(tb_Code);
+            Controls.Add(tb_Name);
             Name = "FrameworkDetailsPage";
             Size = new Size(574, 199);
             ResumeLayout(false);
@@ -86,9 +87,9 @@
 
         #endregion
 
-        private SoftTextbox softTextbox1;
-        private SoftTextbox softTextbox2;
-        private SoftTextbox softTextbox3;
-        private Button button1;
+        private SoftTextbox tb_Name;
+        private SoftTextbox tb_Code;
+        private Button btn_Save;
+        private Button btn_Return;
     }
 }

@@ -1,6 +1,6 @@
-﻿namespace Soft.Generator.DesktopApp.Pages
+﻿namespace Soft.Generator.DesktopApp.Controls
 {
-    partial class FrameworkListPage
+    partial class SoftSaveButton
     {
         /// <summary> 
         /// Required designer variable.
@@ -28,36 +28,31 @@
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
-            frameworkBindingSource = new BindingSource(components);
-            softDataGridView1 = new Controls.SoftDataGridView();
-            ((System.ComponentModel.ISupportInitialize)frameworkBindingSource).BeginInit();
+            btn_Save = new Button();
             SuspendLayout();
             // 
-            // frameworkBindingSource
+            // btn_Save
             // 
-            frameworkBindingSource.DataSource = typeof(Entities.Framework);
+            btn_Save.Location = new Point(3, 3);
+            btn_Save.Name = "btn_Save";
+            btn_Save.Size = new Size(75, 23);
+            btn_Save.TabIndex = 0;
+            btn_Save.Text = "Sačuvaj";
+            btn_Save.UseVisualStyleBackColor = true;
+            btn_Save.Click += btn_Save_Click;
             // 
-            // softDataGridView1
-            // 
-            softDataGridView1.Location = new Point(0, 0);
-            softDataGridView1.Name = "softDataGridView1";
-            softDataGridView1.Size = new Size(600, 181);
-            softDataGridView1.TabIndex = 0;
-            // 
-            // FrameworkPage
+            // SoftSaveButton
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            Controls.Add(softDataGridView1);
-            Name = "FrameworkListPage";
-            Size = new Size(600, 200);
-            ((System.ComponentModel.ISupportInitialize)frameworkBindingSource).EndInit();
+            Controls.Add(btn_Save);
+            Name = "SoftSaveButton";
+            Size = new Size(81, 31);
             ResumeLayout(false);
         }
 
         #endregion
-        private BindingSource frameworkBindingSource;
-        private Controls.SoftDataGridView softDataGridView1;
+
+        private Button btn_Save;
     }
 }
