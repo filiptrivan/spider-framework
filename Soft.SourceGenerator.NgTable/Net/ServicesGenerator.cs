@@ -506,6 +506,25 @@ namespace {{basePartOfTheNamespace}}.Services
                 await DeleteEntityAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>({{nameOfTheEntityClassFirstLower}}Id);
             });
         }
+
+        public virtual async Task OnBefore{{nameOfTheEntityClass}}ListAsyncDelete(List<{{idTypeOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}ListToDelete) { }
+
+        public async Task Delete{{nameOfTheEntityClass}}ListAsync(List<{{idTypeOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}ListToDelete, bool authorize = true)
+        {
+            await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    await _authorizationService.{{nameOfTheEntityClass}}ListDeleteAuthorize({{nameOfTheEntityClassFirstLower}}ListToDelete);
+                }
+
+                await OnBefore{{nameOfTheEntityClass}}ListAsyncDelete({{nameOfTheEntityClassFirstLower}}ListToDelete);
+
+{{string.Join("\n", GetManyToOneDeleteQueriesForList(entityClass, entityClasses, null, 0))}}
+
+                await DeleteEntitiesAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>({{nameOfTheEntityClassFirstLower}}ListToDelete);
+            });
+        }
 """);
 
             return sb.ToString();
@@ -539,6 +558,53 @@ namespace {{basePartOfTheNamespace}}.Services
                 {
                     result.Add($$"""
                 List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => x.{{prop.IdentifierText}}.Id == {{nameOfTheEntityClassFirstLower}}Id).Select(x => x.Id).ToListAsync();
+""");
+                }
+                else
+                {
+                    result.Add($$"""
+                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{parentNameOfTheEntityClass.FirstCharToLower()}}{{nameOfTheEntityClass}}ListToDelete.Contains(x.{{prop.IdentifierText}}.Id)).Select(x => x.Id).ToListAsync();
+""");
+                }
+
+                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, entityClasses, nameOfTheEntityClass, recursiveIteration + 1));
+
+                result.Add($$"""
+                await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete.Contains(x.Id)).ExecuteDeleteAsync();
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetManyToOneDeleteQueriesForList(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, string parentNameOfTheEntityClass, int recursiveIteration)
+        {
+            if (recursiveIteration > 5000)
+            {
+                GetManyToOneDeleteQueries(null, null, null, int.MaxValue);
+                return new List<string> { "You made cascade delete infinite loop." };
+            }
+
+            List<string> result = new List<string>();
+
+            string nameOfTheEntityClass = entityClass.Identifier.Text;
+            string nameOfTheEntityClassFirstLower = nameOfTheEntityClass.FirstCharToLower();
+
+            List<SoftClass> softEntityClasses = Helper.GetSoftEntityClasses(entityClasses);
+
+            List<SoftProperty> manyToOneRequiredProperties = Helper.GetManyToOneRequiredProperties(nameOfTheEntityClass, softEntityClasses);
+
+            foreach (SoftProperty prop in manyToOneRequiredProperties)
+            {
+                ClassDeclarationSyntax nestedEntityClass = Helper.GetClass(prop.ClassIdentifierText, entityClasses);
+                string nestedEntityClassName = nestedEntityClass.Identifier.Text;
+                string nestedEntityClassNameLowerCase = nestedEntityClassName.FirstCharToLower();
+                string nestedEntityClassIdType = Helper.GetGenericIdType(nestedEntityClass, entityClasses);
+
+                if (recursiveIteration == 0)
+                {
+                    result.Add($$"""
+                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{nameOfTheEntityClassFirstLower}}ListToDelete.Contains(x.{{prop.IdentifierText}}.Id)).Select(x => x.Id).ToListAsync();
 """);
                 }
                 else

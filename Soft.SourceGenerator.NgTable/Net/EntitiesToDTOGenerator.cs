@@ -111,7 +111,12 @@ namespace {{basePartOfNamespace}}.DTO
                 else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "Map"))
                 {
                     string DTOListPropType = propType.Replace(">", "DTO>");
-                    DTOproperties.Add($"public {DTOListPropType} {propName} {{ get; set; }}");
+                    DTOproperties.Add($$"""
+        /// <summary>
+        /// Made only for manual mapping, it's not included in the mapping library.
+        /// </summary>
+        public {{DTOListPropType}} {{propName}}DTOList { get; set; }
+""");
                     continue;
                 }
                 else if (propType.IsEnumerable())

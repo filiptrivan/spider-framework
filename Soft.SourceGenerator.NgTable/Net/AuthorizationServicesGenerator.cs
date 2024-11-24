@@ -165,6 +165,17 @@ namespace {{basePartOfTheNamespace}}.Services
             : "")}}
         }
 
+        public virtual async Task {{nameOfTheEntityClass}}ListDeleteAuthorize(List<{{idTypeOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}ListToDelete)
+        {
+{{(generateAuthorizationMethods ? $$"""
+            await _context.WithTransactionAsync(async () =>
+            {
+                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Delete{{nameOfTheEntityClass}});
+            });
+"""
+            : "")}}
+        }
+
 """);
 
                 sb.AppendLine($$"""

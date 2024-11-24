@@ -196,7 +196,7 @@ namespace {{basePartOfNamespace}}.DataMappers
                     manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}DisplayName, src => src.{entityPropName}.{displayNamePropOfManyToOne})"); // "dest.TierDisplayName", "src.Tier.Name"
                 }
 
-                if (entityPropType.IsEnumerable() && entityProp.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
+                if (entityPropType.IsEnumerable())
                 {
                     string entityPropTypeInsideListBrackets = Helper.ExtractTypeFromGenericType(entityPropType);
 
@@ -207,11 +207,19 @@ namespace {{basePartOfNamespace}}.DataMappers
                     if (enumerableEntityClass == null)
                         continue;
 
-                    string displayNamePropOEnumerable = Helper.GetDisplayNamePropForClass(enumerableEntityClass, entityClasses);
-                    displayNamePropOEnumerable = displayNamePropOEnumerable.Replace(".ToString()", "");
+                    string displayNamePropOfEnumerable = Helper.GetDisplayNamePropForClass(enumerableEntityClass, entityClasses);
+                    displayNamePropOfEnumerable = displayNamePropOfEnumerable.Replace(".ToString()", "");
 
-                    // FT: eg.                      ".Map(dest => dest.SegmentationItemsCommaSeparated, src => string.Join(", ", src.CheckedSegmentationItems.Select(x => x.Name)))"
-                    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}CommaSeparated, src => string.Join(\", \", src.{entityPropName}.Select(x => x.{displayNamePropOEnumerable})))");
+                    if (entityProp.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
+                    {
+                        // FT: eg.                      ".Map(dest => dest.SegmentationItemsCommaSeparated, src => string.Join(", ", src.CheckedSegmentationItems.Select(x => x.Name)))"
+                        manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}CommaSeparated, src => string.Join(\", \", src.{entityPropName}.Select(x => x.{displayNamePropOfEnumerable})))");
+                    }
+
+                    //if (entityProp.Attributes.Any(x => x.Name == "Map"))
+                    //{
+                    //    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName}.Adapt<List<{entityPropTypeInsideListBrackets}>>())");
+                    //}
                 }
 
                 if(entityPropType == "byte[]")

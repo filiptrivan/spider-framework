@@ -84,6 +84,15 @@ namespace Soft.Generator.Shared.Services
             });
         }
 
+        public async Task DeleteEntitiesAsync<T, ID>(List<ID> ids) where T : class, IBusinessObject<ID> where ID : struct
+        {
+            await _context.WithTransactionAsync(async () =>
+            {
+                await _context.DbSet<T>().Where(x => ids.Contains(x.Id)).ExecuteDeleteAsync();
+            });
+        }
+
+
         /// <summary>
         /// </summary>
         /// <returns>Newly generated file name</returns>
