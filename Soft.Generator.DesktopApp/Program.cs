@@ -41,7 +41,7 @@ namespace Soft.Generator.DesktopApp
             services.AddScoped<DesktopAppBusinessService>();
             services.AddScoped<ClientSharedService>();
 
-            services.AddScoped<ApplicationController>();
+            services.AddScoped<WebApplicationController>();
             services.AddScoped<CompanyController>();
             services.AddScoped<FrameworkController>();
             services.AddScoped<HomeController>();

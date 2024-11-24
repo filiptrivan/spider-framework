@@ -1,5 +1,6 @@
 ﻿using Soft.Generator.DesktopApp.Controllers;
 using Soft.Generator.DesktopApp.Pages;
+using Soft.Generator.DesktopApp.Pages.FrameworkPages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,7 @@ namespace Soft.Generator.DesktopApp.Services
 {
     public class PageNavigator
     {
-        private readonly ApplicationController _applicationController;
+        private readonly WebApplicationController _webApplicationController;
         private readonly CompanyController _companyController;
         private readonly FrameworkController _frameworkController;
         private readonly HomeController _homeController;
@@ -25,17 +26,17 @@ namespace Soft.Generator.DesktopApp.Services
 
         public PageNavigator(
             ClientSharedService clientSharedService,
-            ApplicationController applicationController, CompanyController companyController, FrameworkController frameworkController, HomeController homeController,
-            PathToDomainFolderController pathToDomainFolderController, PermissionController permissionController, SettingController settingController
+            CompanyController companyController, FrameworkController frameworkController, HomeController homeController,
+            PathToDomainFolderController pathToDomainFolderController, PermissionController permissionController, SettingController settingController, WebApplicationController webApplicationController
             )
         {
-            _applicationController = applicationController;
             _companyController = companyController;
             _frameworkController = frameworkController;
             _homeController = homeController;
             _pathToDomainFolderController = pathToDomainFolderController;
             _permissionController = permissionController;
             _settingController = settingController;
+            _webApplicationController = webApplicationController;
 
             _clientSharedService = clientSharedService;
 
@@ -85,16 +86,44 @@ namespace Soft.Generator.DesktopApp.Services
 
         public T InstantiatePage<T>() where T : UserControl
         {
-            if (typeof(T) == typeof(HomePage))
+            if (typeof(T) == typeof(CompanyListPage))
             {
-                return new HomePage() as T;
+                return new CompanyListPage() as T;
             }
             else if (typeof(T) == typeof(FrameworkListPage))
             {
                 return new FrameworkListPage(_frameworkController, this, _clientSharedService) as T;
             }
+            else if (typeof(T) == typeof(FrameworkDetailsPage))
+            {
+                return new FrameworkDetailsPage(_frameworkController, this, _clientSharedService) as T;
+            }
+            else if (typeof(T) == typeof(HomePage))
+            {
+                return new HomePage() as T;
+            }
+            else if (typeof(T) == typeof(PathToDomainFolderListPage))
+            {
+                return new PathToDomainFolderListPage() as T;
+            }
+            else if (typeof(T) == typeof(PermissionListPage))
+            {
+                return new PermissionListPage(_permissionController) as T;
+            }
+            else if (typeof(T) == typeof(SettingListPage))
+            {
+                return new SettingListPage() as T;
+            }
+            else if (typeof(T) == typeof(WebApplicationListPage))
+            {
+                return new WebApplicationListPage(_webApplicationController, this, _clientSharedService) as T;
+            }
+            else if (typeof(T) == typeof(WebApplicationDetailsPage))
+            {
+                return new WebApplicationDetailsPage(_webApplicationController, this, _clientSharedService) as T;
+            }
 
-            return null;
+            throw new NotSupportedException("Niste napravili stranu za prikaz.");
         }
 
         public UserControl InstantiatePage(string pageName)
@@ -105,9 +134,11 @@ namespace Soft.Generator.DesktopApp.Services
                     return new HomePage();
                 case nameof(FrameworkListPage):
                     return new FrameworkListPage(_frameworkController, this, _clientSharedService);
+                case nameof(FrameworkDetailsPage):
+                    return new FrameworkDetailsPage(_frameworkController, this, _clientSharedService);
             }
 
-            return null;
+            throw new NotSupportedException("Niste napravili stranu za prikaz.");
         }
     }
 }

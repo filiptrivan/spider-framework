@@ -1,6 +1,5 @@
 ﻿using Soft.Generator.DesktopApp.Controllers;
 using Soft.Generator.DesktopApp.Entities;
-using Soft.Generator.DesktopApp.Pages.FrameworkPages;
 using Soft.Generator.DesktopApp.Services;
 using System;
 using System.Collections.Generic;
@@ -14,26 +13,26 @@ using System.Windows.Forms;
 
 namespace Soft.Generator.DesktopApp.Pages
 {
-    public partial class FrameworkListPage : UserControl
+    public partial class WebApplicationListPage : UserControl
     {
-        FrameworkController _frameworkController;
+        WebApplicationController _webApplicationController;
         PageNavigator _pageNavigator;
         ClientSharedService _clientSharedService;
 
-        public FrameworkListPage(FrameworkController frameworkController, PageNavigator pageNavigator, ClientSharedService clientSharedService)
+        public WebApplicationListPage(WebApplicationController webApplicationController, PageNavigator pageNavigator, ClientSharedService clientSharedService)
         {
-            _frameworkController = frameworkController;
+            _webApplicationController = webApplicationController;
             _pageNavigator = pageNavigator;
             _clientSharedService = clientSharedService;
 
             InitializeComponent();
 
-            softDataGridView1.SoftInitializeComponent<Framework>(_frameworkController.GetFrameworkList(), true, FrameworkAddEventHandler, true, true, CellContentClickHandler);
+            softDataGridView1.SoftInitializeComponent<WebApplication>(_webApplicationController.GetWebApplicationList(), true, ApplicationAddEventHandler, true, true, CellContentClickHandler);
         }
 
-        public void FrameworkAddEventHandler(object sender, EventArgs e)
+        public void ApplicationAddEventHandler(object sender, EventArgs e)
         {
-            _pageNavigator.NavigateToPage<FrameworkDetailsPage>(this);
+            _pageNavigator.NavigateToPage<WebApplicationDetailsPage>(this);
         }
 
         public void CellContentClickHandler(object sender, DataGridViewCellEventArgs e)
@@ -43,9 +42,10 @@ namespace Soft.Generator.DesktopApp.Pages
             {
                 int id = (int)softDataGridView1.RowCollection[e.RowIndex].Cells["Id"].Value;
 
-                FrameworkDetailsPage frameworkDetailsPage = _pageNavigator.NavigateToPage<FrameworkDetailsPage>(this);
-                frameworkDetailsPage.Initialize(_frameworkController.GetFramework(id));
+                WebApplicationDetailsPage applicationDetailsPage = _pageNavigator.NavigateToPage<WebApplicationDetailsPage>(this);
+                applicationDetailsPage.Initialize(_webApplicationController.GetWebApplication(id));
             }
         }
+
     }
 }

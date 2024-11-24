@@ -12,6 +12,8 @@ namespace Soft.Generator.DesktopApp.Entities
         [Identifier]
         public long Id { get; set; }
 
+        public string Name { get; set; }
+
         public bool HasGoogleAuth { get; set; }
 
         public string PrimaryColor { get; set; }

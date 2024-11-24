@@ -1,6 +1,6 @@
 ﻿namespace Soft.Generator.DesktopApp.Pages
 {
-    partial class ApplicationListPage
+    partial class WebApplicationListPage
     {
         /// <summary> 
         /// Required designer variable.
@@ -28,31 +28,29 @@
         /// </summary>
         private void InitializeComponent()
         {
-            softTextbox1 = new SoftTextbox();
+            softDataGridView1 = new Controls.SoftDataGridView();
             SuspendLayout();
             // 
-            // softTextbox1
+            // softDataGridView1
             // 
-            softTextbox1.LabelValue = "label1e";
-            softTextbox1.Location = new Point(0, 0);
-            softTextbox1.Name = "softTextbox1";
-            softTextbox1.Size = new Size(238, 63);
-            softTextbox1.TabIndex = 1;
-            softTextbox1.TextBoxValue = "";
-            softTextbox1.Load += softTextbox1_Load;
+            softDataGridView1.Dock = DockStyle.Fill;
+            softDataGridView1.Location = new Point(0, 0);
+            softDataGridView1.Name = "softDataGridView1";
+            softDataGridView1.Size = new Size(666, 313);
+            softDataGridView1.TabIndex = 0;
             // 
-            // ApplicationPage
+            // ApplicationListPage
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            Controls.Add(softTextbox1);
-            Name = "ApplicationPage";
-            Size = new Size(666, 150);
+            Controls.Add(softDataGridView1);
+            Name = "WebApplicationListPage";
+            Size = new Size(666, 313);
             ResumeLayout(false);
         }
 
         #endregion
 
-        private SoftTextbox softTextbox1;
+        private Controls.SoftDataGridView softDataGridView1;
     }
 }

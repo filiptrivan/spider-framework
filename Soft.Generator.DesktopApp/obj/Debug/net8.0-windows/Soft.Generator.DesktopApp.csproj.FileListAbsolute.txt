@@ -60,7 +60,6 @@ E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-win
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.genruntimeconfig.cache
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\ref\Soft.Generator.DesktopApp.dll
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Controls.SoftDataGridView.resources
-E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.ApplicationListPage.resources
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.CompanyListPage.resources
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.FrameworkListPage.resources
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.PathToDomainFolderListPage.resources
@@ -69,3 +68,6 @@ E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-win
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.FrameworkPages.FrameworkDetailsPage.resources
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Controls.SoftReturnButton.resources
 E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Controls.SoftSaveButton.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.WebApplicationDetailsPage.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Pages.WebApplicationListPage.resources
+E:\Projects\Soft.Generator\Source\Soft.Generator.DesktopApp\obj\Debug\net8.0-windows\Soft.Generator.DesktopApp.Controls.SoftCombobox.resources

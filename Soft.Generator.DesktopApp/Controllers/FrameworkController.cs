@@ -26,5 +26,10 @@ namespace Soft.Generator.DesktopApp.Controllers
         {
             return _desktopAppBusinessService.GetFrameworkList();
         }
+
+        public Framework GetFramework(int id)
+        {
+            return _desktopAppBusinessService.GetFramework(id);
+        }
     }
 }

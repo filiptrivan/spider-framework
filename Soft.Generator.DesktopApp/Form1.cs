@@ -12,7 +12,7 @@ namespace Soft.Generator.DesktopApp
     {
         #region Pages
 
-        private readonly ApplicationController _applicationController;
+        private readonly WebApplicationController _applicationController;
         private readonly CompanyController _companyController;
         private readonly FrameworkController _frameworkController;
         private readonly HomeController _homeController;
@@ -28,7 +28,7 @@ namespace Soft.Generator.DesktopApp
 
         public Form1(
             DesktopAppBusinessService desktopAppService, PageNavigator pageNavigator, ClientSharedService clientSharedService,
-            ApplicationController applicationController, CompanyController companyController, FrameworkController frameworkController, HomeController homeController, 
+            WebApplicationController applicationController, CompanyController companyController, FrameworkController frameworkController, HomeController homeController, 
             PathToDomainFolderController pathToDomainFolderController, PermissionController permissionController, SettingController settingController
             )
         {
@@ -60,7 +60,7 @@ namespace Soft.Generator.DesktopApp
 
         private void applicationToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            _pageNavigator.NavigateToPage<ApplicationListPage>();
+            _pageNavigator.NavigateToPage<WebApplicationListPage>();
         }
 
         private void companyToolStripMenuItem_Click(object sender, EventArgs e)

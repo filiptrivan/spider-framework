@@ -37,6 +37,7 @@ CREATE TABLE DomainFolderPath (
 
 CREATE TABLE Setting (
     Id BIGINT PRIMARY KEY IDENTITY(1,1),
+	Name NVARCHAR(500) not null,
     HasGoogleAuth BIT NOT NULL,
     PrimaryColor NCHAR(7) NOT NULL,
     HasLatinTranslate BIT NOT NULL,

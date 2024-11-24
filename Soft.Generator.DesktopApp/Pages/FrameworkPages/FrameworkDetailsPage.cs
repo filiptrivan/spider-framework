@@ -19,15 +19,22 @@ namespace Soft.Generator.DesktopApp.Pages.FrameworkPages
         FrameworkController _frameworkController;
         ClientSharedService _clientSharedService;
 
-        public Framework entity = new Framework();
+        private Framework Entity { get; set; } = new Framework();
 
-        public FrameworkDetailsPage(PageNavigator pageNavigator, FrameworkController frameworkController, ClientSharedService clientSharedService)
+        public FrameworkDetailsPage(FrameworkController frameworkController, PageNavigator pageNavigator, ClientSharedService clientSharedService)
         {
-            _pageNavigator = pageNavigator;
             _frameworkController = frameworkController;
+            _pageNavigator = pageNavigator;
             _clientSharedService = clientSharedService;
 
             InitializeComponent();
+        }
+
+        public void Initialize(Framework entity)
+        {
+            Entity = entity;
+            tb_Name.TextBoxValue = Entity.Name;
+            tb_Code.TextBoxValue = Entity.Code;
         }
 
         private void btn_Return_Click(object sender, EventArgs e)
@@ -37,9 +44,9 @@ namespace Soft.Generator.DesktopApp.Pages.FrameworkPages
 
         private void btn_Save_Click(object sender, EventArgs e)
         {
-            entity = _frameworkController.SaveFramework(new Framework
+            Entity = _frameworkController.SaveFramework(new Framework
             {
-                Id = entity.Id,
+                Id = Entity.Id,
                 Name = tb_Name.TextBoxValue,
                 Code = tb_Code.TextBoxValue,
             });
