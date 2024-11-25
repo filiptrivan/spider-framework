@@ -42,7 +42,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
             if (classes.Count <= 1) return;
 
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgTranslatesGenerator), classes);
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security

@@ -38,7 +38,7 @@ namespace Soft.SourceGenerator.NgTable.Net
         {
             if (classes.Count <= 1) return;
 
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
 
             ClassDeclarationSyntax mapperClass = Helper.GetManualyWrittenMapperClass(classes);
 

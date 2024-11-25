@@ -67,9 +67,19 @@ namespace Soft.SourceGenerators.Helpers
             return c.BaseList?.Types.FirstOrDefault()?.Type?.ToString()?.Contains($"{Helper.BusinessObject}<") == true;
         }
 
+        public static bool IsEntityBusinessObject(this SoftClass c)
+        {
+            return c.BaseType?.Contains($"{Helper.BusinessObject}<") == true;
+        }
+
         public static bool IsEntityReadonlyObject(this ClassDeclarationSyntax c)
         {
             return c.BaseList?.Types.FirstOrDefault()?.Type?.ToString()?.Contains($"{Helper.ReadonlyObject}<") == true;
+        }
+
+        public static bool IsEntityReadonlyObject(this SoftClass c)
+        {
+            return c.BaseType?.Contains($"{Helper.ReadonlyObject}<") == true;
         }
 
         public static bool IsEnumerable(this string propType)
@@ -149,9 +159,9 @@ namespace Soft.SourceGenerators.Helpers
                 return false;
         }
 
-        public static string GetDTOBaseType(this ClassDeclarationSyntax c)
+        public static string GetDTOBaseType(this SoftClass c)
         {
-            string baseClass = c.GetBaseType();
+            string baseClass = c.BaseType;
             if (baseClass == null)
                 return null;
             else if (baseClass.Contains("<"))

@@ -33,14 +33,14 @@ namespace Soft.SourceGenerator.NgTable.Angular
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationControllers(ctx))
                 .Where(static c => c is not null);
 
-            IncrementalValueProvider<IEnumerable<INamedTypeSymbol>> referencedProjectClasses = Helper.GetReferencedProjectsSymbolsDTO(context);
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetDTOClassesFromReferencedAssemblies(context);
 
             var allClasses = classDeclarations.Collect()
                 .Combine(referencedProjectClasses);
 
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
-        private static void Execute(IList<ClassDeclarationSyntax> classes, IEnumerable<INamedTypeSymbol> referencedClassesDTO, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedClassesDTO, SourceProductionContext context)
         {
             if (classes.Count <= 1) return; // FT: one because of config settings
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgControllersGenerator), classes);
@@ -69,11 +69,11 @@ namespace Soft.SourceGenerator.NgTable.Angular
                 }
             }
             List<string> importLines = new List<string>();
-            foreach (INamedTypeSymbol symbol in referencedClassesDTO)
+            foreach (SoftClass softClass in referencedClassesDTO)
             {
-                string[] projectNameHelper = symbol.ContainingNamespace.ToString().Split('.');
+                string[] projectNameHelper = softClass.Namespace.Split('.');
                 string projectName = projectNameHelper[projectNameHelper.Length - 2];
-                string ngType = symbol.Name.Replace("DTO", "");
+                string ngType = softClass.Name.Replace("DTO", "");
 
                 if (Helper.BaseClassNames.Contains(ngType))
                     continue;

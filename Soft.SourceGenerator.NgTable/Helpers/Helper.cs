@@ -32,39 +32,24 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static readonly string MapperNamespaceEnding = "DataMappers";
 
         public static readonly List<string> BaseTypePropertiies = new List<string> { "Id", "Version", "CreatedAt", "ModifiedAt" };
-        public static readonly List<string> BaseClassNames = new List<string> { "TableFilter", "TableResponse", "TableSelection", "Namebook", "Codebook", "SimpleSaveResult", "BusinessObject", "ReadonlyObject", "ExcelReportOptions", "RoleUser" };
+        public static readonly List<string> BaseClassNames = new List<string> 
+        { 
+            "TableFilter", 
+            "TableResponse", 
+            "TableSelection", 
+            "Namebook", 
+            "Codebook", 
+            "SimpleSaveResult", 
+            "BusinessObject", 
+            "ReadonlyObject", 
+            "ExcelReportOptions", 
+            "RoleUser", 
+            "PaginationResult", 
+            "TableFilterContext", 
+            "TableFilterSortMeta" 
+        };
 
         #region Syntax and Semantic targets
-
-        public static IncrementalValueProvider<IEnumerable<INamedTypeSymbol>> GetReferencedProjectsSymbolsDTO(IncrementalGeneratorInitializationContext context)
-        {
-            return context.CompilationProvider
-                .Select(static (compilation, _) =>
-                {
-                    var classSymbols = new List<INamedTypeSymbol>();
-                    foreach (var referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
-                             .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
-                    {
-                        GetClassesFromDTO(referencedAssembly.GlobalNamespace, classSymbols);
-                    }
-                    return classSymbols.AsEnumerable();
-                });
-        }
-
-        public static IncrementalValueProvider<IEnumerable<INamedTypeSymbol>> GetReferencedProjectsSymbolsEntities(IncrementalGeneratorInitializationContext context)
-        {
-            return context.CompilationProvider
-                .Select(static (compilation, _) =>
-                {
-                    var classSymbols = new List<INamedTypeSymbol>();
-                    foreach (var referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
-                             .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
-                    {
-                        GetClassesFromEntities(referencedAssembly.GlobalNamespace, classSymbols);
-                    }
-                    return classSymbols.AsEnumerable();
-                });
-        }
 
         public static bool IsSyntaxTargetForGenerationSettings(SyntaxNode node)
         {
@@ -362,42 +347,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return null;
         }
 
-        public static void GetClassesFromEntities(INamespaceSymbol namespaceSymbol, List<INamedTypeSymbol> classSymbols)
-        {
-            // Add all the type members (classes, structs, etc.) in this namespace
-            foreach (INamedTypeSymbol type in namespaceSymbol.GetTypeMembers())
-            {
-                if (type.TypeKind == TypeKind.Class && type.Name.EndsWith("Entities"))
-                {
-                    classSymbols.Add(type);
-                }
-            }
-
-            // Recursively gather classes from nested namespaces
-            foreach (var nestedNamespace in namespaceSymbol.GetNamespaceMembers())
-            {
-                GetClassesFromEntities(nestedNamespace, classSymbols);
-            }
-        }
-
-        public static void GetClassesFromDTO(INamespaceSymbol namespaceSymbol, List<INamedTypeSymbol> classSymbols)
-        {
-            // Add all the type members (classes, structs, etc.) in this namespace
-            foreach (INamedTypeSymbol type in namespaceSymbol.GetTypeMembers())
-            {
-                if (type.TypeKind == TypeKind.Class && type.Name.EndsWith("DTO"))
-                {
-                    classSymbols.Add(type);
-                }
-            }
-
-            // Recursively gather classes from nested namespaces
-            foreach (var nestedNamespace in namespaceSymbol.GetNamespaceMembers())
-            {
-                GetClassesFromDTO(nestedNamespace, classSymbols);
-            }
-        }
-
         public static bool IsSyntaxTargetForGenerationEnums(SyntaxNode node)
         {
             if (node is EnumDeclarationSyntax enumDeclaration)
@@ -431,6 +380,189 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             }
 
             return null;
+        }
+
+        #endregion
+
+        #region Referenced Assemblies
+
+        public static IncrementalValueProvider<List<SoftClass>> GetEntityClassesFromReferencedAssemblies(IncrementalGeneratorInitializationContext context)
+        {
+            return context.CompilationProvider
+                .Select(static (compilation, _) =>
+                {
+                    List<SoftClass> classes = new List<SoftClass>();
+
+                    foreach (IAssemblySymbol referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
+                             .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
+                    {
+                        classes.AddRange(GetEntityClassesFromReferencedAssemblies(referencedAssembly.GlobalNamespace));
+                    }
+
+                    return classes;
+                });
+        }
+
+        public static IncrementalValueProvider<List<SoftClass>> GetDTOClassesFromReferencedAssemblies(IncrementalGeneratorInitializationContext context)
+        {
+            return context.CompilationProvider
+                .Select(static (compilation, _) =>
+                {
+                    List<SoftClass> classes = new List<SoftClass>();
+
+                    foreach (IAssemblySymbol referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
+                             .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
+                    {
+                        classes.AddRange(GetDTOClassesFromReferencedAssemblies(referencedAssembly.GlobalNamespace));
+                    }
+
+                    return classes;
+                });
+        }
+
+        private static List<SoftClass> GetEntityClassesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol)
+        {
+            List<SoftClass> classes = new List<SoftClass>();
+            FillClassesFromReferencedAssemblies(namespaceSymbol, classes);
+            return classes.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+        }
+
+        private static List<SoftClass> GetDTOClassesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol)
+        {
+            List<SoftClass> classes = new List<SoftClass>();
+            FillClassesFromReferencedAssemblies(namespaceSymbol, classes);
+            return classes.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
+        }
+
+        private static void FillClassesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol, List<SoftClass> classes)
+        {
+            // Add all the type members (classes, structs, etc.) in this namespace
+            foreach (INamedTypeSymbol type in namespaceSymbol.GetTypeMembers())
+            {
+                if (type.TypeKind == TypeKind.Class)
+                {
+                    SoftClass softClass = new SoftClass
+                    {
+                        Name = type.Name,
+                        Namespace = GetFullNamespace(type),
+                        BaseType = type.BaseType?.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat),
+                        IsAbstract = type.IsAbstract,
+                        Properties = GetPropertiesFromReferencedAssemblies(type),
+                        Attributes = GetAttributesFromReferencedAssemblies(type),
+                        Methods = GetMethodsOfCurrentClassFromReferencedAssemblies(type),
+                    };
+
+                    classes.Add(softClass);
+                }
+            }
+
+            // Recursively gather classes from nested namespaces
+            foreach (INamespaceSymbol nestedNamespace in namespaceSymbol.GetNamespaceMembers())
+            {
+                FillClassesFromReferencedAssemblies(nestedNamespace, classes);
+            }
+        }
+
+        private static string GetFullNamespace(INamedTypeSymbol symbol)
+        {
+            Stack<string> namespaces = new Stack<string>();
+            INamespaceSymbol currentNamespace = symbol.ContainingNamespace;
+
+            while (currentNamespace != null && !currentNamespace.IsGlobalNamespace)
+            {
+                namespaces.Push(currentNamespace.Name);
+                currentNamespace = currentNamespace.ContainingNamespace;
+            }
+
+            return string.Join(".", namespaces);
+        }
+
+        private static List<SoftProperty> GetPropertiesFromReferencedAssemblies(INamedTypeSymbol type)
+        {
+            List<SoftProperty> properties = new List<SoftProperty>();
+
+            while (type != null)
+            {
+                foreach (ISymbol member in type.GetMembers())
+                {
+                    if (member is IPropertySymbol property)
+                    {
+                        SoftProperty softProperty = new SoftProperty
+                        {
+                            IdentifierText = member.Name,
+                            ClassIdentifierText = type.Name,
+                            Type = property.Type.ToString(),
+                            Attributes = GetAttributesFromReferencedAssemblies(member)
+                        };
+
+                        properties.Add(softProperty);
+                    }
+                }
+
+                type = type.BaseType;
+            }
+
+            return properties;
+        }
+
+        private static List<SoftAttribute> GetAttributesFromReferencedAssemblies(ISymbol symbol)
+        {
+            List<SoftAttribute> attributes = new List<SoftAttribute>();
+
+            foreach (AttributeData attribute in symbol.GetAttributes())
+            {
+                string argumentValue = attribute.ConstructorArguments.Length > 0
+                    ? 
+                    string.Join(", ", attribute.ConstructorArguments.Select(arg =>
+                    {
+                        try
+                        {
+                            return arg.Value?.ToString();
+                        }
+                        catch (Exception)
+                        {
+                            return arg.Values.FirstOrDefault().Value?.ToString();
+                        }
+                    }))
+                    : null; // FT: Doing this because of Range(0, 5) (long tail because of null pointer exception)
+
+                argumentValue = GetFormatedAttributeValue(argumentValue);
+
+                SoftAttribute softAttribute = new SoftAttribute
+                {
+                    Name = attribute.AttributeClass.Name?.Replace("Attribute", ""),
+                    Value = argumentValue
+                };
+
+                attributes.Add(softAttribute);
+            }
+
+            return attributes;
+        }
+
+        /// <summary>
+        /// Cant get method Body and method DescendantNodes from referenced assemblies
+        /// </summary>
+        private static List<SoftMethod> GetMethodsOfCurrentClassFromReferencedAssemblies(INamedTypeSymbol type)
+        {
+            List<SoftMethod> methods = new List<SoftMethod>();
+
+            foreach (ISymbol member in type.GetMembers())
+            {
+                if (member is IMethodSymbol method)
+                {
+                    SoftMethod softMethod = new SoftMethod
+                    {
+                        Name = member.Name,
+                        ReturnType = method.ReturnType.ToString(),
+                        Attributes = GetAttributesFromReferencedAssemblies(member),
+                    };
+
+                    methods.Add(softMethod);
+                }
+            }
+
+            return methods;
         }
 
         #endregion
@@ -469,49 +601,55 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
         public static List<SoftClass> GetSoftEntityClasses(IList<ClassDeclarationSyntax> classes)
         {
-            return classes
-                .Where(x => x.Ancestors()
-                    .OfType<NamespaceDeclarationSyntax>()
-                    .Select(ns => ns.Name.ToString())
-                    .Any(ns => ns.EndsWith($".{EntitiesNamespaceEnding}")))
-                .Select(x =>
-                {
-                    return new SoftClass
-                    {
-                        Name = x.Identifier.Text,
-                        Properties = GetAllPropertiesOfTheClass(x, classes, true),
-                        Attributes = GetAllAttributesOfTheClass(x, classes)
-                    };
-                })
+            return GetSoftClasses(classes)
+                .Where(x => x.Namespace.EndsWith(".Entities"))
                 .ToList();
         }
 
-        public static List<SoftClass> GetDTOClasses(IList<ClassDeclarationSyntax> classes)
+        public static List<SoftClass> GetDTOClasses(List<SoftClass> classes)
         {
             return classes
-                .Where(x => x.Ancestors()
-                    .OfType<NamespaceDeclarationSyntax>()
-                    .Select(ns => ns.Name.ToString())
-                    .Any(ns => ns.EndsWith($".{EntitiesNamespaceEnding}") || ns.EndsWith($".{DTONamespaceEnding}")))
+                .Where(x => x.Namespace.EndsWith($".{EntitiesNamespaceEnding}") || x.Namespace.EndsWith($".{DTONamespaceEnding}"))
                 .Select(x =>
                 {
-                    if (x.Identifier.Text.EndsWith("DTO"))
+                    if (x.Name.EndsWith("DTO"))
                     {
                         return new SoftClass
                         {
-                            Name = x.Identifier.Text,
-                            Properties = GetAllPropertiesOfTheClass(x, classes, true)
+                            Name = x.Name,
+                            Properties = x.Properties
                         };
                     }
                     else // Entity
                     {
                         return new SoftClass
                         {
-                            Name = $"{x.Identifier.Text}DTO",
+                            Name = $"{x.Name}DTO",
                             Properties = GetDTOSoftProps(x, classes),
                             IsGenerated = true
                         };
                     }
+                })
+                .ToList();
+        }
+
+        public static List<SoftClass> GetSoftClasses(IList<ClassDeclarationSyntax> classes)
+        {
+            return classes
+                .Select(x =>
+                {
+                    return new SoftClass
+                    {
+                        Name = x.Identifier.Text,
+                        Namespace = x.Ancestors()
+                         .OfType<NamespaceDeclarationSyntax>()
+                         .FirstOrDefault()?.Name.ToString(),
+                        BaseType = x.GetBaseType(),
+                        IsAbstract = x.IsAbstract(),
+                        Properties = GetAllPropertiesOfTheClass(x, classes, true),
+                        Attributes = GetAllAttributesOfTheClass(x, classes),
+                        Methods = GetMethodsOfCurrentClass(x)
+                    };
                 })
                 .ToList();
         }
@@ -521,10 +659,10 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return c.Properties.Where(x => x.IdentifierText == propName).Select(x => x.Type).Single();
         }
 
-        public static List<SoftProperty> GetDTOSoftProps(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        public static List<SoftProperty> GetDTOSoftProps(SoftClass entityClass, List<SoftClass> entityClasses)
         {
             List<SoftProperty> props = new List<SoftProperty>(); // public string Email { get; set; }
-            List<SoftProperty> properties = GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
+            List<SoftProperty> properties = entityClass.Properties;
 
             foreach (SoftProperty prop in properties)
             {
@@ -538,8 +676,8 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 if (propType.PropTypeIsManyToOne())
                 {
                     props.Add(new SoftProperty { IdentifierText = $"{propName}DisplayName", Type = "string" });
-                    ClassDeclarationSyntax manyToOneClass = entityClasses.Where(x => x.Identifier.Text == propType).Single();
-                    props.Add(new SoftProperty { IdentifierText = $"{propName}Id", Type = $"{Helper.GetGenericIdType(manyToOneClass, entityClasses)}?" });
+                    SoftClass manyToOneClass = entityClasses.Where(x => x.Name == propType).SingleOrDefault();
+                    props.Add(new SoftProperty { IdentifierText = $"{propName}Id", Type = $"{GetGenericIdType(manyToOneClass, entityClasses)}?" });
                     continue;
                 }
                 else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
@@ -583,16 +721,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     .Select(ns => ns.Name.ToString())
                     .Any(ns => ns.EndsWith($".{ValidationNamespaceEnding}")))
                 .ToList();
-        }
-
-        public static ClassDeclarationSyntax GetNonGeneratedMapperClass(IList<ClassDeclarationSyntax> classes)
-        {
-            return classes
-                .Where(x => x.Ancestors()
-                    .OfType<NamespaceDeclarationSyntax>()
-                    .Select(ns => ns.Name.ToString())
-                    .Any(ns => ns.EndsWith($".{MapperNamespaceEnding}")))
-                .FirstOrDefault();
         }
 
         public static List<ClassDeclarationSyntax> GetControllerClasses(IList<ClassDeclarationSyntax> classes)
@@ -813,9 +941,13 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return softAttributes;
         }
 
-        public static ClassDeclarationSyntax GetClass(TypeSyntax type, IEnumerable<ClassDeclarationSyntax> classes)
+        /// <summary>
+        /// Using this method only when getting all properties of the class, for other situations, we should search SoftClass.
+        /// </summary>
+        private static ClassDeclarationSyntax GetClass(TypeSyntax type, IEnumerable<ClassDeclarationSyntax> classes)
         {
             string typeName = "";
+
             if (type is GenericNameSyntax genericNameSyntax)
             {
                 typeName = genericNameSyntax.Identifier.Text; // BaseClass<T>
@@ -824,6 +956,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             {
                 typeName = nameSyntax.ToString();
             }
+
             return classes.Where(x => x.Identifier.Text == typeName).SingleOrDefault();
         }
 
@@ -841,16 +974,43 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 if (baseType.ToString() == "Role")
                     return "int";
 
-                ClassDeclarationSyntax baseC = classes.Where(x => x.Identifier.Text == baseType.ToString()).FirstOrDefault();
+                ClassDeclarationSyntax baseClass = classes.Where(x => x.Identifier.Text == baseType.ToString()).SingleOrDefault();
 
-                if (baseC == null)
+                if (baseClass == null)
                     return null;
 
-                baseType = baseC.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
+                baseType = baseClass.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
             }
 
             if (baseType != null && baseType is GenericNameSyntax genericNameSyntax)
                 return genericNameSyntax.TypeArgumentList.Arguments.FirstOrDefault().ToString(); // long
+            else
+                return null; // FT: It doesn't, many to many doesn't
+                             //return "Every entity class needs to have the base class";
+        }
+
+        public static string GetGenericIdType(SoftClass c, List<SoftClass> classes)
+        {
+            if (c == null)
+                return "TheClassDoesNotExist";
+
+            string baseType = c.BaseType; //BaseClass<long>
+
+            while (baseType != null && baseType.Contains("<") == false)
+            {
+                if (baseType.ToString() == "Role")
+                    return "int";
+
+                SoftClass baseClass = classes.Where(x => x.Name == baseType).SingleOrDefault();
+
+                if (baseClass == null)
+                    return null;
+
+                baseType = baseClass.BaseType; //BaseClass<long>
+            }
+
+            if (baseType != null && baseType.Contains("<"))
+                return baseType.Split('<')[1].Replace(">", ""); // long
             else
                 return null; // FT: It doesn't, many to many doesn't
                              //return "Every entity class needs to have the base class";
@@ -947,6 +1107,20 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return displayNamePropForClass.IdentifierText;
         }
 
+        public static string GetDisplayNamePropForClass(SoftClass c)
+        {
+            List<SoftProperty> props = c.Properties;
+            SoftProperty displayNamePropForClass = props.Where(x => x.Attributes.Any(x => x.Name == DisplayNameAttribute)).SingleOrDefault();
+
+            if (displayNamePropForClass == null)
+                return $"Id.ToString()";
+
+            if (displayNamePropForClass.Type != "string")
+                return $"{displayNamePropForClass.IdentifierText}.ToString()";
+
+            return displayNamePropForClass.IdentifierText;
+        }
+
         public static string[] GetNamespacePartsWithoutLastElement(BaseTypeDeclarationSyntax b)
         {
             string domainModelNamespace = b
@@ -956,6 +1130,14 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 .FirstOrDefault();
 
             string[] namespaceParts = domainModelNamespace.Split('.');
+            string[] namespacePartsWithoutLastElement = namespaceParts.Take(namespaceParts.Length - 1).ToArray();
+
+            return namespacePartsWithoutLastElement; // eg. Soft, Generator, Security
+        }
+
+        public static string[] GetNamespacePartsWithoutLastElement(string namespaceValue)
+        {
+            string[] namespaceParts = namespaceValue.Split('.');
             string[] namespacePartsWithoutLastElement = namespaceParts.Take(namespaceParts.Length - 1).ToArray();
 
             return namespacePartsWithoutLastElement; // eg. Soft, Generator, Security
@@ -1020,16 +1202,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             string result = parts[1].Replace(">", "");
 
             return result;
-        }
-
-        public static ClassDeclarationSyntax ExtractEntityFromList(string input, IList<ClassDeclarationSyntax> entityClasses)
-        {
-            string[] parts = input.Split('<'); // List, Role>
-            string entityClassName = parts[1].Replace(">", "");
-
-            ClassDeclarationSyntax entityClass = GetClass(entityClassName, entityClasses);
-
-            return entityClass;
         }
 
         /// <summary>
@@ -1167,16 +1339,23 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     ? string.Join(", ", a.ArgumentList.Arguments.Select(arg => arg?.ToString()))
                     : null; ; // FT: Doing this because of Range(0, 5) (long tail because of null pointer exception)
 
-            argumentValue = argumentValue?.Replace("\"", "").Replace("@", "");
-
-            string pattern = @"nameof\(([^)]*)\)";
-            argumentValue = argumentValue != null ? Regex.Replace(argumentValue, pattern, "$1") : null;
+            argumentValue = GetFormatedAttributeValue(argumentValue);
 
             return new SoftAttribute
             {
                 Name = a.Name.ToString(),
                 Value = argumentValue,
             };
+        }
+
+        private static string GetFormatedAttributeValue(string value)
+        {
+            value = value?.Replace("\"", "").Replace("@", "");
+
+            string pattern = @"nameof\(([^)]*)\)";
+            value = value != null ? Regex.Replace(value, pattern, "$1") : null;
+
+            return value;
         }
 
         private static SoftProperty GetPropWithModifiedT(PropertyDeclarationSyntax prop, TypeSyntax typeGeneric)

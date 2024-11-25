@@ -32,23 +32,27 @@ namespace Soft.SourceGenerator.NgTable.NgTable
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationDTODataMappersAndEntities(ctx))
                 .Where(static c => c is not null);
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-                static (spc, source) => Execute(source, spc));
+            IncrementalValueProvider<List<SoftClass>> referencedProjectEntityClasses = Helper.GetEntityClassesFromReferencedAssemblies(context);
+
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectEntityClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectEntityClasses, SourceProductionContext context)
         {
-            if (classes.Count == 0) return;
+            if (classes.Count <= 1) return;
 
-            IList<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
-
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
+            List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
+            List<SoftClass> allEntityClasses = entityClasses.Concat(referencedProjectEntityClasses).ToList();
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
 
             StringBuilder sb = new StringBuilder();
             List<string> usings = new List<string>();
             StringBuilder sbUsings = new StringBuilder();
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0]);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0].Namespace);
 
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
@@ -59,31 +63,24 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Soft.Generator.Shared.DTO;
 using System.Text.Json;
+using {{basePartOfNamespace}}.Entities;
 
 namespace {{basePartOfNamespace}}.TableFiltering
 {
     public static class TableFilterQueryable
     {
 """);
-            foreach (ClassDeclarationSyntax entityClass in entityClasses)
+            foreach (SoftClass entityClass in entityClasses)
             {
-                string baseType = entityClass.GetBaseType();
+                string baseType = entityClass.BaseType;
 
                 if (baseType == null)
                     continue;
 
-                SoftClass entitySoftClass = entityClass.ToSoftClass(classes);
-
-                usings.Add(entityClass.
-                    Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault());
-
                 sb.AppendLine($$"""
-        public static async Task<PaginationResult<{{entityClass.Identifier.Text}}>> Build(IQueryable<{{entityClass.Identifier.Text}}> query, TableFilterDTO tableFilterPayload)
+        public static async Task<PaginationResult<{{entityClass.Name}}>> Build(IQueryable<{{entityClass.Name}}> query, TableFilterDTO tableFilterPayload)
         {
-            Expression<Func<{{entityClass.Identifier.Text}}, bool>> predicate = PredicateBuilder.New<{{entityClass.Identifier.Text}}>(true);
+            Expression<Func<{{entityClass.Name}}, bool>> predicate = PredicateBuilder.New<{{entityClass.Name}}>(true);
 
             foreach (KeyValuePair<string, List<TableFilterContext>> item in tableFilterPayload.Filters)
             {
@@ -91,14 +88,15 @@ namespace {{basePartOfNamespace}}.TableFiltering
                 {
                     if (filter.Value != null)
                     {
-                        Expression<Func<{{entityClass.Identifier.Text}}, bool>> condition;
+                        Expression<Func<{{entityClass.Name}}, bool>> condition;
 
                         switch (item.Key)
                         {
 """);
                 // FT: idem po svim DTO propertijima, ako naletim na neki koji ne postoji u ef klasi, trazim resenje u maperima, ako ne postoji upisujem odgovarajucu gresku
-                List<SoftClass> pairDTOClasses = DTOClasses.Where(x => x.Name == $"{entityClass.Identifier.Text}DTO").ToList(); // FT: Getting the pair DTO classes of entity class
-                List<SoftProperty> efClassProps = Helper.GetAllPropertiesOfTheClass(entityClass, classes);
+                List<SoftClass> pairDTOClasses = DTOClasses.Where(x => x.Name == $"{entityClass.Name}DTO").ToList(); // FT: Getting the pair DTO classes of entity class
+                List<SoftProperty> efClassProps = entityClass.Properties;
+
                 foreach (SoftClass pairDTOClass in pairDTOClasses)
                 {
                     foreach (SoftProperty DTOprop in pairDTOClass.Properties)
@@ -119,12 +117,12 @@ namespace {{basePartOfNamespace}}.TableFiltering
                             }
                             else
                             {
-                                entityDotNotation = GetDotNotatioOfEntityFromMappers(classes, entitySoftClass, pairDTOClass, entityDotNotation); // "Role.Id"
+                                entityDotNotation = GetDotNotatioOfEntityFromMappers(allEntityClasses, entityClass, pairDTOClass, entityDotNotation); // "Role.Id"
 
                                 if (entityDotNotation == null)
                                     continue;
 
-                                DTOpropType = GetPropTypeOfEntityDotNotationProperty(entityDotNotation, entityClass, classes);
+                                DTOpropType = GetPropTypeOfEntityDotNotationProperty(entityDotNotation, entityClass, allEntityClasses);
                             }
                         }
 
@@ -172,7 +170,7 @@ namespace {{basePartOfNamespace}}.TableFiltering
                 }
             }
             query = query.Where(predicate).OrderBy(x => x.Id);
-            return new PaginationResult<{{entityClass.Identifier.Text}}>()
+            return new PaginationResult<{{entityClass.Name}}>()
             {
                 TotalRecords = await query.CountAsync(),
                 Query = query
@@ -320,15 +318,15 @@ using {{item}};
         /// <param name="DTOClass">UserDTO</param>
         /// <param name="DTOClassProp">RoleDisplayName</param>
         /// <returns>Role.Id</returns>
-        private static string GetDotNotatioOfEntityFromMappers(IList<ClassDeclarationSyntax> allClasses, SoftClass entitySoftClass, SoftClass DTOClass, string DTOClassProp)
+        private static string GetDotNotatioOfEntityFromMappers(List<SoftClass> allClasses, SoftClass entitySoftClass, SoftClass DTOClass, string DTOClassProp)
         {
             if (DTOClassProp.EndsWith("DisplayName") && DTOClass.IsGenerated == true) // FT: Doing this thing with the IsGenerated so we can make prop in non generated DTO with "DisplayName" or "Id" sufix 
             {
                 string baseClassInDotNotation = DTOClassProp.Replace("DisplayName", ""); // "Rolinho"
                 SoftProperty propertyInEntityClass = entitySoftClass.Properties.Where(x => x.IdentifierText == baseClassInDotNotation).Single();
                 string typeOfThePropertyInEntityClass = propertyInEntityClass.Type; // "Role"
-                ClassDeclarationSyntax entityClassWhichWeAreSearchingDisplayNameFor = Helper.GetClass(typeOfThePropertyInEntityClass, allClasses);
-                string displayName = Helper.GetDisplayNamePropForClass(entityClassWhichWeAreSearchingDisplayNameFor, allClasses); // Name
+                SoftClass entityClassWhichWeAreSearchingDisplayNameFor = allClasses.Where(x => x.Name == typeOfThePropertyInEntityClass).Single();
+                string displayName = Helper.GetDisplayNamePropForClass(entityClassWhichWeAreSearchingDisplayNameFor); // Name
                 displayName = displayName.Replace(".ToString()", "");
                 return $"{baseClassInDotNotation}.{displayName}"; // FT: It's okay to do it like this, because when we generating DisplayNames for DTO, we are doing it just for the first level.
             }
@@ -338,9 +336,9 @@ using {{item}};
                 return $"{baseClassInDotNotation}.Id";
             }
 
-            ClassDeclarationSyntax nonGeneratedMapperClass = Helper.GetNonGeneratedMapperClass(allClasses);
+            SoftClass nonGeneratedMapperClass = allClasses.Where(x => x.Namespace.EndsWith(".DataMappers")).SingleOrDefault(); // FT: Can be null if the user still didn't made DataMappers partial class
 
-            List<SoftMethod> methodsOfTheNonGeneratedMapperClass = Helper.GetMethodsOfCurrentClass(nonGeneratedMapperClass);
+            List<SoftMethod> methodsOfTheNonGeneratedMapperClass = nonGeneratedMapperClass?.Methods; // FT: Classes from referenced assemblies won't have method body, but here it's not important.
 
             return GetEntityDotNotationForDTO(methodsOfTheNonGeneratedMapperClass, DTOClass.Name, entitySoftClass.Name, DTOClassProp);
 
@@ -373,22 +371,19 @@ using {{item}};
             return null;
         }
 
-        public static string GetPropTypeOfEntityDotNotationProperty(string entityDotNotation, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> allClasses)
+        public static string GetPropTypeOfEntityDotNotationProperty(string entityDotNotation, SoftClass entityClass, List<SoftClass> allClasses)
         {
             // Rolinho.Permission.Id
             string propName = entityDotNotation.Split('.')[0]; // Rolinho
-            List<SoftProperty> entityClassProperties = Helper.GetAllPropertiesOfTheClass(entityClass, allClasses);
+            List<SoftProperty> entityClassProperties = entityClass.Properties;
             SoftProperty prop = entityClassProperties.Where(x => x.IdentifierText == propName).Single(); // Role
 
             int i = 1;
             while (prop.Type.IsBaseType() == false)
             {
-                ClassDeclarationSyntax helperClass = allClasses.Where(x => x.Identifier.Text == prop.Type).SingleOrDefault(); // Role
+                SoftClass helperClass = allClasses.Where(x => x.Name == prop.Type).Single(); // Role
 
-                if (helperClass == null)
-                    break;
-
-                List<SoftProperty> helperProps = Helper.GetAllPropertiesOfTheClass(helperClass, allClasses);
+                List<SoftProperty> helperProps = helperClass.Properties;
 
                 propName = entityDotNotation.Split('.')[i]; // Id
                 prop = helperProps.Where(x => x.IdentifierText == propName).Single(); // Id
@@ -400,6 +395,9 @@ using {{item}};
 
         public static string GetEntityDotNotationForDTO(List<SoftMethod> methodsOfTheNonGeneratedMapperClass, string destinationDTOClass, string sourceEntityClass, string DTOProp)
         {
+            if (methodsOfTheNonGeneratedMapperClass == null)
+                return null;
+
             List<SoftMethod> methodsWithTableFiltersAttribute = methodsOfTheNonGeneratedMapperClass.Where(x => x.Attributes.Any(x => x.Name == "TableFiltersListener")).ToList();
 
             SoftMethod currentConfigMethod = methodsWithTableFiltersAttribute.Where(x => x.Body.Contains($".NewConfig<{sourceEntityClass}, {destinationDTOClass}>()")).SingleOrDefault();

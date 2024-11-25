@@ -19,35 +19,36 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntities(s),
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEntities(ctx))
                 .Where(static c => c is not null);
 
-            IncrementalValueProvider<IEnumerable<INamedTypeSymbol>> referencedProjectClasses = Helper.GetReferencedProjectsSymbolsEntities(context);
+            IncrementalValueProvider<List<SoftClass>> referencedProjectEntityClasses = Helper.GetEntityClassesFromReferencedAssemblies(context);
 
             var allClasses = classDeclarations.Collect()
-                .Combine(referencedProjectClasses);
+                .Combine(referencedProjectEntityClasses);
 
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, IEnumerable<INamedTypeSymbol> referencedClassesEntities, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectEntityClasses, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
 
-            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
+            List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
+            List<SoftClass> allEntityClasses = entityClasses.Concat(referencedProjectEntityClasses).ToList();
 
             StringBuilder sb = new StringBuilder();
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0]);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0].Namespace);
 
             string basePartOfTheNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
@@ -77,18 +78,18 @@ namespace {{basePartOfTheNamespace}}.Services
         }
 
 """);
-            foreach (ClassDeclarationSyntax entityClass in entityClasses)
+            foreach (SoftClass entityClass in entityClasses)
             {
-                string baseType = entityClass.GetBaseType();
+                string baseType = entityClass.BaseType;
 
-                string nameOfTheEntityClass = entityClass.Identifier.Text;
+                string nameOfTheEntityClass = entityClass.Name;
 
                 if (baseType == null) // FT: Handling many to many
                 {
                     sb.AppendLine($$"""
         #region {{nameOfTheEntityClass}}
 
-{{HandleManyToManyData(entityClass, entityClasses)}}
+{{HandleManyToManyData(entityClass, allEntityClasses)}}
 
         #endregion
 
@@ -97,11 +98,11 @@ namespace {{basePartOfTheNamespace}}.Services
                     continue;
                 }
 
-                string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
-                string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, entityClasses);
-                string displayNameProperty = Helper.GetDisplayNamePropForClass(entityClass, entityClasses);
+                string nameOfTheEntityClassFirstLower = entityClass.Name.FirstCharToLower();
+                string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, allEntityClasses);
+                string displayNameProperty = Helper.GetDisplayNamePropForClass(entityClass);
 
-                List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
+                List<SoftProperty> entityProperties = entityClass.Properties;
 
                 sb.AppendLine($$"""
         #region {{nameOfTheEntityClass}}
@@ -117,7 +118,7 @@ namespace {{basePartOfTheNamespace}}.Services
                     await _authorizationService.{{nameOfTheEntityClass}}SingleReadAuthorize(id);
                 }
 
-                {{nameOfTheEntityClass}}DTO dto = await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ProjectToConfig()).SingleOrDefaultAsync();
+                {{nameOfTheEntityClass}}DTO dto = await _context.DbSet<{{nameOfTheEntityClass}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Name}}ProjectToConfig()).SingleOrDefaultAsync();
 
                 if (dto == null)
                     throw new BusinessException(SharedTerms.EntityDoesNotExistInDatabase);
@@ -153,7 +154,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 data = await paginationResult.Query
                     .Skip(tableFilterPayload.First)
                     .Take(tableFilterPayload.Rows)
-                    .ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ProjectToConfig())
+                    .ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Name}}ProjectToConfig())
                     .ToListAsync();
             });
 
@@ -229,7 +230,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
                 List<{{nameOfTheEntityClass}}DTO> dtoList = await {{nameOfTheEntityClassFirstLower}}Query
                     .AsNoTracking()
-                    .ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ToDTOConfig())
+                    .ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Name}}ToDTOConfig())
                     .ToListAsync();
 
 {{GetPopulateDTOWithBlobPartsForDTOList(entityClass, entityProperties)}}
@@ -242,15 +243,15 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Save
 
-{{(entityClass.IsAbstract() || entityClass.IsEntityReadonlyObject() ? "" : GetSavingData(entityClass, idTypeOfTheEntityClass, entityClasses, entityProperties))}}
+{{(entityClass.IsAbstract || entityClass.IsEntityReadonlyObject() ? "" : GetSavingData(entityClass, idTypeOfTheEntityClass, allEntityClasses, entityProperties))}}
 
 {{string.Join("\n", GetUploadBlobMethods(entityClass, idTypeOfTheEntityClass, entityProperties))}}
         
         #endregion
 
-{{(entityClass.IsAbstract() || entityClass.IsEntityReadonlyObject() ? "" : GetDeletingData(entityClass, idTypeOfTheEntityClass, entityClasses))}}
+{{(entityClass.IsAbstract || entityClass.IsEntityReadonlyObject() ? "" : GetDeletingData(entityClass, idTypeOfTheEntityClass, allEntityClasses))}}
 
-{{string.Join("\n", GetEnumerableGeneratedMethods(entityClass, entityClasses, referencedClassesEntities))}}
+{{string.Join("\n", GetEnumerableGeneratedMethods(entityClass, allEntityClasses))}}
 
         public async Task<byte[]> Export{{nameOfTheEntityClass}}ListToExcel(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query, bool authorize = true)
         {
@@ -266,7 +267,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
                 paginationResult = await Load{{nameOfTheEntityClass}}ListForPagination(tableFilterPayload, query);
 
-                data = await paginationResult.Query.ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ExcelProjectToConfig()).ToListAsync();
+                data = await paginationResult.Query.ProjectToType<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Name}}ExcelProjectToConfig()).ToListAsync();
             });
 
             string[] excelPropertiesToExclude = ExcelPropertiesToExclude.GetHeadersToExclude(new {{nameOfTheEntityClass}}DTO());
@@ -288,9 +289,9 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Save
 
-        static string GetSavingData(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses, List<SoftProperty> propertiesEntityClass)
+        static string GetSavingData(SoftClass entityClass, string idTypeOfTheEntityClass, List<SoftClass> allEntityClasses, List<SoftProperty> propertiesEntityClass)
         {
-            string nameOfTheEntityClass = entityClass.Identifier.Text;
+            string nameOfTheEntityClass = entityClass.Name;
 
             StringBuilder sb = new StringBuilder();
 
@@ -345,7 +346,7 @@ namespace {{basePartOfTheNamespace}}.Services
             }
             sb.AppendLine($$"""
 
-{{string.Join("\n", GetManyToOneInstancesForSave(entityClass, entityClasses))}}
+{{string.Join("\n", GetManyToOneInstancesForSave(entityClass, allEntityClasses))}}
 
                 await _context.SaveChangesAsync();
 
@@ -361,24 +362,24 @@ namespace {{basePartOfTheNamespace}}.Services
             {
                 {{nameOfTheEntityClass}} poco = await Save{{nameOfTheEntityClass}}AndReturnDomainAsync(dto, authorizeUpdate, authorizeInsert);
 
-                return poco.Adapt<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Identifier.Text}}ToDTOConfig());
+                return poco.Adapt<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Name}}ToDTOConfig());
             });
         }
 """);
             return sb.ToString();
         }
 
-        static List<string> GetManyToOneInstancesForSave(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> classes)
+        static List<string> GetManyToOneInstancesForSave(SoftClass entityClass, List<SoftClass> allEntityClasses)
         {
             List<string> result = new List<string>();
 
-            List<SoftProperty> properties = Helper.GetAllPropertiesOfTheClass(entityClass, classes)
+            List<SoftProperty> properties = entityClass.Properties
                 .Where(prop => prop.Type.PropTypeIsManyToOne())
                 .ToList();
 
             foreach (SoftProperty prop in properties)
             {
-                ClassDeclarationSyntax classOfManyToOneProperty = GetClassOfManyToOneProperty(prop.Type, classes);
+                SoftClass classOfManyToOneProperty = GetClassOfManyToOneProperty(prop.Type, allEntityClasses);
 
                 if (classOfManyToOneProperty == null)
                     continue;
@@ -387,7 +388,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 {
                     result.Add($$"""
             if (dto.{{prop.IdentifierText}}Id > 0)
-                poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{Helper.GetGenericIdType(classOfManyToOneProperty, classes)}}>(dto.{{prop.IdentifierText}}Id.Value, null);
+                poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{Helper.GetGenericIdType(classOfManyToOneProperty, allEntityClasses)}}>(dto.{{prop.IdentifierText}}Id.Value, null);
             else
                 poco.{{prop.IdentifierText}} = null;
 """);
@@ -396,7 +397,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 {
                     result.Add($$"""
             if (dto.{{prop.IdentifierText}}Id > 0)
-                poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{Helper.GetGenericIdType(classOfManyToOneProperty, classes)}}>(dto.{{prop.IdentifierText}}Id.Value);
+                poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{Helper.GetGenericIdType(classOfManyToOneProperty, allEntityClasses)}}>(dto.{{prop.IdentifierText}}Id.Value);
             else
                 poco.{{prop.IdentifierText}} = null;
 """);
@@ -406,9 +407,9 @@ namespace {{basePartOfTheNamespace}}.Services
             return result;
         }
 
-        static ClassDeclarationSyntax GetClassOfManyToOneProperty(string propType, IList<ClassDeclarationSyntax> classes)
+        static SoftClass GetClassOfManyToOneProperty(string propType, List<SoftClass> allEntityClasses)
         {
-            ClassDeclarationSyntax manyToOneclass = classes.Where(x => x.Identifier.Text == propType).SingleOrDefault();
+            SoftClass manyToOneclass = allEntityClasses.Where(x => x.Name == propType).SingleOrDefault();
 
             if (manyToOneclass == null)
                 return null;
@@ -416,26 +417,26 @@ namespace {{basePartOfTheNamespace}}.Services
             return manyToOneclass;
         }
 
-        private static List<string> GetNonActiveDeleteBlobMethods(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
+        private static List<string> GetNonActiveDeleteBlobMethods(SoftClass entityClass, List<SoftProperty> propertiesEntityClass)
         {
             List<string> result = new List<string>();
 
             List<SoftProperty> blobProperies = Helper.GetBlobProperties(propertiesEntityClass);
 
             foreach (SoftProperty property in blobProperies)
-                result.Add($"await DeleteNonActiveBlobs(dto.{property.IdentifierText}, nameof({entityClass.Identifier.Text}), nameof({entityClass.Identifier.Text}.{property.IdentifierText}), poco.Id.ToString());");
+                result.Add($"await DeleteNonActiveBlobs(dto.{property.IdentifierText}, nameof({entityClass.Name}), nameof({entityClass.Name}.{property.IdentifierText}), poco.Id.ToString());");
 
             return result;
         }
 
-        private static List<string> GetUploadBlobMethods(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, List<SoftProperty> entityProperties)
+        private static List<string> GetUploadBlobMethods(SoftClass entityClass, string idTypeOfTheEntityClass, List<SoftProperty> entityProperties)
         {
             List<string> result = new List<string>();
 
             List<SoftProperty> blobProperies = Helper.GetBlobProperties(entityProperties);
 
-            string nameOfTheEntityClass = entityClass.Identifier.Text;
-            string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
+            string nameOfTheEntityClass = entityClass.Name;
+            string nameOfTheEntityClassFirstLower = entityClass.Name.FirstCharToLower();
 
             foreach (SoftProperty property in blobProperies)
             {
@@ -480,9 +481,9 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Delete
 
-        private static string GetDeletingData(ClassDeclarationSyntax entityClass, string idTypeOfTheEntityClass, IList<ClassDeclarationSyntax> entityClasses)
+        private static string GetDeletingData(SoftClass entityClass, string idTypeOfTheEntityClass, List<SoftClass> allEntityClasses)
         {
-            string nameOfTheEntityClass = entityClass.Identifier.Text;
+            string nameOfTheEntityClass = entityClass.Name;
             string nameOfTheEntityClassFirstLower = nameOfTheEntityClass.FirstCharToLower();
 
             StringBuilder sb = new StringBuilder();
@@ -501,7 +502,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
                 await OnBefore{{nameOfTheEntityClass}}AsyncDelete({{nameOfTheEntityClassFirstLower}}Id);
 
-{{string.Join("\n", GetManyToOneDeleteQueries(entityClass, entityClasses, null, 0))}}
+{{string.Join("\n", GetManyToOneDeleteQueries(entityClass, allEntityClasses, null, 0))}}
 
                 await DeleteEntityAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>({{nameOfTheEntityClassFirstLower}}Id);
             });
@@ -520,7 +521,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
                 await OnBefore{{nameOfTheEntityClass}}ListAsyncDelete({{nameOfTheEntityClassFirstLower}}ListToDelete);
 
-{{string.Join("\n", GetManyToOneDeleteQueriesForList(entityClass, entityClasses, null, 0))}}
+{{string.Join("\n", GetManyToOneDeleteQueriesForList(entityClass, allEntityClasses, null, 0))}}
 
                 await DeleteEntitiesAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>({{nameOfTheEntityClassFirstLower}}ListToDelete);
             });
@@ -530,7 +531,7 @@ namespace {{basePartOfTheNamespace}}.Services
             return sb.ToString();
         }
 
-        private static List<string> GetManyToOneDeleteQueries(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, string parentNameOfTheEntityClass, int recursiveIteration)
+        private static List<string> GetManyToOneDeleteQueries(SoftClass entityClass, List<SoftClass> allEntityClasses, string parentNameOfTheEntityClass, int recursiveIteration)
         {
             if (recursiveIteration > 5000)
             {
@@ -540,19 +541,17 @@ namespace {{basePartOfTheNamespace}}.Services
 
             List<string> result = new List<string>();
 
-            string nameOfTheEntityClass = entityClass.Identifier.Text;
+            string nameOfTheEntityClass = entityClass.Name;
             string nameOfTheEntityClassFirstLower = nameOfTheEntityClass.FirstCharToLower();
 
-            List<SoftClass> softEntityClasses = Helper.GetSoftEntityClasses(entityClasses);
-
-            List<SoftProperty> manyToOneRequiredProperties = Helper.GetManyToOneRequiredProperties(nameOfTheEntityClass, softEntityClasses);
+            List<SoftProperty> manyToOneRequiredProperties = Helper.GetManyToOneRequiredProperties(nameOfTheEntityClass, allEntityClasses);
 
             foreach (SoftProperty prop in manyToOneRequiredProperties)
             {
-                ClassDeclarationSyntax nestedEntityClass = Helper.GetClass(prop.ClassIdentifierText, entityClasses);
-                string nestedEntityClassName = nestedEntityClass.Identifier.Text;
+                SoftClass nestedEntityClass = allEntityClasses.Where(x => x.Name == prop.ClassIdentifierText).SingleOrDefault();
+                string nestedEntityClassName = nestedEntityClass.Name;
                 string nestedEntityClassNameLowerCase = nestedEntityClassName.FirstCharToLower();
-                string nestedEntityClassIdType = Helper.GetGenericIdType(nestedEntityClass, entityClasses);
+                string nestedEntityClassIdType = Helper.GetGenericIdType(nestedEntityClass, allEntityClasses);
 
                 if (recursiveIteration == 0)
                 {
@@ -567,7 +566,7 @@ namespace {{basePartOfTheNamespace}}.Services
 """);
                 }
 
-                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, entityClasses, nameOfTheEntityClass, recursiveIteration + 1));
+                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, allEntityClasses, nameOfTheEntityClass, recursiveIteration + 1));
 
                 result.Add($$"""
                 await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete.Contains(x.Id)).ExecuteDeleteAsync();
@@ -577,7 +576,7 @@ namespace {{basePartOfTheNamespace}}.Services
             return result;
         }
 
-        private static List<string> GetManyToOneDeleteQueriesForList(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses, string parentNameOfTheEntityClass, int recursiveIteration)
+        private static List<string> GetManyToOneDeleteQueriesForList(SoftClass entityClass, List<SoftClass> allEntityClasses, string parentNameOfTheEntityClass, int recursiveIteration)
         {
             if (recursiveIteration > 5000)
             {
@@ -587,19 +586,17 @@ namespace {{basePartOfTheNamespace}}.Services
 
             List<string> result = new List<string>();
 
-            string nameOfTheEntityClass = entityClass.Identifier.Text;
+            string nameOfTheEntityClass = entityClass.Name;
             string nameOfTheEntityClassFirstLower = nameOfTheEntityClass.FirstCharToLower();
 
-            List<SoftClass> softEntityClasses = Helper.GetSoftEntityClasses(entityClasses);
-
-            List<SoftProperty> manyToOneRequiredProperties = Helper.GetManyToOneRequiredProperties(nameOfTheEntityClass, softEntityClasses);
+            List<SoftProperty> manyToOneRequiredProperties = Helper.GetManyToOneRequiredProperties(nameOfTheEntityClass, allEntityClasses);
 
             foreach (SoftProperty prop in manyToOneRequiredProperties)
             {
-                ClassDeclarationSyntax nestedEntityClass = Helper.GetClass(prop.ClassIdentifierText, entityClasses);
-                string nestedEntityClassName = nestedEntityClass.Identifier.Text;
+                SoftClass nestedEntityClass = allEntityClasses.Where(x => x.Name == prop.ClassIdentifierText).SingleOrDefault();
+                string nestedEntityClassName = nestedEntityClass.Name;
                 string nestedEntityClassNameLowerCase = nestedEntityClassName.FirstCharToLower();
-                string nestedEntityClassIdType = Helper.GetGenericIdType(nestedEntityClass, entityClasses);
+                string nestedEntityClassIdType = Helper.GetGenericIdType(nestedEntityClass, allEntityClasses);
 
                 if (recursiveIteration == 0)
                 {
@@ -614,7 +611,7 @@ namespace {{basePartOfTheNamespace}}.Services
 """);
                 }
 
-                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, entityClasses, nameOfTheEntityClass, recursiveIteration + 1));
+                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, allEntityClasses, nameOfTheEntityClass, recursiveIteration + 1));
 
                 result.Add($$"""
                 await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete.Contains(x.Id)).ExecuteDeleteAsync();
@@ -628,9 +625,9 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Read
 
-        private static string GetPopulateDTOWithBlobPartsForDTO(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
+        private static string GetPopulateDTOWithBlobPartsForDTO(SoftClass entityClass, List<SoftProperty> propertiesEntityClass)
         {
-            List<string> blobParts = GetPopulateDTOWithBlobParts(entityClass, propertiesEntityClass);
+            List<string> blobParts = GetPopulateDTOWithBlobParts(propertiesEntityClass);
 
             if (blobParts.Count == 0)
                 return null;
@@ -640,22 +637,22 @@ namespace {{basePartOfTheNamespace}}.Services
 """;
         }
 
-        private static string GetPopulateDTOWithBlobPartsForDTOList(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
+        private static string GetPopulateDTOWithBlobPartsForDTOList(SoftClass entityClass, List<SoftProperty> propertiesEntityClass)
         {
-            List<string> blobParts = GetPopulateDTOWithBlobParts(entityClass, propertiesEntityClass);
+            List<string> blobParts = GetPopulateDTOWithBlobParts(propertiesEntityClass);
 
             if (blobParts.Count == 0)
                 return null;
 
             return $$"""
-                foreach ({{entityClass.Identifier.Text}}DTO dto in dtoList)
+                foreach ({{entityClass.Name}}DTO dto in dtoList)
                 {
                     {{string.Join("\n", blobParts)}}
                 }
 """;
         }
 
-        private static List<string> GetPopulateDTOWithBlobParts(ClassDeclarationSyntax entityClass, List<SoftProperty> propertiesEntityClass)
+        private static List<string> GetPopulateDTOWithBlobParts(List<SoftProperty> propertiesEntityClass)
         {
             List<string> blobParts = new List<string>();
 
@@ -678,40 +675,39 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Enumerable
 
-        static List<string> GetEnumerableGeneratedMethods(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> classes, IEnumerable<INamedTypeSymbol> referencedClassesEntities)
+        static List<string> GetEnumerableGeneratedMethods(SoftClass entityClass, List<SoftClass> allEntityClasses)
         {
-            string nameOfTheEntityClass = entityClass.Identifier.Text; // User
-            string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower(); // user
-            string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, classes); // long
+            string nameOfTheEntityClass = entityClass.Name; // User
+            string nameOfTheEntityClassFirstLower = entityClass.Name.FirstCharToLower(); // user
+            string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, allEntityClasses); // long
 
-            List<SoftProperty> propertiesEntityClass = Helper.GetAllPropertiesOfTheClass(entityClass, classes, true)
+            List<SoftProperty> enumerablePropertiesOfTheEntityClass = entityClass.Properties
                 .Where(prop => prop.Type.IsEnumerable())
                 .ToList();
 
             List<string> result = new List<string>();
 
-            foreach (SoftProperty prop in propertiesEntityClass) // List<Role> Roles
+            foreach (SoftProperty prop in enumerablePropertiesOfTheEntityClass) // List<Role> Roles
             {
                 string classNameFromTheList = GetClassNameFromTheList(prop.Type); // Role
                 string classNameFromTheListFirstLower = classNameFromTheList.FirstCharToLower(); // role
-                ClassDeclarationSyntax classFromTheList = classes.Where(x => x.Identifier.Text == classNameFromTheList).SingleOrDefault(); // Role
+                SoftClass classFromTheList = allEntityClasses.Where(x => x.Name == classNameFromTheList).Single(); // Role
 
-                INamedTypeSymbol classFromTheListFromTheReferencedProjects = referencedClassesEntities.Where(x => x.Name == classNameFromTheList).SingleOrDefault();
-                if (classFromTheList == null) // && classFromTheListFromTheReferencedProjects == null  // TODO FT: Continue to do this...
-                {
-                    continue;
+                //ClassDeclarationSyntax classFromTheListFromTheReferencedProjects = referencedClassesEntities.Where(x => x.Identifier.Text == classNameFromTheList).SingleOrDefault();
+                //if (classFromTheList == null) // && classFromTheListFromTheReferencedProjects == null  // TODO FT: Continue to do this...
+                //{
+                    //continue;
                     //result.Add("INVALID ENTITY CLASS, YOU CAN'T MAKE LIST OF NO ENTITY CLASS"); // FT: It can, if the class is from another project.
-                }
-                string idTypeOfTheClassFromTheList = Helper.GetGenericIdType(classFromTheList, classes); // int
-                string classNameFromTheListDisplayNameProp = Helper.GetDisplayNamePropForClass(classFromTheList, classes); // Name
+                //}
+
+                string idTypeOfTheClassFromTheList = Helper.GetGenericIdType(classFromTheList, allEntityClasses); // int
+
+                if (idTypeOfTheClassFromTheList == null) // FT: M2M List, maybe do something else in the future.
+                    continue;
+
+                string classNameFromTheListDisplayNameProp = Helper.GetDisplayNamePropForClass(classFromTheList); // Name
                 //classNameFromTheListDisplayNameProp = classNameFromTheListDisplayNameProp ?? classFromTheListFromTheReferencedProjects.Att.Where(x => ).FirstOrDefault() // TODO FT: Continue to do this...
-                List<SoftProperty> classFromTheListProperties = classFromTheList.Members.OfType<PropertyDeclarationSyntax>()
-                    .Select(prop => new SoftProperty()
-                    {
-                        Type = prop.Type.ToString(),
-                        IdentifierText = prop.Identifier.Text
-                    })
-                    .ToList();
+                List<SoftProperty> classFromTheListProperties = classFromTheList.Properties;
 
                 SoftProperty manyToManyPropFromTheListProperties = classFromTheListProperties.Where(x => x.Type.IsEnumerable() && GetClassNameFromTheList(x.Type) == nameOfTheEntityClass).SingleOrDefault(); // List<User> Users
                 SoftProperty manyToOneProp = classFromTheListProperties.Where(x => x.Type.PropTypeIsManyToOne() && prop.Type == nameOfTheEntityClass).SingleOrDefault(); // User / Userando
@@ -887,12 +883,12 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region M2M
 
-        private static string HandleManyToManyData(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        private static string HandleManyToManyData(SoftClass entityClass, List<SoftClass> allEntityClasses)
         {
-            string nameOfTheEntityClass = entityClass.Identifier.Text;
-            string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
+            string nameOfTheEntityClass = entityClass.Name;
+            string nameOfTheEntityClassFirstLower = entityClass.Name.FirstCharToLower();
 
-            List<SoftProperty> manyToManyProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses);
+            List<SoftProperty> manyToManyProperties = entityClass.Properties;
 
             SoftProperty extendPrimaryKeyProperty = manyToManyProperties.Where(x => x.Attributes.Any(x => x.Name == "ExtendManyToMany")).SingleOrDefault();
             SoftProperty mainEntityPrimaryKeyProperty = manyToManyProperties.Where(x => x.Attributes.Any(x => x.Name == "MainEntityManyToMany")).SingleOrDefault();
@@ -906,12 +902,12 @@ namespace {{basePartOfTheNamespace}}.Services
             List<SoftProperty> manyToManyAdditionalProperties = manyToManyProperties.Where(x => x.IdentifierText != extendPrimaryKeyProperty.IdentifierText && x.IdentifierText != mainEntityPrimaryKeyProperty.IdentifierText).ToList();
 
             string extendEntityClassName = extendPrimaryKeyProperty.Attributes.Where(x => x.Name == "ExtendManyToMany").Select(x => x.Value).SingleOrDefault();
-            ClassDeclarationSyntax extendEntityClass = Helper.GetClass(extendEntityClassName, entityClasses);
-            string extendEntityIdType = Helper.GetGenericIdType(extendEntityClass, entityClasses);
+            SoftClass extendEntityClass = allEntityClasses.Where(x => x.Name == extendEntityClassName).SingleOrDefault();
+            string extendEntityIdType = Helper.GetGenericIdType(extendEntityClass, allEntityClasses);
 
             string mainEntityClassName = mainEntityPrimaryKeyProperty.Attributes.Where(x => x.Name == "MainEntityManyToMany").Select(x => x.Value).SingleOrDefault();
-            ClassDeclarationSyntax mainEntityClass = Helper.GetClass(mainEntityClassName, entityClasses);
-            string mainEntityIdType = Helper.GetGenericIdType(mainEntityClass, entityClasses);
+            SoftClass mainEntityClass = allEntityClasses.Where(x => x.Name == mainEntityClassName).SingleOrDefault();
+            string mainEntityIdType = Helper.GetGenericIdType(mainEntityClass, allEntityClasses);
 
             return $$"""
         /// <summary>
@@ -984,6 +980,7 @@ using Soft.Generator.Shared.Excel;
 using Soft.Generator.Shared.Interfaces;
 using Soft.Generator.Shared.Services;
 using Soft.Generator.Shared.DTO;
+using Soft.Generator.Shared.Entities;
 using Soft.Generator.Shared.Extensions;
 using Soft.Generator.Shared.SoftExceptions;
 using Soft.Generator.Shared.Terms;

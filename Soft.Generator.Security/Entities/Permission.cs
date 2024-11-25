@@ -33,7 +33,7 @@ namespace Soft.Generator.Security.Entities
 
         [Required]
         [StringLength(100, MinimumLength = 1)]
-        public string Code { get; set; }
+        public string Code { get; set; } // TODO FT: Maybe put Code also inside ReadonlyObject?
 
         public virtual List<Role> Roles { get; set; }
     }

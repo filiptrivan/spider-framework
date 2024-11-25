@@ -41,12 +41,12 @@ namespace Soft.SourceGenerator.NgTable.Net
         {
             if (classes.Count <= 1) return;
 
-            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
+            List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
 
             StringBuilder sb = new StringBuilder();
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0]);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0].Namespace);
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
@@ -72,7 +72,7 @@ namespace {{basePartOfNamespace}}.ValidationRules
                 foreach (SoftClass DTOClass in DTOClassGroup)
                     DTOProperties.AddRange(DTOClass.Properties);
 
-                ClassDeclarationSyntax entityClass = entityClasses.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Identifier.Text).SingleOrDefault(); // If it is null then we only made DTO, without entity class
+                SoftClass entityClass = entityClasses.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Name).SingleOrDefault(); // If it is null then we only made DTO, without entity class
 
                 sb.AppendLine($$"""
     public class {{DTOClassGroup.Key}}ValidationRules : AbstractValidator<{{DTOClassGroup.Key}}>
@@ -98,7 +98,7 @@ namespace {{basePartOfNamespace}}.ValidationRules
         /// <param name="DTOProperties">Including the attributes</param>
         /// <param name="entityClass">User</param>
         /// <returns>List of rules: eg. [RuleFor(x => x.Username).Length(0, 70), RuleFor(x => x.Email).Length(0, 70)]</returns>
-        public static List<string> GetValidationRules(List<SoftProperty> DTOProperties, List<SoftAttribute> DTOAttributes, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        public static List<string> GetValidationRules(List<SoftProperty> DTOProperties, List<SoftAttribute> DTOAttributes, SoftClass entityClass, List<SoftClass> entityClasses)
         {
             // [RuleFor(x => x.Username).Length(0, 70);, RuleFor(x => x.Email).Length(0, 70);]
             List<string> validationRulesOnDTO = new List<string>(); // priority - 1.
@@ -123,7 +123,7 @@ namespace {{basePartOfNamespace}}.ValidationRules
             {
                 validationRulesOnEntity.AddRange(GetRulesOnEntity(entityClass, entityClasses));
 
-                List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses);
+                List<SoftProperty> entityProperties = entityClass.Properties;
                 foreach (SoftProperty prop in entityProperties)
                 {
                     string rule = GetRuleForProp(prop);
@@ -232,10 +232,10 @@ namespace {{basePartOfNamespace}}.ValidationRules
         /// </summary>
         /// <param name="entityClass"></param>
         /// <returns></returns>
-        static List<string> GetRulesOnEntity(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        static List<string> GetRulesOnEntity(SoftClass entityClass, List<SoftClass> entityClasses)
         {
             List<string> ruleFors = new List<string>();
-            List<SoftAttribute> entityAttributes = Helper.GetAllAttributesOfTheClass(entityClass, entityClasses);
+            List<SoftAttribute> entityAttributes = entityClass.Attributes;
 
             foreach (SoftAttribute attribute in entityAttributes)
             {

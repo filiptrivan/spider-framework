@@ -40,8 +40,8 @@ namespace Soft.SourceGenerator.NgTable.Angular
         {
             if (classes.Count <= 1) return;
 
-            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
+            List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
 
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgValidatorsGenerator), classes);
 
@@ -77,7 +77,9 @@ export class Validator{{projectName}}Service {
                 List<SoftAttribute> DTOAttributes = new List<SoftAttribute>();
 
                 ClassDeclarationSyntax nonGeneratedDTOClass = classes.Where(x => x.Identifier.Text == DTOClassGroup.Key).SingleOrDefault();
+
                 List<SoftAttribute> softAttributes = Helper.GetAllAttributesOfTheClass(nonGeneratedDTOClass, classes);
+
                 if (softAttributes != null)
                     DTOAttributes.AddRange(softAttributes); // FT: Its okay to add only for non generated because we will not have any attributes on the generated DTOs
 
@@ -85,7 +87,7 @@ export class Validator{{projectName}}Service {
                 foreach (SoftClass DTOClass in DTOClassGroup)
                     DTOProperties.AddRange(DTOClass.Properties);
 
-                ClassDeclarationSyntax entityClass = entityClasses.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Identifier.Text).SingleOrDefault(); // If it is null then we only made DTO, without entity class
+                SoftClass entityClass = entityClasses.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Name).SingleOrDefault(); // If it is null then we only made DTO, without entity class
 
                 string validationClassConstructorBody = GetValidationClassConstructorBody(DTOProperties, DTOAttributes, entityClass, entityClasses);
 
@@ -333,7 +335,7 @@ export class Validator{{projectName}}Service {
             return validationRulePropNameFirstLower;
         }
 
-        private static string GetValidationClassConstructorBody(List<SoftProperty> DTOProperties, List<SoftAttribute> DTOAttributes, ClassDeclarationSyntax entityClass, List<ClassDeclarationSyntax> entityClasses)
+        private static string GetValidationClassConstructorBody(List<SoftProperty> DTOProperties, List<SoftAttribute> DTOAttributes, SoftClass entityClass, List<SoftClass> entityClasses)
         {
             return $"{string.Join("\n\t\t\t", FluentValidationGenerator.GetValidationRules(DTOProperties, DTOAttributes, entityClass, entityClasses))}";
         }

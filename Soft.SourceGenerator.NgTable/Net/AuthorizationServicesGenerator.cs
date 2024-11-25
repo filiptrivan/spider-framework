@@ -29,17 +29,13 @@ namespace Soft.SourceGenerator.NgTable.Net
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntities(s),
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEntities(ctx))
-                .Where(static c => c is not null);
+                .Where(static c => c is not null);;
 
-            IncrementalValueProvider<IEnumerable<INamedTypeSymbol>> referencedProjectClasses = Helper.GetReferencedProjectsSymbolsEntities(context);
-
-            var allClasses = classDeclarations.Collect()
-                .Combine(referencedProjectClasses);
-
-            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
+            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
+                static (spc, source) => Execute(source, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, IEnumerable<INamedTypeSymbol> referencedClassesEntities, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
 
