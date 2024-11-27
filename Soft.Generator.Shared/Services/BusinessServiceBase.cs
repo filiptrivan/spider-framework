@@ -28,7 +28,7 @@ namespace Soft.Generator.Shared.Services
             _blobContainerClient = blobContainerClient;
         }
 
-        protected internal async Task<T> LoadInstanceAsync<T, ID>(ID id, int? version) 
+        public async Task<T> LoadInstanceAsync<T, ID>(ID id, int? version) 
             where T : class, IBusinessObject<ID>
             where ID : struct
         {
@@ -46,7 +46,7 @@ namespace Soft.Generator.Shared.Services
             });
         }
 
-        protected internal async Task<T> LoadInstanceAsync<T, ID>(ID id) 
+        public async Task<T> LoadInstanceAsync<T, ID>(ID id) 
             where T : class, IReadonlyObject<ID>
             where ID : struct
         {

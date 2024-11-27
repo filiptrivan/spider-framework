@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Soft.Generator.Security\Soft.Generator.Security.csproj" />
+    <ProjectReference Include="..\Soft.Generator.Shared\Soft.Generator.Shared.csproj" />
   </ItemGroup>
 
 	<ItemGroup>

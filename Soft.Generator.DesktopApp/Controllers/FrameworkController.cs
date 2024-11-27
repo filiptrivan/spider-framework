@@ -31,5 +31,10 @@ namespace Soft.Generator.DesktopApp.Controllers
         {
             return _desktopAppBusinessService.GetFramework(id);
         }
+
+        public void DeleteFramework(int id)
+        {
+            _desktopAppBusinessService.DeleteFramework(id);
+        }
     }
 }

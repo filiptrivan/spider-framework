@@ -9,11 +9,12 @@ using Soft.Generator.Shared.Enums;
 using Soft.Generator.Security.Interface;
 using Soft.Generator.Security.Entities;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Soft.Generator.Shared.Attributes;
 
 namespace Soft.Generator.Infrastructure.Data
 {
-    public class ApplicationDbContext<TUser> : DbContext, IApplicationDbContext 
-        where TUser : class, IUser, new() 
+    public class ApplicationDbContext<TUser> : DbContext, IApplicationDbContext
+        where TUser : class, IUser, new()
     {
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext<TUser>> options)
@@ -57,6 +58,27 @@ namespace Soft.Generator.Infrastructure.Data
                 modelBuilder.Entity<Permission>().Ignore(x => x.DescriptionLatin);
             }
 
+            foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                Type clrType = entityType.ClrType;
+
+                foreach (IMutableProperty property in entityType.GetProperties())
+                {
+                    MemberInfo memberInfo = property.PropertyInfo ?? (MemberInfo)property.FieldInfo;
+
+                    if (memberInfo == null) 
+                        continue;
+
+                    ManyToOneRequiredAttribute attributeValue = Attribute.GetCustomAttribute(memberInfo, typeof(ManyToOneRequiredAttribute)) as ManyToOneRequiredAttribute;
+
+                    if (attributeValue == null) 
+                        continue;
+
+                    modelBuilder.Entity(clrType)
+                        .Property(property.Name)
+                        .IsRequired();
+                }
+            }
         }
 
         public DbSet<TEntity> DbSet<TEntity>() where TEntity : class
@@ -90,17 +112,17 @@ namespace Soft.Generator.Infrastructure.Data
                     HandleBusinessObjectChanges(businessObjectByte, changedEntity);
                     break;
 
-                //case ReadonlyObject<long> readonlyObjectLong:
-                //    HandleReadonlyObjectChanges(readonlyObjectLong, changedEntity);
-                //    break;
+                    //case ReadonlyObject<long> readonlyObjectLong:
+                    //    HandleReadonlyObjectChanges(readonlyObjectLong, changedEntity);
+                    //    break;
 
-                //case ReadonlyObject<int> readonlyObjectInt:
-                //    HandleReadonlyObjectChanges(readonlyObjectInt, changedEntity);
-                //    break;
+                    //case ReadonlyObject<int> readonlyObjectInt:
+                    //    HandleReadonlyObjectChanges(readonlyObjectInt, changedEntity);
+                    //    break;
 
-                //case ReadonlyObject<byte> readonlyObjectByte:
-                //    HandleReadonlyObjectChanges(readonlyObjectByte, changedEntity);
-                //    break;
+                    //case ReadonlyObject<byte> readonlyObjectByte:
+                    //    HandleReadonlyObjectChanges(readonlyObjectByte, changedEntity);
+                    //    break;
             }
         }
 

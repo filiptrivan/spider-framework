@@ -24,7 +24,7 @@ namespace Soft.Generator.DesktopApp.Pages
 
             InitializeComponent();
 
-            softDataGridView1.SoftInitializeComponent<Permission>(_permissionController.GetPermissionList(), false);
+            softDataGridView1.SoftInitializeComponent<Permission>(_permissionController.GetPermissionList(), false, null, false, false);
         }
     }
 }

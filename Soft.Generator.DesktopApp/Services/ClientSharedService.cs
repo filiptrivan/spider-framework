@@ -10,7 +10,7 @@ namespace Soft.Generator.DesktopApp.Services
     {
         public void ShowSuccessfullMessage()
         {
-            MessageBox.Show("Uspešno ste sačuvali objekat.");
+            MessageBox.Show("Uspešno ste izvršili akciju.", "Uspešna akcija");
         }
     }
 }
