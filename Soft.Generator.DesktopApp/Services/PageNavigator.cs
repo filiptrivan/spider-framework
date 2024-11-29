@@ -1,6 +1,9 @@
 ﻿using Soft.Generator.DesktopApp.Controllers;
 using Soft.Generator.DesktopApp.Pages;
+using Soft.Generator.DesktopApp.Pages.CompanyPages;
+using Soft.Generator.DesktopApp.Pages.DomainFolderPathPages;
 using Soft.Generator.DesktopApp.Pages.FrameworkPages;
+using Soft.Generator.DesktopApp.Pages.SettingPages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +18,7 @@ namespace Soft.Generator.DesktopApp.Services
         private readonly CompanyController _companyController;
         private readonly FrameworkController _frameworkController;
         private readonly HomeController _homeController;
-        private readonly PathToDomainFolderController _pathToDomainFolderController;
+        private readonly DomainFolderPathController _pathToDomainFolderController;
         private readonly PermissionController _permissionController;
         private readonly SettingController _settingController;
 
@@ -27,7 +30,7 @@ namespace Soft.Generator.DesktopApp.Services
         public PageNavigator(
             ClientSharedService clientSharedService,
             CompanyController companyController, FrameworkController frameworkController, HomeController homeController,
-            PathToDomainFolderController pathToDomainFolderController, PermissionController permissionController, SettingController settingController, WebApplicationController webApplicationController
+            DomainFolderPathController pathToDomainFolderController, PermissionController permissionController, SettingController settingController, WebApplicationController webApplicationController
             )
         {
             _companyController = companyController;
@@ -88,7 +91,11 @@ namespace Soft.Generator.DesktopApp.Services
         {
             if (typeof(T) == typeof(CompanyListPage))
             {
-                return new CompanyListPage() as T;
+                return new CompanyListPage(_companyController, this, _clientSharedService) as T;
+            }
+            else if (typeof(T) == typeof(CompanyDetailsPage))
+            {
+                return new CompanyDetailsPage(_companyController, this, _clientSharedService) as T;
             }
             else if (typeof(T) == typeof(FrameworkListPage))
             {
@@ -102,9 +109,13 @@ namespace Soft.Generator.DesktopApp.Services
             {
                 return new HomePage() as T;
             }
-            else if (typeof(T) == typeof(PathToDomainFolderListPage))
+            else if (typeof(T) == typeof(DomainFolderPathListPage))
             {
-                return new PathToDomainFolderListPage() as T;
+                return new DomainFolderPathListPage(_pathToDomainFolderController, this, _clientSharedService) as T;
+            }
+            else if (typeof(T) == typeof(DomainFolderPathDetailsPage))
+            {
+                return new DomainFolderPathDetailsPage(_pathToDomainFolderController, this, _clientSharedService) as T;
             }
             else if (typeof(T) == typeof(PermissionListPage))
             {
@@ -112,7 +123,11 @@ namespace Soft.Generator.DesktopApp.Services
             }
             else if (typeof(T) == typeof(SettingListPage))
             {
-                return new SettingListPage() as T;
+                return new SettingListPage(_settingController, this, _clientSharedService) as T;
+            }
+            else if (typeof(T) == typeof(SettingDetailsPage))
+            {
+                return new SettingDetailsPage(_settingController, this, _clientSharedService) as T;
             }
             else if (typeof(T) == typeof(WebApplicationListPage))
             {
@@ -130,12 +145,30 @@ namespace Soft.Generator.DesktopApp.Services
         {
             switch (pageName)
             {
-                case nameof(HomePage):
-                    return new HomePage();
+                case nameof(CompanyListPage):
+                    return new CompanyListPage(_companyController, this, _clientSharedService);
+                case nameof(CompanyDetailsPage):
+                    return new CompanyDetailsPage(_companyController, this, _clientSharedService);
                 case nameof(FrameworkListPage):
                     return new FrameworkListPage(_frameworkController, this, _clientSharedService);
                 case nameof(FrameworkDetailsPage):
                     return new FrameworkDetailsPage(_frameworkController, this, _clientSharedService);
+                case nameof(HomePage):
+                    return new HomePage();
+                case nameof(DomainFolderPathListPage):
+                    return new DomainFolderPathListPage(_pathToDomainFolderController, this, _clientSharedService);
+                case nameof(DomainFolderPathDetailsPage):
+                    return new DomainFolderPathDetailsPage(_pathToDomainFolderController, this, _clientSharedService);
+                case nameof(PermissionListPage):
+                    return new PermissionListPage(_permissionController);
+                case nameof(SettingListPage):
+                    return new SettingListPage(_settingController, this, _clientSharedService);
+                case nameof(SettingDetailsPage):
+                    return new SettingDetailsPage(_settingController, this, _clientSharedService);
+                case nameof(WebApplicationListPage):
+                    return new WebApplicationListPage(_webApplicationController, this, _clientSharedService);
+                case nameof(WebApplicationDetailsPage):
+                    return new WebApplicationDetailsPage(_webApplicationController, this, _clientSharedService);
             }
 
             throw new NotSupportedException("Niste napravili stranu za prikaz.");

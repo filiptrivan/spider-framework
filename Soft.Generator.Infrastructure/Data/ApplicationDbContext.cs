@@ -58,27 +58,29 @@ namespace Soft.Generator.Infrastructure.Data
                 modelBuilder.Entity<Permission>().Ignore(x => x.DescriptionLatin);
             }
 
-            foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes())
-            {
-                Type clrType = entityType.ClrType;
+            //foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes())
+            //{
+            //    Type clrType = entityType.ClrType;
 
-                foreach (IMutableProperty property in entityType.GetProperties())
-                {
-                    MemberInfo memberInfo = property.PropertyInfo ?? (MemberInfo)property.FieldInfo;
+            //    foreach (PropertyInfo property in clrType.GetProperties())
+            //    {
+            //        MemberInfo member = property;
 
-                    if (memberInfo == null) 
-                        continue;
+            //        if (member == null) 
+            //            continue;
 
-                    ManyToOneRequiredAttribute attributeValue = Attribute.GetCustomAttribute(memberInfo, typeof(ManyToOneRequiredAttribute)) as ManyToOneRequiredAttribute;
+            //        ManyToOneRequiredAttribute attributeValue = Attribute.GetCustomAttribute(member, typeof(ManyToOneRequiredAttribute)) as ManyToOneRequiredAttribute;
 
-                    if (attributeValue == null) 
-                        continue;
+            //        if (attributeValue == null) 
+            //            continue;
 
-                    modelBuilder.Entity(clrType)
-                        .Property(property.Name)
-                        .IsRequired();
-                }
-            }
+            //        modelBuilder.Entity(clrType)
+            //            .HasOne(property.PropertyType, property.Name)
+            //            .WithMany()
+            //            .OnDelete(DeleteBehavior.NoAction)
+            //            .IsRequired(true);
+            //    }
+            //}
         }
 
         public DbSet<TEntity> DbSet<TEntity>() where TEntity : class

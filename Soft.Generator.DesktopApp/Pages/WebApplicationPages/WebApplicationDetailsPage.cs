@@ -36,10 +36,11 @@ namespace Soft.Generator.DesktopApp.Pages
             tb_Name.TextBoxValue = Entity.Name;
 
             cb_Company.Initialize<Company>(_webApplicationController.GetCompanyList());
-            //cb_Company.SelectedValue = Entity.Company.Id; // TODO FT: Need to add at least first level join
+            cb_Company.SelectedValue = Entity.Company.Id;
             cb_Company.DisplayMember = nameof(Company.Name);
 
             cb_Setting.Initialize<Setting>(_webApplicationController.GetSettingList());
+            cb_Company.SelectedValue = Entity.Setting.Id;
             cb_Company.DisplayMember = nameof(Setting.Name);
         }
 

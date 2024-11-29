@@ -45,7 +45,7 @@ namespace Soft.Generator.DesktopApp
             services.AddScoped<CompanyController>();
             services.AddScoped<FrameworkController>();
             services.AddScoped<HomeController>();
-            services.AddScoped<PathToDomainFolderController>();
+            services.AddScoped<DomainFolderPathController>();
             services.AddScoped<PermissionController>();
             services.AddScoped<SettingController>();
 

@@ -28,10 +28,29 @@
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            softDataGridView1 = new Controls.SoftDataGridView();
+            SuspendLayout();
+            // 
+            // softDataGridView1
+            // 
+            softDataGridView1.Dock = DockStyle.Fill;
+            softDataGridView1.Location = new Point(0, 0);
+            softDataGridView1.Name = "softDataGridView1";
+            softDataGridView1.Size = new Size(610, 242);
+            softDataGridView1.TabIndex = 0;
+            // 
+            // CompanyListPage
+            // 
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            Controls.Add(softDataGridView1);
+            Name = "CompanyListPage";
+            Size = new Size(610, 242);
+            ResumeLayout(false);
         }
 
         #endregion
+
+        private Controls.SoftDataGridView softDataGridView1;
     }
 }

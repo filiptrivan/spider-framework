@@ -1,6 +1,6 @@
-﻿namespace Soft.Generator.DesktopApp.Pages
+﻿namespace Soft.Generator.DesktopApp.Controls
 {
-    partial class SettingListPage
+    partial class SoftCheckbox
     {
         /// <summary> 
         /// Required designer variable.
@@ -28,29 +28,32 @@
         /// </summary>
         private void InitializeComponent()
         {
-            softDataGridView1 = new Controls.SoftDataGridView();
+            checkBox1 = new CheckBox();
             SuspendLayout();
             // 
-            // softDataGridView1
+            // checkBox1
             // 
-            softDataGridView1.Dock = DockStyle.Fill;
-            softDataGridView1.Location = new Point(0, 0);
-            softDataGridView1.Name = "softDataGridView1";
-            softDataGridView1.Size = new Size(532, 263);
-            softDataGridView1.TabIndex = 0;
+            checkBox1.AutoSize = true;
+            checkBox1.Location = new Point(13, 22);
+            checkBox1.Name = "checkBox1";
+            checkBox1.Size = new Size(83, 19);
+            checkBox1.TabIndex = 0;
+            checkBox1.Text = "checkBox1";
+            checkBox1.UseVisualStyleBackColor = true;
             // 
-            // SettingListPage
+            // SoftCheckbox
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            Controls.Add(softDataGridView1);
-            Name = "SettingListPage";
-            Size = new Size(532, 263);
+            Controls.Add(checkBox1);
+            Name = "SoftCheckbox";
+            Size = new Size(238, 63);
             ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
 
-        private Controls.SoftDataGridView softDataGridView1;
+        private CheckBox checkBox1;
     }
 }

@@ -1,6 +1,6 @@
-﻿namespace Soft.Generator.DesktopApp.Pages
+﻿namespace Soft.Generator.DesktopApp.Pages.DomainFolderPathPages
 {
-    partial class PathToDomainFolderListPage
+    partial class DomainFolderPathDetailsPage
     {
         /// <summary> 
         /// Required designer variable.
@@ -28,10 +28,30 @@
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            tb_Path = new SoftTextbox();
+            SuspendLayout();
+            // 
+            // tb_Path
+            // 
+            tb_Path.LabelValue = "Putanja domenskog foldera";
+            tb_Path.Location = new Point(3, 3);
+            tb_Path.Name = "tb_Path";
+            tb_Path.Size = new Size(238, 63);
+            tb_Path.TabIndex = 0;
+            tb_Path.TextBoxValue = "";
+            // 
+            // DomainFolderPathDetailsPage
+            // 
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            Controls.Add(tb_Path);
+            Name = "DomainFolderPathDetailsPage";
+            Size = new Size(520, 251);
+            ResumeLayout(false);
         }
 
         #endregion
+
+        private SoftTextbox tb_Path;
     }
 }

@@ -19,6 +19,12 @@ namespace Soft.Generator.DesktopApp.Controls
             set { label1.Text = value; }
         }
 
+        public object? SelectedValue
+        {
+            get { return comboBox1.SelectedValue; }
+            set { comboBox1.SelectedValue = value; }
+        }
+
         public string DisplayMember
         {
             get { return comboBox1.DisplayMember; }

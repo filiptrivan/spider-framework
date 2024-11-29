@@ -169,13 +169,16 @@ namespace {{basePartOfNamespace}}.TableFiltering
                     }
                 }
             }
-            query = query.Where(predicate).OrderBy(x => x.Id);
+
+            query = query.Where(predicate);
+
             return new PaginationResult<{{entityClass.Name}}>()
             {
                 TotalRecords = await query.CountAsync(),
                 Query = query
             };
         }
+
 """);
             }
             sb.AppendLine($$"""

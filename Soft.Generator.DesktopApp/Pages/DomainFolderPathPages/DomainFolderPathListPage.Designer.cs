@@ -1,6 +1,6 @@
 ﻿namespace Soft.Generator.DesktopApp.Pages
 {
-    partial class SettingListPage
+    partial class DomainFolderPathListPage
     {
         /// <summary> 
         /// Required designer variable.
@@ -36,16 +36,16 @@
             softDataGridView1.Dock = DockStyle.Fill;
             softDataGridView1.Location = new Point(0, 0);
             softDataGridView1.Name = "softDataGridView1";
-            softDataGridView1.Size = new Size(532, 263);
+            softDataGridView1.Size = new Size(484, 217);
             softDataGridView1.TabIndex = 0;
             // 
-            // SettingListPage
+            // DomainFolderPathListPage
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             Controls.Add(softDataGridView1);
-            Name = "SettingListPage";
-            Size = new Size(532, 263);
+            Name = "DomainFolderPathListPage";
+            Size = new Size(484, 217);
             ResumeLayout(false);
         }
 

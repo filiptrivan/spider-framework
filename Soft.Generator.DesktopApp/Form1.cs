@@ -16,7 +16,7 @@ namespace Soft.Generator.DesktopApp
         private readonly CompanyController _companyController;
         private readonly FrameworkController _frameworkController;
         private readonly HomeController _homeController;
-        private readonly PathToDomainFolderController _pathToDomainFolderController;
+        private readonly DomainFolderPathController _pathToDomainFolderController;
         private readonly PermissionController _permissionController;
         private readonly SettingController _settingController;
 
@@ -29,7 +29,7 @@ namespace Soft.Generator.DesktopApp
         public Form1(
             DesktopAppBusinessService desktopAppService, PageNavigator pageNavigator, ClientSharedService clientSharedService,
             WebApplicationController applicationController, CompanyController companyController, FrameworkController frameworkController, HomeController homeController, 
-            PathToDomainFolderController pathToDomainFolderController, PermissionController permissionController, SettingController settingController
+            DomainFolderPathController pathToDomainFolderController, PermissionController permissionController, SettingController settingController
             )
         {
             _applicationController = applicationController;
@@ -85,7 +85,7 @@ namespace Soft.Generator.DesktopApp
 
         private void pathToDomainFolderToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            _pageNavigator.NavigateToPage<PathToDomainFolderListPage>();
+            _pageNavigator.NavigateToPage<DomainFolderPathListPage>();
         }
 
     }

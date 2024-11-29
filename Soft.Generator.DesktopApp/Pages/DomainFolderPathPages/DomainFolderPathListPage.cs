@@ -1,6 +1,6 @@
 ﻿using Soft.Generator.DesktopApp.Controllers;
 using Soft.Generator.DesktopApp.Entities;
-using Soft.Generator.DesktopApp.Pages.SettingPages;
+using Soft.Generator.DesktopApp.Pages.DomainFolderPathPages;
 using Soft.Generator.DesktopApp.Services;
 using System;
 using System.Collections.Generic;
@@ -14,15 +14,15 @@ using System.Windows.Forms;
 
 namespace Soft.Generator.DesktopApp.Pages
 {
-    public partial class SettingListPage : UserControl
+    public partial class DomainFolderPathListPage : UserControl
     {
-        SettingController _settingController;
+        DomainFolderPathController _domainFolderPathController;
         PageNavigator _pageNavigator;
         ClientSharedService _clientSharedService;
 
-        public SettingListPage(SettingController settingController, PageNavigator pageNavigator, ClientSharedService clientSharedService)
+        public DomainFolderPathListPage(DomainFolderPathController domainFolderPathController, PageNavigator pageNavigator, ClientSharedService clientSharedService)
         {
-            _settingController = settingController;
+            _domainFolderPathController = domainFolderPathController;
             _pageNavigator = pageNavigator;
             _clientSharedService = clientSharedService;
 
@@ -33,12 +33,12 @@ namespace Soft.Generator.DesktopApp.Pages
 
         private void LoadTable()
         {
-            softDataGridView1.SoftInitializeComponent<Setting>(_settingController.GetSettingList(), true, SettingAddEventHandler, true, true, CellContentClickHandler);
+            softDataGridView1.SoftInitializeComponent<DomainFolderPath>(_domainFolderPathController.GetDomainFolderPathList(), true, DomainFolderPathAddEventHandler, true, true, CellContentClickHandler);
         }
 
-        public void SettingAddEventHandler(object sender, EventArgs e)
+        public void DomainFolderPathAddEventHandler(object sender, EventArgs e)
         {
-            _pageNavigator.NavigateToPage<SettingDetailsPage>(this);
+            _pageNavigator.NavigateToPage<DomainFolderPathDetailsPage>(this);
         }
 
         public void CellContentClickHandler(object sender, DataGridViewCellEventArgs e)
@@ -48,8 +48,8 @@ namespace Soft.Generator.DesktopApp.Pages
 
             if (detailsColumn != null && e.ColumnIndex == detailsColumn.Index)
             {
-                SettingDetailsPage settingDetailsPage = _pageNavigator.NavigateToPage<SettingDetailsPage>(this);
-                settingDetailsPage.Initialize(_settingController.GetSetting(id));
+                DomainFolderPathDetailsPage domainFolderPathDetailsPage = _pageNavigator.NavigateToPage<DomainFolderPathDetailsPage>(this);
+                domainFolderPathDetailsPage.Initialize(_domainFolderPathController.GetDomainFolderPath(id));
             }
 
             DataGridViewColumn deleteColumn = softDataGridView1.ColumnCollection["Delete"];
@@ -60,7 +60,7 @@ namespace Soft.Generator.DesktopApp.Pages
 
                 if (dialogResult == DialogResult.Yes)
                 {
-                    _settingController.DeleteSetting(id);
+                    _domainFolderPathController.DeleteDomainFolderPath(id);
                     LoadTable();
 
                     _clientSharedService.ShowSuccessfullMessage();
