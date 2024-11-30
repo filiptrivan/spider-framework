@@ -18,14 +18,16 @@ namespace Soft.Generator.DesktopApp.Pages.FrameworkPages
         PageNavigator _pageNavigator;
         FrameworkController _frameworkController;
         ClientSharedService _clientSharedService;
+        ValidationService _validationService;
 
         private Framework Entity { get; set; } = new Framework();
 
-        public FrameworkDetailsPage(FrameworkController frameworkController, PageNavigator pageNavigator, ClientSharedService clientSharedService)
+        public FrameworkDetailsPage(FrameworkController frameworkController, PageNavigator pageNavigator, ClientSharedService clientSharedService, ValidationService validationService)
         {
             _frameworkController = frameworkController;
             _pageNavigator = pageNavigator;
             _clientSharedService = clientSharedService;
+            _validationService = validationService;
 
             InitializeComponent();
         }

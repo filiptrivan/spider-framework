@@ -71,6 +71,27 @@ namespace Soft.Generator.Shared.Emailing
             }
         }
 
+        public async Task SendEmailAsync(string recipient, string subject, string body)
+        {
+            try
+            {
+                MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, recipient)
+                {
+                    Subject = subject,
+                    Body = body,
+                    BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
+                    IsBodyHtml = true,
+                };
+
+                await _smtpClient.SendMailAsync(mailMessage);
+            }
+            catch (Exception ex)
+            {
+                // don't throw, log
+                throw;
+            }
+        }
+
         /// <summary>
         /// TODO FT: Test if this is working
         /// </summary>

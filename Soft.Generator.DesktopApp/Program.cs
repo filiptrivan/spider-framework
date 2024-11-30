@@ -36,10 +36,10 @@ namespace Soft.Generator.DesktopApp
         {
             services.AddSingleton<PageNavigator>();
 
-            //services.AddMySqlDataSource(Settings.ConnectionString);
             services.AddScoped<SqlConnection>(_ => new SqlConnection(Settings.ConnectionString));
             services.AddScoped<DesktopAppBusinessService>();
             services.AddScoped<ClientSharedService>();
+            services.AddScoped<ValidationService>();
 
             services.AddScoped<WebApplicationController>();
             services.AddScoped<CompanyController>();

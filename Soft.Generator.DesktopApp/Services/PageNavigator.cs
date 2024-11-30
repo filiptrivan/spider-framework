@@ -23,6 +23,7 @@ namespace Soft.Generator.DesktopApp.Services
         private readonly SettingController _settingController;
 
         private readonly ClientSharedService _clientSharedService;
+        private readonly ValidationService _validationService;
 
         private Stack<UserControl> _pageStack = new Stack<UserControl>();
         private Panel _pnl_Main;
@@ -30,7 +31,8 @@ namespace Soft.Generator.DesktopApp.Services
         public PageNavigator(
             ClientSharedService clientSharedService,
             CompanyController companyController, FrameworkController frameworkController, HomeController homeController,
-            DomainFolderPathController pathToDomainFolderController, PermissionController permissionController, SettingController settingController, WebApplicationController webApplicationController
+            DomainFolderPathController pathToDomainFolderController, PermissionController permissionController, SettingController settingController, WebApplicationController webApplicationController,
+            ValidationService validationService
             )
         {
             _companyController = companyController;
@@ -42,7 +44,7 @@ namespace Soft.Generator.DesktopApp.Services
             _webApplicationController = webApplicationController;
 
             _clientSharedService = clientSharedService;
-
+            _validationService = validationService;
         }
 
         public void InitializeMainPanel(Panel pnl_Main)
@@ -95,7 +97,7 @@ namespace Soft.Generator.DesktopApp.Services
             }
             else if (typeof(T) == typeof(CompanyDetailsPage))
             {
-                return new CompanyDetailsPage(_companyController, this, _clientSharedService) as T;
+                return new CompanyDetailsPage(_companyController, this, _clientSharedService, _validationService) as T;
             }
             else if (typeof(T) == typeof(FrameworkListPage))
             {
@@ -103,7 +105,7 @@ namespace Soft.Generator.DesktopApp.Services
             }
             else if (typeof(T) == typeof(FrameworkDetailsPage))
             {
-                return new FrameworkDetailsPage(_frameworkController, this, _clientSharedService) as T;
+                return new FrameworkDetailsPage(_frameworkController, this, _clientSharedService, _validationService) as T;
             }
             else if (typeof(T) == typeof(HomePage))
             {
@@ -115,7 +117,7 @@ namespace Soft.Generator.DesktopApp.Services
             }
             else if (typeof(T) == typeof(DomainFolderPathDetailsPage))
             {
-                return new DomainFolderPathDetailsPage(_pathToDomainFolderController, this, _clientSharedService) as T;
+                return new DomainFolderPathDetailsPage(_pathToDomainFolderController, this, _clientSharedService, _validationService) as T;
             }
             else if (typeof(T) == typeof(PermissionListPage))
             {
@@ -127,7 +129,7 @@ namespace Soft.Generator.DesktopApp.Services
             }
             else if (typeof(T) == typeof(SettingDetailsPage))
             {
-                return new SettingDetailsPage(_settingController, this, _clientSharedService) as T;
+                return new SettingDetailsPage(_settingController, this, _clientSharedService, _validationService) as T;
             }
             else if (typeof(T) == typeof(WebApplicationListPage))
             {
@@ -135,7 +137,7 @@ namespace Soft.Generator.DesktopApp.Services
             }
             else if (typeof(T) == typeof(WebApplicationDetailsPage))
             {
-                return new WebApplicationDetailsPage(_webApplicationController, this, _clientSharedService) as T;
+                return new WebApplicationDetailsPage(_webApplicationController, this, _clientSharedService, _validationService) as T;
             }
 
             throw new NotSupportedException("Niste napravili stranu za prikaz.");
@@ -148,27 +150,27 @@ namespace Soft.Generator.DesktopApp.Services
                 case nameof(CompanyListPage):
                     return new CompanyListPage(_companyController, this, _clientSharedService);
                 case nameof(CompanyDetailsPage):
-                    return new CompanyDetailsPage(_companyController, this, _clientSharedService);
+                    return new CompanyDetailsPage(_companyController, this, _clientSharedService, _validationService);
                 case nameof(FrameworkListPage):
                     return new FrameworkListPage(_frameworkController, this, _clientSharedService);
                 case nameof(FrameworkDetailsPage):
-                    return new FrameworkDetailsPage(_frameworkController, this, _clientSharedService);
+                    return new FrameworkDetailsPage(_frameworkController, this, _clientSharedService, _validationService);
                 case nameof(HomePage):
                     return new HomePage();
                 case nameof(DomainFolderPathListPage):
                     return new DomainFolderPathListPage(_pathToDomainFolderController, this, _clientSharedService);
                 case nameof(DomainFolderPathDetailsPage):
-                    return new DomainFolderPathDetailsPage(_pathToDomainFolderController, this, _clientSharedService);
+                    return new DomainFolderPathDetailsPage(_pathToDomainFolderController, this, _clientSharedService, _validationService);
                 case nameof(PermissionListPage):
                     return new PermissionListPage(_permissionController);
                 case nameof(SettingListPage):
                     return new SettingListPage(_settingController, this, _clientSharedService);
                 case nameof(SettingDetailsPage):
-                    return new SettingDetailsPage(_settingController, this, _clientSharedService);
+                    return new SettingDetailsPage(_settingController, this, _clientSharedService, _validationService);
                 case nameof(WebApplicationListPage):
                     return new WebApplicationListPage(_webApplicationController, this, _clientSharedService);
                 case nameof(WebApplicationDetailsPage):
-                    return new WebApplicationDetailsPage(_webApplicationController, this, _clientSharedService);
+                    return new WebApplicationDetailsPage(_webApplicationController, this, _clientSharedService, _validationService);
             }
 
             throw new NotSupportedException("Niste napravili stranu za prikaz.");

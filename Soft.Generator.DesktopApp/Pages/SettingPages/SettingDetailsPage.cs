@@ -18,14 +18,16 @@ namespace Soft.Generator.DesktopApp.Pages.SettingPages
         PageNavigator _pageNavigator;
         SettingController _settingController;
         ClientSharedService _clientSharedService;
+        ValidationService _validationService;
 
         private Setting Entity { get; set; } = new Setting();
 
-        public SettingDetailsPage(SettingController settingController, PageNavigator pageNavigator, ClientSharedService clientSharedService)
+        public SettingDetailsPage(SettingController settingController, PageNavigator pageNavigator, ClientSharedService clientSharedService, ValidationService validationService)
         {
             _settingController = settingController;
             _pageNavigator = pageNavigator;
             _clientSharedService = clientSharedService;
+            _validationService = validationService;
 
             InitializeComponent();
         }

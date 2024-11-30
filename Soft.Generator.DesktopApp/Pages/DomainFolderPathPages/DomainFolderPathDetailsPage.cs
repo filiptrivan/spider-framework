@@ -18,14 +18,16 @@ namespace Soft.Generator.DesktopApp.Pages.DomainFolderPathPages
         PageNavigator _pageNavigator;
         DomainFolderPathController _domainFolderPathController;
         ClientSharedService _clientSharedService;
+        ValidationService _validationService;
 
         private DomainFolderPath Entity { get; set; } = new DomainFolderPath();
 
-        public DomainFolderPathDetailsPage(DomainFolderPathController domainFolderPathController, PageNavigator pageNavigator, ClientSharedService clientSharedService)
+        public DomainFolderPathDetailsPage(DomainFolderPathController domainFolderPathController, PageNavigator pageNavigator, ClientSharedService clientSharedService, ValidationService validationService)
         {
             _domainFolderPathController = domainFolderPathController;
             _pageNavigator = pageNavigator;
             _clientSharedService = clientSharedService;
+            _validationService = validationService;
 
             InitializeComponent();
         }

@@ -31,9 +31,13 @@ namespace Soft.Generator.DesktopApp.Controls
             set { comboBox1.DisplayMember = value; }
         }
 
+        public Func<object?, string> InvalidMessage { get; set; }
+
         public SoftCombobox()
         {
             InitializeComponent();
+
+            comboBox1.Validating += comboBox1_Validating;
 
             comboBox1.ValueMember = "Id";
             comboBox1.SelectedIndex = -1;
@@ -44,9 +48,27 @@ namespace Soft.Generator.DesktopApp.Controls
             EventHandler selectedValueChangedHandler = null
         )
         {
-            comboBox1.DataSource = new BindingList<T>(dataSource);
+            //comboBox1.DataSource = new BindingList<T>(dataSource);
+            comboBox1.DataSource = dataSource;
 
             comboBox1.SelectedValueChanged += selectedValueChangedHandler;
+
+            comboBox1.SelectedIndex = -1; // FT: Always the last
+        }
+
+        private void comboBox1_Validating(object sender, CancelEventArgs e)
+        {
+            if (InvalidMessage != null)
+            {
+                if (InvalidMessage(comboBox1.SelectedValue) == null)
+                {
+                    errorProvider1.SetError(comboBox1, null);
+                }
+                else
+                {
+                    errorProvider1.SetError(comboBox1, InvalidMessage(comboBox1.SelectedValue));
+                }
+            }
         }
     }
 }

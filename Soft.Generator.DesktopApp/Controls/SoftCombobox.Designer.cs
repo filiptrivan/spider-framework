@@ -28,8 +28,11 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             comboBox1 = new ComboBox();
             label1 = new Label();
+            errorProvider1 = new ErrorProvider(components);
+            ((System.ComponentModel.ISupportInitialize)errorProvider1).BeginInit();
             SuspendLayout();
             // 
             // comboBox1
@@ -49,6 +52,12 @@
             label1.TabIndex = 2;
             label1.Text = "label1";
             // 
+            // errorProvider1
+            // 
+            errorProvider1.BlinkRate = 0;
+            errorProvider1.BlinkStyle = ErrorBlinkStyle.NeverBlink;
+            errorProvider1.ContainerControl = this;
+            // 
             // SoftCombobox
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -57,6 +66,7 @@
             Controls.Add(comboBox1);
             Name = "SoftCombobox";
             Size = new Size(238, 63);
+            ((System.ComponentModel.ISupportInitialize)errorProvider1).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -65,5 +75,6 @@
 
         private ComboBox comboBox1;
         private Label label1;
+        private ErrorProvider errorProvider1;
     }
 }

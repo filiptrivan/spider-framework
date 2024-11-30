@@ -296,7 +296,9 @@ namespace {{basePartOfTheNamespace}}.Services
             StringBuilder sb = new StringBuilder();
 
             sb.Append($$"""
-        protected virtual void OnBefore{{nameOfTheEntityClass}}IsMapped({{nameOfTheEntityClass}}DTO dto) { }
+        protected virtual void OnBefore{{nameOfTheEntityClass}}IsMapped({{nameOfTheEntityClass}}DTO {{nameOfTheEntityClass.FirstCharToLower()}}DTO) { }
+
+        protected virtual void OnBefore{{nameOfTheEntityClass}}Update({{nameOfTheEntityClass}} {{nameOfTheEntityClass.FirstCharToLower()}}, {{nameOfTheEntityClass}}DTO {{nameOfTheEntityClass.FirstCharToLower()}}DTO) { }
 
         public async Task<{{nameOfTheEntityClass}}> Save{{nameOfTheEntityClass}}AndReturnDomainAsync({{nameOfTheEntityClass}}DTO dto, bool authorizeUpdate = true, bool authorizeInsert = true)
         {
@@ -329,6 +331,7 @@ namespace {{basePartOfTheNamespace}}.Services
                     }
 
                     poco = await LoadInstanceAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>(dto.Id, dto.Version);
+                    OnBefore{{nameOfTheEntityClass}}Update(poco, dto);
                     dto.Adapt(poco, Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
                     dbSet.Update(poco);
                 }

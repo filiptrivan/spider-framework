@@ -203,7 +203,7 @@ FROM [{{nameOfTheEntityClass}}] AS [{{nameOfTheEntityClassFirstLower}}]
                 {
                     {{string.Join("\n\t\t\t\t\t", entityPropertiesWithoutEnumerableAndId
                         .Select(x => x.Type.PropTypeIsManyToOne() ?
-                            $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}Id\", entity.{x.IdentifierText}.{GetIdentifierProperty(x.Type, entityClasses).IdentifierText});" :
+                            $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}Id\", entity.{x.IdentifierText}?.{GetIdentifierProperty(x.Type, entityClasses).IdentifierText});" :
                             $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}\", entity.{x.IdentifierText});"))}}
 
                     {{idTypeOfTheEntityClass}} newId = ({{idTypeOfTheEntityClass}})cmd.ExecuteScalar();
@@ -228,7 +228,7 @@ FROM [{{nameOfTheEntityClass}}] AS [{{nameOfTheEntityClassFirstLower}}]
                 using (SqlCommand cmd = new SqlCommand(query, _connection))
                 {
                     cmd.Parameters.AddWithValue("@{{idPropertyOfTheEntityClass.IdentifierText}}", entity.{{idPropertyOfTheEntityClass.IdentifierText}});
-                    {{string.Join("\n\t\t\t\t\t", entityPropertiesWithoutEnumerableAndId.Select(x => x.Type.PropTypeIsManyToOne() ? $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}Id\", entity.{x.IdentifierText}.{GetIdentifierProperty(x.Type, entityClasses).IdentifierText});" : $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}\", entity.{x.IdentifierText});"))}}
+                    {{string.Join("\n\t\t\t\t\t", entityPropertiesWithoutEnumerableAndId.Select(x => x.Type.PropTypeIsManyToOne() ? $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}Id\", entity.{x.IdentifierText}?.{GetIdentifierProperty(x.Type, entityClasses).IdentifierText});" : $"cmd.Parameters.AddWithValue(\"@{x.IdentifierText}\", entity.{x.IdentifierText});"))}}
 
                     cmd.ExecuteNonQuery();
                 }

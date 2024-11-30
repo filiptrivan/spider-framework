@@ -19,14 +19,16 @@ namespace Soft.Generator.DesktopApp.Pages.CompanyPages
         PageNavigator _pageNavigator;
         CompanyController _companyController;
         ClientSharedService _clientSharedService;
+        ValidationService _validationService;
 
         private Company Entity { get; set; } = new Company();
 
-        public CompanyDetailsPage(CompanyController companyController, PageNavigator pageNavigator, ClientSharedService clientSharedService)
+        public CompanyDetailsPage(CompanyController companyController, PageNavigator pageNavigator, ClientSharedService clientSharedService, ValidationService validationService)
         {
             _companyController = companyController;
             _pageNavigator = pageNavigator;
             _clientSharedService = clientSharedService;
+            _validationService = validationService;
 
             InitializeComponent();
         }

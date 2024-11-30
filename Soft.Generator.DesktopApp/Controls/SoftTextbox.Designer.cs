@@ -28,8 +28,11 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             label1 = new Label();
             textBox1 = new TextBox();
+            errorProvider1 = new ErrorProvider(components);
+            ((System.ComponentModel.ISupportInitialize)errorProvider1).BeginInit();
             SuspendLayout();
             // 
             // label1
@@ -48,6 +51,12 @@
             textBox1.Size = new Size(209, 23);
             textBox1.TabIndex = 1;
             // 
+            // errorProvider1
+            // 
+            errorProvider1.BlinkRate = 0;
+            errorProvider1.BlinkStyle = ErrorBlinkStyle.NeverBlink;
+            errorProvider1.ContainerControl = this;
+            // 
             // SoftTextbox
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -56,6 +65,7 @@
             Controls.Add(label1);
             Name = "SoftTextbox";
             Size = new Size(238, 63);
+            ((System.ComponentModel.ISupportInitialize)errorProvider1).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -64,5 +74,6 @@
 
         private Label label1;
         private TextBox textBox1;
+        private ErrorProvider errorProvider1;
     }
 }

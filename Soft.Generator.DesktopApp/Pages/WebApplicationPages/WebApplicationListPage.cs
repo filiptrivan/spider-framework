@@ -32,7 +32,8 @@ namespace Soft.Generator.DesktopApp.Pages
 
         public void ApplicationAddEventHandler(object sender, EventArgs e)
         {
-            _pageNavigator.NavigateToPage<WebApplicationDetailsPage>(this);
+            WebApplicationDetailsPage applicationDetailsPage = _pageNavigator.NavigateToPage<WebApplicationDetailsPage>(this);
+            applicationDetailsPage.Initialize(new WebApplication());
         }
 
         public void CellContentClickHandler(object sender, DataGridViewCellEventArgs e)
