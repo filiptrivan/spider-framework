@@ -1,5 +1,6 @@
 ﻿using Soft.Generator.DesktopApp.Controllers;
 using Soft.Generator.DesktopApp.Entities;
+using Soft.Generator.DesktopApp.Interfaces;
 using Soft.Generator.DesktopApp.Services;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ using System.Windows.Forms;
 
 namespace Soft.Generator.DesktopApp.Pages.SettingPages
 {
-    public partial class SettingDetailsPage : UserControl
+    public partial class SettingDetailsPage : UserControl, ISoftDetailsPage
     {
         PageNavigator _pageNavigator;
         SettingController _settingController;
@@ -32,21 +33,32 @@ namespace Soft.Generator.DesktopApp.Pages.SettingPages
             InitializeComponent();
         }
 
-        public void Initialize(Setting entity)
+        public void Initialize(ISoftEntity entity)
         {
-            Entity = entity;
-
-            cb_Framework.Initialize<Framework>(_settingController.GetFrameworkList());
-            cb_Framework.SelectedValue = Entity.Framework.Id;
-            cb_Framework.DisplayMember = nameof(Framework.Name);
+            Entity = (Setting)entity;
 
             tb_Name.TextBoxValue = Entity.Name;
-            chb_HasGoogleAuth.Value = Entity.HasGoogleAuth;
+            tb_Name.InvalidMessage = _validationService.SettingNameValidationMessage;
+
             tb_PrimaryColor.TextBoxValue = Entity.PrimaryColor;
+            tb_PrimaryColor.InvalidMessage = _validationService.SettingPrimaryColorValidationMessage;
+
+            chb_HasGoogleAuth.Value = Entity.HasGoogleAuth;
+            chb_HasGoogleAuth.InvalidMessage = _validationService.SettingHasGoogleAuthValidationMessage;
+
             chb_HasLatinTranslate.Value = Entity.HasLatinTranslate;
+            chb_HasLatinTranslate.InvalidMessage = _validationService.SettingHasLatinTranslateValidationMessage;
+
             chb_HasDarkMode.Value = Entity.HasDarkMode;
+            chb_HasDarkMode.InvalidMessage = _validationService.SettingHasDarkModeValidationMessage;
+
             chb_HasNotifications.Value = Entity.HasNotifications;
-            cb_Framework.SelectedValue = Entity.Framework.Id;
+            chb_HasNotifications.InvalidMessage = _validationService.SettingHasNotificationsValidationMessage;
+
+            cb_Framework.SelectedValue = Entity.Framework?.Id ?? 0;
+            cb_Framework.DisplayMember = nameof(Framework.Name);
+            cb_Framework.InvalidMessage = _validationService.SettingFrameworkIdValidationMessage;
+            cb_Framework.Initialize<Framework>(_settingController.GetFrameworkList());
         }
 
         private void btn_Return_Click(object sender, EventArgs e)
@@ -56,7 +68,7 @@ namespace Soft.Generator.DesktopApp.Pages.SettingPages
 
         private void btn_Save_Click(object sender, EventArgs e)
         {
-            Entity = _settingController.SaveSetting(new Setting
+            Setting setting = new Setting
             {
                 Id = Entity.Id,
                 Name = tb_Name.TextBoxValue,
@@ -66,9 +78,28 @@ namespace Soft.Generator.DesktopApp.Pages.SettingPages
                 HasDarkMode = chb_HasDarkMode.Value,
                 HasNotifications = chb_HasNotifications.Value,
                 Framework = new Framework { Id = (int)cb_Framework.SelectedValue },
-            });
+            };
+
+            if (_validationService.IsSettingValid(setting) == false)
+            {
+                ValidateAllChildControls();
+                return;
+            }
+
+            Entity = _settingController.SaveSetting(setting);
 
             _clientSharedService.ShowSuccessfullMessage();
+        }
+
+        public void ValidateAllChildControls()
+        {
+            tb_Name.StartValidation();
+            cb_Framework.StartValidation();
+            tb_PrimaryColor.StartValidation();
+            chb_HasGoogleAuth.StartValidation();
+            chb_HasLatinTranslate.StartValidation();
+            chb_HasDarkMode.StartValidation();
+            chb_HasNotifications.StartValidation();
         }
     }
 }

@@ -38,7 +38,7 @@ namespace Soft.Generator.DesktopApp
         {
             if (InvalidMessage != null)
             {
-                if (InvalidMessage(textBox1.Text) == null)
+                if (InvalidMessage(textBox1.Text) == "")
                 {
                     errorProvider1.SetError(textBox1, null);
                 }
@@ -47,6 +47,15 @@ namespace Soft.Generator.DesktopApp
                     errorProvider1.SetError(textBox1, InvalidMessage(textBox1.Text));
                 }
             }
+        }
+
+        /// <summary>
+        /// Call this on Save
+        /// </summary>
+        public void StartValidation()
+        {
+            var cancelEventArgs = new CancelEventArgs();
+            textBox1_Validating(textBox1, cancelEventArgs);
         }
     }
 }

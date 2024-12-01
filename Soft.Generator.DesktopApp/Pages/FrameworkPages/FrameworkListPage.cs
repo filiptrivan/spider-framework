@@ -38,34 +38,21 @@ namespace Soft.Generator.DesktopApp.Pages
 
         public void FrameworkAddEventHandler(object sender, EventArgs e)
         {
-            _pageNavigator.NavigateToPage<FrameworkDetailsPage>(this);
+            FrameworkDetailsPage frameworkDetailsPage = _pageNavigator.NavigateToPage<FrameworkDetailsPage>(this);
+            frameworkDetailsPage.Initialize(new Framework());
         }
 
         public void CellContentClickHandler(object sender, DataGridViewCellEventArgs e)
         {
-            DataGridViewColumn detailsColumn = softDataGridView1.ColumnCollection["Details"];
-            int id = (int)softDataGridView1.RowCollection[e.RowIndex].Cells["Id"].Value;
-
-            if (detailsColumn != null && e.ColumnIndex == detailsColumn.Index)
-            {
-                FrameworkDetailsPage frameworkDetailsPage = _pageNavigator.NavigateToPage<FrameworkDetailsPage>(this);
-                frameworkDetailsPage.Initialize(_frameworkController.GetFramework(id));
-            }
-
-            DataGridViewColumn deleteColumn = softDataGridView1.ColumnCollection["Delete"];
-
-            if (deleteColumn != null && e.ColumnIndex == deleteColumn.Index)
-            {
-                DialogResult dialogResult = MessageBox.Show("Da li ste sigurni da želite da obrišete objekat?", "Potvrda brisanja", MessageBoxButtons.YesNoCancel);
-
-                if (dialogResult == DialogResult.Yes)
-                {
-                    _frameworkController.DeleteFramework(id);
-                    LoadTable();
-
-                    _clientSharedService.ShowSuccessfullMessage();
-                }
-            }
+            _clientSharedService.CellContentClickHandler<FrameworkDetailsPage, Framework, int>(
+                e,
+                this,
+                softDataGridView1,
+                _pageNavigator.NavigateToPage<FrameworkDetailsPage>,
+                _frameworkController.GetFramework,
+                _frameworkController.DeleteFramework,
+                LoadTable
+            );
         }
     }
 }

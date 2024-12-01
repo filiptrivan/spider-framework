@@ -1,5 +1,6 @@
 ﻿using Soft.Generator.DesktopApp.Controllers;
 using Soft.Generator.DesktopApp.Entities;
+using Soft.Generator.DesktopApp.Interfaces;
 using Soft.Generator.DesktopApp.Services;
 using System;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ using static System.Runtime.CompilerServices.RuntimeHelpers;
 
 namespace Soft.Generator.DesktopApp.Pages.CompanyPages
 {
-    public partial class CompanyDetailsPage : UserControl
+    public partial class CompanyDetailsPage : UserControl, ISoftDetailsPage
     {
         PageNavigator _pageNavigator;
         CompanyController _companyController;
@@ -33,12 +34,18 @@ namespace Soft.Generator.DesktopApp.Pages.CompanyPages
             InitializeComponent();
         }
 
-        public void Initialize(Company entity)
+        public void Initialize(ISoftEntity entity)
         {
-            Entity = entity;
+            Entity = (Company)entity;
+
             tb_Name.TextBoxValue = Entity.Name;
+            tb_Name.InvalidMessage = _validationService.CompanyNameValidationMessage;
+
             tb_Email.TextBoxValue = Entity.Email;
+            tb_Email.InvalidMessage = _validationService.CompanyEmailValidationMessage;
+
             tb_Password.TextBoxValue = Entity.Password;
+            tb_Password.InvalidMessage = _validationService.CompanyPasswordValidationMessage;
         }
 
         private void btn_Return_Click(object sender, EventArgs e)
@@ -48,15 +55,30 @@ namespace Soft.Generator.DesktopApp.Pages.CompanyPages
 
         private void btn_Save_Click(object sender, EventArgs e)
         {
-            Entity = _companyController.SaveCompany(new Company
+            Company company = new Company
             {
                 Id = Entity.Id,
                 Name = tb_Name.TextBoxValue,
                 Email = tb_Email.TextBoxValue,
                 Password = tb_Password.TextBoxValue,
-            });
+            };
+
+            if (_validationService.IsCompanyValid(company) == false)
+            {
+                ValidateAllChildControls();
+                return;
+            }
+
+            Entity = _companyController.SaveCompany(company);
 
             _clientSharedService.ShowSuccessfullMessage();
+        }
+
+        public void ValidateAllChildControls()
+        {
+            tb_Name.StartValidation();
+            tb_Email.StartValidation();
+            tb_Password.StartValidation();
         }
     }
 }

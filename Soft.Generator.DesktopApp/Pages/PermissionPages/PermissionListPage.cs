@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using Soft.Generator.DesktopApp.Controllers;
 using Soft.Generator.DesktopApp.Entities;
+using Soft.Generator.DesktopApp.Interfaces;
 using Soft.Generator.DesktopApp.Services;
 using System;
 using System.Collections.Generic;

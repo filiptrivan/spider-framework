@@ -40,34 +40,21 @@ namespace Soft.Generator.DesktopApp.Pages
 
         public void CompanyAddEventHandler(object sender, EventArgs e)
         {
-            _pageNavigator.NavigateToPage<CompanyDetailsPage>(this);
+            CompanyDetailsPage companyDetailsPage = _pageNavigator.NavigateToPage<CompanyDetailsPage>(this);
+            companyDetailsPage.Initialize(new Company());
         }
 
         public void CellContentClickHandler(object sender, DataGridViewCellEventArgs e)
         {
-            DataGridViewColumn detailsColumn = softDataGridView1.ColumnCollection["Details"];
-            int id = (int)softDataGridView1.RowCollection[e.RowIndex].Cells["Id"].Value;
-
-            if (detailsColumn != null && e.ColumnIndex == detailsColumn.Index)
-            {
-                CompanyDetailsPage companyDetailsPage = _pageNavigator.NavigateToPage<CompanyDetailsPage>(this);
-                companyDetailsPage.Initialize(_companyController.GetCompany(id));
-            }
-
-            DataGridViewColumn deleteColumn = softDataGridView1.ColumnCollection["Delete"];
-
-            if (deleteColumn != null && e.ColumnIndex == deleteColumn.Index)
-            {
-                DialogResult dialogResult = MessageBox.Show("Da li ste sigurni da želite da obrišete objekat?", "Potvrda brisanja", MessageBoxButtons.YesNoCancel);
-
-                if (dialogResult == DialogResult.Yes)
-                {
-                    _companyController.DeleteCompany(id);
-                    LoadTable();
-
-                    _clientSharedService.ShowSuccessfullMessage();
-                }
-            }
+            _clientSharedService.CellContentClickHandler<CompanyDetailsPage, Company, int>(
+                e,
+                this,
+                softDataGridView1,
+                _pageNavigator.NavigateToPage<CompanyDetailsPage>,
+                _companyController.GetCompany,
+                _companyController.DeleteCompany,
+                LoadTable
+            );
         }
     }
 }

@@ -27,25 +27,31 @@ namespace Soft.Generator.DesktopApp.Pages
 
             InitializeComponent();
 
+            LoadTable();
+        }
+
+        private void LoadTable()
+        {
             softDataGridView1.SoftInitializeComponent<WebApplication>(_webApplicationController.GetWebApplicationList(), true, ApplicationAddEventHandler, true, true, CellContentClickHandler);
         }
 
         public void ApplicationAddEventHandler(object sender, EventArgs e)
         {
-            WebApplicationDetailsPage applicationDetailsPage = _pageNavigator.NavigateToPage<WebApplicationDetailsPage>(this);
-            applicationDetailsPage.Initialize(new WebApplication());
+            WebApplicationDetailsPage webApplicationDetailsPage = _pageNavigator.NavigateToPage<WebApplicationDetailsPage>(this);
+            webApplicationDetailsPage.Initialize(new WebApplication());
         }
 
         public void CellContentClickHandler(object sender, DataGridViewCellEventArgs e)
         {
-            DataGridViewColumn detailsColumn = softDataGridView1.ColumnCollection["Details"];
-            if (detailsColumn != null && e.ColumnIndex == detailsColumn.Index)
-            {
-                int id = (int)softDataGridView1.RowCollection[e.RowIndex].Cells["Id"].Value;
-
-                WebApplicationDetailsPage applicationDetailsPage = _pageNavigator.NavigateToPage<WebApplicationDetailsPage>(this);
-                applicationDetailsPage.Initialize(_webApplicationController.GetWebApplication(id));
-            }
+            _clientSharedService.CellContentClickHandler<WebApplicationDetailsPage, WebApplication, long>(
+                e,
+                this,
+                softDataGridView1,
+                _pageNavigator.NavigateToPage<WebApplicationDetailsPage>,
+                _webApplicationController.GetWebApplication,
+                _webApplicationController.DeleteWebApplication,
+                LoadTable
+            );
         }
 
     }

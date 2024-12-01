@@ -28,7 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             checkBox1 = new CheckBox();
+            errorProvider1 = new ErrorProvider(components);
+            ((System.ComponentModel.ISupportInitialize)errorProvider1).BeginInit();
             SuspendLayout();
             // 
             // checkBox1
@@ -41,6 +44,10 @@
             checkBox1.Text = "checkBox1";
             checkBox1.UseVisualStyleBackColor = true;
             // 
+            // errorProvider1
+            // 
+            errorProvider1.ContainerControl = this;
+            // 
             // SoftCheckbox
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -48,6 +55,7 @@
             Controls.Add(checkBox1);
             Name = "SoftCheckbox";
             Size = new Size(238, 63);
+            ((System.ComponentModel.ISupportInitialize)errorProvider1).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -55,5 +63,6 @@
         #endregion
 
         private CheckBox checkBox1;
+        private ErrorProvider errorProvider1;
     }
 }

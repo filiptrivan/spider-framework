@@ -60,7 +60,7 @@ namespace Soft.Generator.DesktopApp.Controls
         {
             if (InvalidMessage != null)
             {
-                if (InvalidMessage(comboBox1.SelectedValue) == null)
+                if (InvalidMessage(comboBox1.SelectedValue) == "")
                 {
                     errorProvider1.SetError(comboBox1, null);
                 }
@@ -69,6 +69,12 @@ namespace Soft.Generator.DesktopApp.Controls
                     errorProvider1.SetError(comboBox1, InvalidMessage(comboBox1.SelectedValue));
                 }
             }
+        }
+
+        public void StartValidation()
+        {
+            var cancelEventArgs = new CancelEventArgs();
+            comboBox1_Validating(comboBox1, cancelEventArgs);
         }
     }
 }

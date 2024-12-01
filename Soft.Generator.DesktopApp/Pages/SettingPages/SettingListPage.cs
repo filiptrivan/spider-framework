@@ -38,34 +38,21 @@ namespace Soft.Generator.DesktopApp.Pages
 
         public void SettingAddEventHandler(object sender, EventArgs e)
         {
-            _pageNavigator.NavigateToPage<SettingDetailsPage>(this);
+            SettingDetailsPage settingDetailsPage = _pageNavigator.NavigateToPage<SettingDetailsPage>(this);
+            settingDetailsPage.Initialize(new Setting());
         }
 
         public void CellContentClickHandler(object sender, DataGridViewCellEventArgs e)
         {
-            DataGridViewColumn detailsColumn = softDataGridView1.ColumnCollection["Details"];
-            int id = (int)softDataGridView1.RowCollection[e.RowIndex].Cells["Id"].Value;
-
-            if (detailsColumn != null && e.ColumnIndex == detailsColumn.Index)
-            {
-                SettingDetailsPage settingDetailsPage = _pageNavigator.NavigateToPage<SettingDetailsPage>(this);
-                settingDetailsPage.Initialize(_settingController.GetSetting(id));
-            }
-
-            DataGridViewColumn deleteColumn = softDataGridView1.ColumnCollection["Delete"];
-
-            if (deleteColumn != null && e.ColumnIndex == deleteColumn.Index)
-            {
-                DialogResult dialogResult = MessageBox.Show("Da li ste sigurni da želite da obrišete objekat?", "Potvrda brisanja", MessageBoxButtons.YesNoCancel);
-
-                if (dialogResult == DialogResult.Yes)
-                {
-                    _settingController.DeleteSetting(id);
-                    LoadTable();
-
-                    _clientSharedService.ShowSuccessfullMessage();
-                }
-            }
+            _clientSharedService.CellContentClickHandler<SettingDetailsPage, Setting, int>(
+                e,
+                this,
+                softDataGridView1,
+                _pageNavigator.NavigateToPage<SettingDetailsPage>,
+                _settingController.GetSetting,
+                _settingController.DeleteSetting,
+                LoadTable
+            );
         }
     }
 }

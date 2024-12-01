@@ -1,4 +1,5 @@
 ﻿using Soft.Generator.DesktopApp.Attributes;
+using Soft.Generator.DesktopApp.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,7 @@ namespace Soft.Generator.DesktopApp.Entities
     /// Cascade delete is done in sql
     /// </summary>
     [ManyToMany]
-    public class CompanyPermission
+    public class CompanyPermission : ISoftEntity
     {
         public virtual Company Company { get; set; }
 

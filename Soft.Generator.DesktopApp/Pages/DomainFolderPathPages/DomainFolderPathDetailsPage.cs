@@ -1,5 +1,6 @@
 ﻿using Soft.Generator.DesktopApp.Controllers;
 using Soft.Generator.DesktopApp.Entities;
+using Soft.Generator.DesktopApp.Interfaces;
 using Soft.Generator.DesktopApp.Services;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ using System.Windows.Forms;
 
 namespace Soft.Generator.DesktopApp.Pages.DomainFolderPathPages
 {
-    public partial class DomainFolderPathDetailsPage : UserControl
+    public partial class DomainFolderPathDetailsPage : UserControl, ISoftDetailsPage
     {
         PageNavigator _pageNavigator;
         DomainFolderPathController _domainFolderPathController;
@@ -32,10 +33,12 @@ namespace Soft.Generator.DesktopApp.Pages.DomainFolderPathPages
             InitializeComponent();
         }
 
-        public void Initialize(DomainFolderPath entity)
+        public void Initialize(ISoftEntity entity)
         {
-            Entity = entity;
+            Entity = (DomainFolderPath)entity;
+
             tb_Path.TextBoxValue = Entity.Path;
+            tb_Path.InvalidMessage = _validationService.DomainFolderPathPathValidationMessage;
         }
 
         private void btn_Return_Click(object sender, EventArgs e)
@@ -45,13 +48,26 @@ namespace Soft.Generator.DesktopApp.Pages.DomainFolderPathPages
 
         private void btn_Save_Click(object sender, EventArgs e)
         {
-            Entity = _domainFolderPathController.SaveDomainFolderPath(new DomainFolderPath
+            DomainFolderPath domainFolderPath = new DomainFolderPath
             {
                 Id = Entity.Id,
                 Path = tb_Path.TextBoxValue,
-            });
+            };
+
+            if (_validationService.IsDomainFolderPathValid(domainFolderPath) == false)
+            {
+                ValidateAllChildControls();
+                return;
+            }
+
+            Entity = _domainFolderPathController.SaveDomainFolderPath(domainFolderPath);
 
             _clientSharedService.ShowSuccessfullMessage();
+        }
+
+        public void ValidateAllChildControls()
+        {
+            tb_Path.StartValidation();
         }
     }
 }

@@ -32,7 +32,7 @@ namespace Soft.Generator.DesktopApp.Controllers
             return _desktopAppBusinessService.GetWebApplicationList();
         }
 
-        public WebApplication GetWebApplication(int id)
+        public WebApplication GetWebApplication(long id)
         {
             return _desktopAppBusinessService.GetWebApplication(id);
         }

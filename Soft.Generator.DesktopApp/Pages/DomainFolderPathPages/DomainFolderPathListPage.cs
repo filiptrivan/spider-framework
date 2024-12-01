@@ -38,34 +38,21 @@ namespace Soft.Generator.DesktopApp.Pages
 
         public void DomainFolderPathAddEventHandler(object sender, EventArgs e)
         {
-            _pageNavigator.NavigateToPage<DomainFolderPathDetailsPage>(this);
+            DomainFolderPathDetailsPage domainFolderPathDetailsPage = _pageNavigator.NavigateToPage<DomainFolderPathDetailsPage>(this);
+            domainFolderPathDetailsPage.Initialize(new DomainFolderPath());
         }
 
         public void CellContentClickHandler(object sender, DataGridViewCellEventArgs e)
         {
-            DataGridViewColumn detailsColumn = softDataGridView1.ColumnCollection["Details"];
-            int id = (int)softDataGridView1.RowCollection[e.RowIndex].Cells["Id"].Value;
-
-            if (detailsColumn != null && e.ColumnIndex == detailsColumn.Index)
-            {
-                DomainFolderPathDetailsPage domainFolderPathDetailsPage = _pageNavigator.NavigateToPage<DomainFolderPathDetailsPage>(this);
-                domainFolderPathDetailsPage.Initialize(_domainFolderPathController.GetDomainFolderPath(id));
-            }
-
-            DataGridViewColumn deleteColumn = softDataGridView1.ColumnCollection["Delete"];
-
-            if (deleteColumn != null && e.ColumnIndex == deleteColumn.Index)
-            {
-                DialogResult dialogResult = MessageBox.Show("Da li ste sigurni da želite da obrišete objekat?", "Potvrda brisanja", MessageBoxButtons.YesNoCancel);
-
-                if (dialogResult == DialogResult.Yes)
-                {
-                    _domainFolderPathController.DeleteDomainFolderPath(id);
-                    LoadTable();
-
-                    _clientSharedService.ShowSuccessfullMessage();
-                }
-            }
+            _clientSharedService.CellContentClickHandler<DomainFolderPathDetailsPage, DomainFolderPath, int>(
+                e,
+                this,
+                softDataGridView1,
+                _pageNavigator.NavigateToPage<DomainFolderPathDetailsPage>,
+                _domainFolderPathController.GetDomainFolderPath,
+                _domainFolderPathController.DeleteDomainFolderPath,
+                LoadTable
+            );
         }
     }
 }

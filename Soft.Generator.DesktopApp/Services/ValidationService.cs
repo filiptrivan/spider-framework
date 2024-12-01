@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Soft.Generator.DesktopApp.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,6 +12,20 @@ namespace Soft.Generator.DesktopApp.Services
         public ValidationService() { }
 
         #region Company
+
+        public bool IsCompanyValid(Company company)
+        {
+            if (CompanyNameValidationMessage(company.Name) != "")
+                return false;
+
+            if (CompanyEmailValidationMessage(company.Name) != "")
+                return false;
+
+            if (CompanyPasswordValidationMessage(company.Name) != "")
+                return false;
+
+            return true;
+        }
 
         public string CompanyNameValidationMessage(string value)
         {
@@ -55,6 +70,14 @@ namespace Soft.Generator.DesktopApp.Services
 
         #region DomainFolderPath
 
+        public bool IsDomainFolderPathValid(DomainFolderPath domainFolderPath)
+        {
+            if (DomainFolderPathPathValidationMessage(domainFolderPath.Path) != "")
+                return false;
+
+            return true;
+        }
+
         public string DomainFolderPathPathValidationMessage(string value)
         {
             List<string> errors = new List<string>();
@@ -71,6 +94,17 @@ namespace Soft.Generator.DesktopApp.Services
         #endregion
 
         #region Framework
+
+        public bool IsFrameworkValid(Framework framework)
+        {
+            if (FrameworkNameValidationMessage(framework.Name) != "")
+                return false;
+
+            if (FrameworkCodeValidationMessage(framework.Code) != "")
+                return false;
+
+            return true;
+        }
 
         public string FrameworkNameValidationMessage(string value)
         {
@@ -102,6 +136,17 @@ namespace Soft.Generator.DesktopApp.Services
 
         #region Permission
 
+        public bool IsPermissionValid(Permission permission)
+        {
+            if (PermissionNameValidationMessage(permission.Name) != "")
+                return false;
+
+            if (PermissionCodeValidationMessage(permission.Code) != "")
+                return false;
+
+            return true;
+        }
+
         public string PermissionNameValidationMessage(string value)
         {
             List<string> errors = new List<string>();
@@ -131,6 +176,32 @@ namespace Soft.Generator.DesktopApp.Services
         #endregion
 
         #region Setting
+
+        public bool IsSettingValid(Setting setting)
+        {
+            if (SettingNameValidationMessage(setting.Name) != "")
+                return false;
+
+            if (SettingPrimaryColorValidationMessage(setting.PrimaryColor) != "")
+                return false;
+
+            if (SettingHasLatinTranslateValidationMessage(setting.HasLatinTranslate) != "")
+                return false;
+
+            if (SettingHasDarkModeValidationMessage(setting.HasDarkMode) != "")
+                return false;
+
+            if (SettingHasNotificationsValidationMessage(setting.HasNotifications) != "")
+                return false;
+
+            if (SettingHasGoogleAuthValidationMessage(setting.HasGoogleAuth) != "")
+                return false;
+
+            if (SettingFrameworkIdValidationMessage(setting.Framework?.Id) != "")
+                return false;
+
+            return true;
+        }
 
         public string SettingNameValidationMessage(string value)
         {
@@ -201,6 +272,20 @@ namespace Soft.Generator.DesktopApp.Services
         #endregion
 
         #region WebApplication
+
+        public bool IsWebApplicationValid(WebApplication webApplication)
+        {
+            if (WebApplicationNameValidationMessage(webApplication.Name) != "")
+                return false;
+
+            if (WebApplicationCompanyIdValidationMessage(webApplication.Company?.Id) != "")
+                return false;
+
+            if (WebApplicationSettingIdValidationMessage(webApplication.Setting?.Id) != "")
+                return false;
+
+            return true;
+        }
 
         public string WebApplicationNameValidationMessage(string value)
         {
