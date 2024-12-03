@@ -50,14 +50,6 @@ namespace Soft.Generator.DesktopApp
             services.AddScoped<SettingController>();
 
             services.AddTransient<Form1>();
-            //services.AddTransient<ApplicationListPage>();
-            //services.AddTransient<CompanyListPage>();
-            //services.AddTransient<FrameworkListPage>();
-            //services.AddTransient<FrameworkDetailsPage>();
-            //services.AddTransient<HomePage>();
-            //services.AddTransient<PathToDomainFolderListPage>();
-            //services.AddTransient<PermissionListPage>();
-            //services.AddTransient<SettingListPage>();
         }
     }
 }

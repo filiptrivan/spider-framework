@@ -1,6 +1,5 @@
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Linq;
-using Soft.Generator.AngularEntities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -75,14 +74,14 @@ public class Startup
         };
 
         services.AddSingleton(securityOptions);
-        services.AddDbContext<IApplicationDbContext, ApplicationDbContext>( // https://youtu.be/bN57EDYD6M0?si=CVztRqlj0hBSrFXb
-            options =>
-            {
-                options
-                    .UseLazyLoadingProxies()
-                    .UseSqlServer(SettingsProvider.Current.ConnectionString)
-                    .LogTo(Console.WriteLine, Microsoft.Extensions.Logging.LogLevel.Information);
-            });
+        //services.AddDbContext<IApplicationDbContext, ApplicationDbContext>( // https://youtu.be/bN57EDYD6M0?si=CVztRqlj0hBSrFXb
+        //    options =>
+        //    {
+        //        options
+        //            .UseLazyLoadingProxies()
+        //            .UseSqlServer(SettingsProvider.Current.ConnectionString)
+        //            .LogTo(Console.WriteLine, Microsoft.Extensions.Logging.LogLevel.Information);
+        //    });
         services.AddSwaggerGen(c =>
         {
             c.SwaggerDoc("v1", new OpenApiInfo
@@ -194,6 +193,7 @@ public class Startup
             });
         });
     }
+
     public static T ReadAssemblyConfiguration<T>()
     {
         string name = typeof(T).Assembly.GetName().Name;
@@ -214,6 +214,7 @@ public class Startup
 
         return default(T);
     }
+
     private static string ReadConfigFile()
     {
         if (!string.IsNullOrEmpty(_cachedConfigFile))

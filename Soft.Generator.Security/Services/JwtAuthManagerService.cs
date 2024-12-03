@@ -270,7 +270,6 @@ namespace Soft.Generator.Security.Services
 
         #endregion
 
-
         #region Verification
 
         #region Login
