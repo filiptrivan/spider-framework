@@ -41,7 +41,8 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectEntityClasses, SourceProductionContext context)
         {
-            if (classes.Count <= 1) return;
+            if (classes.Count <= 1) 
+                return;
 
             List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
             List<SoftClass> allEntityClasses = entityClasses.Concat(referencedProjectEntityClasses).ToList();
@@ -137,7 +138,7 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-        public async virtual Task<TableResponseDTO<{{nameOfTheEntityClass}}DTO>> Load{{nameOfTheEntityClass}}ListForTable(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query, bool authorize = true)
+        public async virtual Task<TableResponseDTO<{{nameOfTheEntityClass}}DTO>> Load{{nameOfTheEntityClass}}TableData(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query, bool authorize = true)
         {
             PaginationResult<{{nameOfTheEntityClass}}> paginationResult = new PaginationResult<{{nameOfTheEntityClass}}>();
             List<{{nameOfTheEntityClass}}DTO> data = null;
@@ -253,7 +254,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
 {{string.Join("\n", GetEnumerableGeneratedMethods(entityClass, allEntityClasses))}}
 
-        public async Task<byte[]> Export{{nameOfTheEntityClass}}ListToExcel(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query, bool authorize = true)
+        public async Task<byte[]> Export{{nameOfTheEntityClass}}TableDataToExcel(TableFilterDTO tableFilterPayload, IQueryable<{{nameOfTheEntityClass}}> query, bool authorize = true)
         {
             PaginationResult<{{nameOfTheEntityClass}}> paginationResult = new PaginationResult<{{nameOfTheEntityClass}}>();
             List<{{nameOfTheEntityClass}}DTO> data = null;
@@ -296,9 +297,9 @@ namespace {{basePartOfTheNamespace}}.Services
             StringBuilder sb = new StringBuilder();
 
             sb.Append($$"""
-        protected virtual void OnBefore{{nameOfTheEntityClass}}IsMapped({{nameOfTheEntityClass}}DTO {{nameOfTheEntityClass.FirstCharToLower()}}DTO) { }
+        protected virtual async Task OnBefore{{nameOfTheEntityClass}}IsMapped({{nameOfTheEntityClass}}DTO {{nameOfTheEntityClass.FirstCharToLower()}}DTO) { }
 
-        protected virtual void OnBefore{{nameOfTheEntityClass}}Update({{nameOfTheEntityClass}} {{nameOfTheEntityClass.FirstCharToLower()}}, {{nameOfTheEntityClass}}DTO {{nameOfTheEntityClass.FirstCharToLower()}}DTO) { }
+        protected virtual async Task OnBefore{{nameOfTheEntityClass}}Update({{nameOfTheEntityClass}} {{nameOfTheEntityClass.FirstCharToLower()}}, {{nameOfTheEntityClass}}DTO {{nameOfTheEntityClass.FirstCharToLower()}}DTO) { }
 
         public async Task<{{nameOfTheEntityClass}}> Save{{nameOfTheEntityClass}}AndReturnDomainAsync({{nameOfTheEntityClass}}DTO dto, bool authorizeUpdate = true, bool authorizeInsert = true)
         {
@@ -308,7 +309,7 @@ namespace {{basePartOfTheNamespace}}.Services
             {{nameOfTheEntityClass}} poco = null;
             await _context.WithTransactionAsync(async () =>
             {
-                OnBefore{{nameOfTheEntityClass}}IsMapped(dto);
+                await OnBefore{{nameOfTheEntityClass}}IsMapped(dto);
                 DbSet<{{nameOfTheEntityClass}}> dbSet = _context.DbSet<{{nameOfTheEntityClass}}>();
 """);
             if (entityClass.IsEntityReadonlyObject())
@@ -331,7 +332,7 @@ namespace {{basePartOfTheNamespace}}.Services
                     }
 
                     poco = await LoadInstanceAsync<{{nameOfTheEntityClass}}, {{idTypeOfTheEntityClass}}>(dto.Id, dto.Version);
-                    OnBefore{{nameOfTheEntityClass}}Update(poco, dto);
+                    await OnBefore{{nameOfTheEntityClass}}Update(poco, dto);
                     dto.Adapt(poco, Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
                     dbSet.Update(poco);
                 }
@@ -359,11 +360,11 @@ namespace {{basePartOfTheNamespace}}.Services
             return poco;
         }
 
-        public async Task<{{nameOfTheEntityClass}}DTO> Save{{nameOfTheEntityClass}}AndReturnDTOAsync({{nameOfTheEntityClass}}DTO dto, bool authorizeUpdate = true, bool authorizeInsert = true)
+        public async Task<{{nameOfTheEntityClass}}DTO> Save{{nameOfTheEntityClass}}AndReturnDTOAsync({{nameOfTheEntityClass}}DTO {{nameOfTheEntityClass.FirstCharToLower()}}DTO, bool authorizeUpdate = true, bool authorizeInsert = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                {{nameOfTheEntityClass}} poco = await Save{{nameOfTheEntityClass}}AndReturnDomainAsync(dto, authorizeUpdate, authorizeInsert);
+                {{nameOfTheEntityClass}} poco = await Save{{nameOfTheEntityClass}}AndReturnDomainAsync({{nameOfTheEntityClass.FirstCharToLower()}}DTO, authorizeUpdate, authorizeInsert);
 
                 return poco.Adapt<{{nameOfTheEntityClass}}DTO>(Mapper.{{entityClass.Name}}ToDTOConfig());
             });
@@ -832,7 +833,7 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-        public async Task Update{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}TableSelection(IQueryable<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}Query, {{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, TableSelectionDTO<{{idTypeOfTheClassFromTheList}}> tableSelectionDTO)
+        public async Task Update{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}TableSelection(IQueryable<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}Query, {{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, LazyTableSelectionDTO<{{idTypeOfTheClassFromTheList}}> tableSelectionDTO)
         {
             await _context.WithTransactionAsync(async () =>
             {

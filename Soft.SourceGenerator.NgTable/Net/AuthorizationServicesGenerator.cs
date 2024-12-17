@@ -19,12 +19,12 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntities(s),
@@ -37,7 +37,8 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
-            if (classes.Count <= 1) return;
+            if (classes.Count <= 1) 
+                return;
 
             List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
 

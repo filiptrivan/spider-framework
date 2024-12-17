@@ -10,6 +10,9 @@ using Soft.Generator.Security.Interface;
 using Soft.Generator.Security.Entities;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Soft.Generator.Shared.Attributes;
+using System.Diagnostics.CodeAnalysis;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Soft.Generator.Shared.Attributes.EF;
 
 namespace Soft.Generator.Infrastructure.Data
 {
@@ -56,6 +59,17 @@ namespace Soft.Generator.Infrastructure.Data
             {
                 modelBuilder.Entity<Permission>().Ignore(x => x.NameLatin);
                 modelBuilder.Entity<Permission>().Ignore(x => x.DescriptionLatin);
+            }
+
+            foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                Type clrType = entityType.ClrType;
+
+                foreach (PropertyInfo property in clrType.GetProperties())
+                {
+                    if (property.GetCustomAttribute<SetNullAttribute>() != null)
+                        SetNull(property, entityType);
+                }
             }
 
             //foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes())
@@ -146,6 +160,17 @@ namespace Soft.Generator.Infrastructure.Data
                     businessObject.SetVersion(businessObject.Version + 1);
                     break;
             }
+        }
+
+        void SetNull(PropertyInfo property, IMutableEntityType entityType)
+        {
+            if (property.GetCustomAttribute<SetNullAttribute>() == null)
+                throw new Exception("The property set null attribute can not be null.");
+
+            IMutableNavigation navigation = entityType.FindNavigation(property.Name);
+
+            if (navigation != null)
+                navigation.ForeignKey.DeleteBehavior = DeleteBehavior.NoAction;
         }
 
         //void HandleReadonlyObjectChanges<T>(ReadonlyObject<T> readOnlyObject, EntityEntry changedEntity)

@@ -45,43 +45,52 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectEntityClasses, SourceProductionContext context)
         {
-            if (classes.Count <= 1) return;
+            if (classes.Count <= 1) 
+                return;
 
             List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
             List<SoftClass> allClasses = entityClasses.Concat(referencedProjectEntityClasses).ToList();
-
-            StringBuilder sb = new StringBuilder();
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0].Namespace);
 
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
-            sb.AppendLine($$"""
+            string result = $$"""
 {{GetUsings()}}
 
 namespace {{basePartOfNamespace}}.DTO
 {
+{{string.Join("\n", GetDTOClasses(entityClasses, allClasses))}}
+}
+""";
 
-""");
+            context.AddSource($"{projectName}DTOList.generated", SourceText.From(result, Encoding.UTF8));
+        }
+
+        private static List<string> GetDTOClasses(List<SoftClass> entityClasses, List<SoftClass> allClasses)
+        {
+            List<string> result = new List<string>();
+
             foreach (SoftClass entityClass in entityClasses)
             {
                 string DTObaseType = entityClass.GetDTOBaseType();
 
-                sb.AppendLine($$"""
+                // Add table selection base class to SaveBodyDTO if there is some attribute on the class
+                result.Add($$"""
     public partial class {{entityClass.Name}}DTO {{(DTObaseType == null ? "" : $": {DTObaseType}")}}
     {
-        {{string.Join("\n\n\t\t", GetDTOPropertiesWithoutBaseType(entityClass, allClasses))}}
+{{string.Join("\n", GetDTOPropertiesWithoutBaseType(entityClass, allClasses))}}
     }
 
+    public partial class {{entityClass.Name}}SaveBodyDTO
+    {
+        public {{entityClass.Name}}DTO {{entityClass.Name}}DTO { get; set; }
+    }
 """);
             }
 
-            sb.AppendLine($$"""
-}
-""");
-
-            context.AddSource($"{projectName}DTOList.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
+            return result;
         }
 
         /// <summary>
@@ -103,26 +112,34 @@ namespace {{basePartOfNamespace}}.DTO
 
                 if (propType.PropTypeIsManyToOne())
                 {
-                    DTOproperties.Add($"public string {propName}DisplayName {{ get; set; }}");
+                    DTOproperties.Add($$"""
+        public string {{propName}}DisplayName { get; set; }
+""");
                     SoftClass manyToOneClass = allClasses.Where(x => x.Name == propType).Single();
-                    DTOproperties.Add($"public {Helper.GetGenericIdType(manyToOneClass, allClasses)}? {propName}Id {{ get; set; }}");
+                    DTOproperties.Add($$"""
+        public {{Helper.GetGenericIdType(manyToOneClass, allClasses)}}? {{propName}}Id { get; set; }
+""");
                     continue;
                 }
                 else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
                 {
-                    DTOproperties.Add($"public string {propName}CommaSeparated {{ get; set; }}");
+                    DTOproperties.Add($$"""
+        public string {{propName}}CommaSeparated { get; set; }
+""");
                     continue;
                 }
                 else if (propType == "byte[]")
                 {
-                    DTOproperties.Add($"public string {propName} {{ get; set; }}");
+                    DTOproperties.Add($$"""
+        public string {{propName}} { get; set; }
+""");
                     continue;
                 }
                 else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "Map"))
                 {
                     string DTOListPropType = propType.Replace(">", "DTO>");
                     DTOproperties.Add($$"""
-/// <summary>
+        /// <summary>
         /// Made only for manual mapping, it's not included in the mapping library.
         /// </summary>
         public {{DTOListPropType}} {{propName}}DTOList { get; set; }
@@ -139,14 +156,19 @@ namespace {{basePartOfNamespace}}.DTO
                 }
                 else if (prop.Attributes.Any(x => x.Name == "BlobName"))
                 {
-                    DTOproperties.Add($"public string {propName}Data {{ get; set; }}");
+                    DTOproperties.Add($$"""
+        public string {{propName}}Data { get; set; }
+""");
                 }
                 else if (propType != "string")
                 {
                     propType = "UNSUPPORTED TYPE";
                 }
 
-                DTOproperties.Add($"public {propType} {propName} {{ get; set; }}"); // string
+                // string
+                DTOproperties.Add($$"""
+        public {{propType}} {{propName}} { get; set; }
+""");
             }
 
             return DTOproperties;

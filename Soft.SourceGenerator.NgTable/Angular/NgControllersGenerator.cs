@@ -65,7 +65,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
                     //properties.AddRange(parameterProperties);
                     string returnType = endpointMethod.ReturnType.ToString();
                     //properties.Add(new SoftProperty { Type = returnType });
-                    angularHttpMethods.Add(GetAngularHttpMethod(endpointMethod, Helper.GetAngularType(returnType), controllerName));
+                    angularHttpMethods.Add(GetAngularHttpMethod(endpointMethod, returnType, controllerName));
                 }
             }
             List<string> importLines = new List<string>();
@@ -109,8 +109,9 @@ export class ApiGeneratedService extends ApiSecurityService {
             Helper.WriteToTheFile(sb.ToString(), outputPath);
         }
 
-        private static string GetAngularHttpMethod(MethodDeclarationSyntax endpointMethod, string returnType, string controllerName)
+        private static string GetAngularHttpMethod(MethodDeclarationSyntax endpointMethod, string cSharpReturnType, string controllerName)
         {
+            string angularReturnType = Helper.GetAngularType(cSharpReturnType);
 
             string methodName = endpointMethod.Identifier.Text;
             string inputParameters = string.Join(", ", endpointMethod.ParameterList.Parameters.Select(p => $"{p.Identifier.Text}: {Helper.GetAngularType(p.Type.ToString())}").ToList());
@@ -129,58 +130,58 @@ export class ApiGeneratedService extends ApiSecurityService {
 
             if (endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "HttpGet")))
             {
-                if (returnType.Contains("Namebook") || methodName.Contains("Autocomplete") || methodName.Contains("Dropdown") || skipSpinner)
+                if (cSharpReturnType.Contains("NamebookDTO") || methodName.Contains("Autocomplete") || methodName.Contains("Dropdown") || skipSpinner)
                 {
                     result = @$"
-    {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{
-        return this.http.get<{returnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}{getAndDeleteParameters}`, environment.httpSkipSpinnerOptions);
+    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{
+        return this.http.get<{angularReturnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}{getAndDeleteParameters}`, environment.httpSkipSpinnerOptions);
     }}";
                 }
                 else
                 {
                     result = @$"
-    {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{
-        return this.http.get<{returnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}{getAndDeleteParameters}`);
+    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{
+        return this.http.get<{angularReturnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}{getAndDeleteParameters}`);
     }}";
                 }
 
             }
             if (endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "HttpPost")))
             {
-                if (returnType == "string")
+                if (angularReturnType == "string")
                 {
                     result = @$"
-    {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{ 
+    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{ 
         return this.http.post(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, {{...environment.httpOptions, responseType: 'text'}});
     }}";
                 }
-                else if (methodName.Contains("ForTable") || skipSpinner) // FT HACK: Be carefull with method name
+                else if (cSharpReturnType.Contains("TableResponseDTO") || skipSpinner)
                 {
                     result = @$"
-    {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{ 
-        return this.http.post<{returnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, environment.httpSkipSpinnerOptions);
+    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{ 
+        return this.http.post<{angularReturnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, environment.httpSkipSpinnerOptions);
     }}";
                 }
                 else
                 {
                     result = @$"
-    {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{ 
-        return this.http.post<{returnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, environment.httpOptions);
+    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{ 
+        return this.http.post<{angularReturnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, environment.httpOptions);
     }}";
                 }
             }
             if (endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "HttpPut")))
             {
                 result = @$"
-    {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{ 
-        return this.http.put<{returnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, environment.httpOptions);
+    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{ 
+        return this.http.put<{angularReturnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, environment.httpOptions);
     }}";
             }
             if (endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "HttpDelete")))
             {
                 result = @$"
-    {methodName.FirstCharToLower()}({inputParameters}): Observable<{returnType}> {{ 
-        return this.http.delete<{returnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}{getAndDeleteParameters}`);
+    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{ 
+        return this.http.delete<{angularReturnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}{getAndDeleteParameters}`);
     }}";
             }
 

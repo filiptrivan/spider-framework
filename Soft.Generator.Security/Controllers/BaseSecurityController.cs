@@ -93,16 +93,16 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         [HttpPost]
         [AuthGuard]
-        public async Task<TableResponseDTO<RoleDTO>> LoadRoleListForTable(TableFilterDTO dto)
+        public async Task<TableResponseDTO<RoleDTO>> LoadRoleTableData(TableFilterDTO tableFilterDTO)
         {
-            return await _securityBusinessService.LoadRoleListForTable(dto, _context.DbSet<Role>());
+            return await _securityBusinessService.LoadRoleTableData(tableFilterDTO, _context.DbSet<Role>());
         }
 
         [HttpPost]
         [AuthGuard]
-        public async Task<IActionResult> ExportRoleListToExcel(TableFilterDTO dto)
+        public async Task<IActionResult> ExportRoleTableDataToExcel(TableFilterDTO tableFilterDTO)
         {
-            byte[] fileContent = await _securityBusinessService.ExportRoleListToExcel(dto, _context.DbSet<Role>());
+            byte[] fileContent = await _securityBusinessService.ExportRoleTableDataToExcel(tableFilterDTO, _context.DbSet<Role>());
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"Roles.xlsx"));
         }
 

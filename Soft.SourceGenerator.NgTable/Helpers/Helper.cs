@@ -32,21 +32,21 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static readonly string MapperNamespaceEnding = "DataMappers";
 
         public static readonly List<string> BaseTypePropertiies = new List<string> { "Id", "Version", "CreatedAt", "ModifiedAt" };
-        public static readonly List<string> BaseClassNames = new List<string> 
-        { 
-            "TableFilter", 
-            "TableResponse", 
-            "TableSelection", 
-            "Namebook", 
-            "Codebook", 
-            "SimpleSaveResult", 
-            "BusinessObject", 
-            "ReadonlyObject", 
-            "ExcelReportOptions", 
-            "RoleUser", 
-            "PaginationResult", 
-            "TableFilterContext", 
-            "TableFilterSortMeta" 
+        public static readonly List<string> BaseClassNames = new List<string>
+        {
+            "TableFilter",
+            "TableResponse",
+            "TableSelection",
+            "Namebook",
+            "Codebook",
+            "SimpleSaveResult",
+            "BusinessObject",
+            "ReadonlyObject",
+            "ExcelReportOptions",
+            "RoleUser",
+            "PaginationResult",
+            "TableFilterContext",
+            "TableFilterSortMeta"
         };
 
         #region Syntax and Semantic targets
@@ -512,7 +512,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             foreach (AttributeData attribute in symbol.GetAttributes())
             {
                 string argumentValue = attribute.ConstructorArguments.Length > 0
-                    ? 
+                    ?
                     string.Join(", ", attribute.ConstructorArguments.Select(arg =>
                     {
                         try
@@ -610,23 +610,35 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         {
             return classes
                 .Where(x => x.Namespace.EndsWith($".{EntitiesNamespaceEnding}") || x.Namespace.EndsWith($".{DTONamespaceEnding}"))
-                .Select(x =>
+                .SelectMany(x =>
                 {
                     if (x.Name.EndsWith("DTO"))
                     {
-                        return new SoftClass
+                        return new List<SoftClass>
                         {
-                            Name = x.Name,
-                            Properties = x.Properties
+                            new SoftClass
+                            {
+                                Name = x.Name,
+                                Properties = x.Properties
+                            }
                         };
                     }
                     else // Entity
                     {
-                        return new SoftClass
+                        return new List<SoftClass>
                         {
-                            Name = $"{x.Name}DTO",
-                            Properties = GetDTOSoftProps(x, classes),
-                            IsGenerated = true
+                            new SoftClass
+                            {
+                                Name = $"{x.Name}DTO",
+                                Properties = GetDTOSoftProps(x, classes),
+                                IsGenerated = true
+                            },
+                            new SoftClass
+                            {
+                                Name = $"{x.Name}SaveBodyDTO",
+                                Properties = new List<SoftProperty> { new SoftProperty { IdentifierText = $"{x.Name}DTO", Type = $"{x.Name}DTO" } },
+                                IsGenerated = true
+                            },
                         };
                     }
                 })
@@ -1220,7 +1232,17 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         {
             if (data != null)
             {
-                StreamWriter sw = new StreamWriter(path);
+                StreamWriter sw = new StreamWriter(path, false);
+                sw.WriteLine(data);
+                sw.Close();
+            }
+        }
+
+        public static void WriteToTheFile(StringBuilder data, string path)
+        {
+            if (data != null)
+            {
+                StreamWriter sw = new StreamWriter(path, false);
                 sw.WriteLine(data);
                 sw.Close();
             }
@@ -1507,7 +1529,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     };
                 }
             }
-            else if (typeName.StartsWith($"TableSelectionDTO")) // TODO FT: Put inside variable
+            else if (typeName.StartsWith($"LazyTableSelectionDTO")) // TODO FT: Put inside variable
             {
                 return new List<SoftProperty>()
                 {
