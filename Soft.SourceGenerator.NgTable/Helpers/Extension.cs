@@ -4,9 +4,7 @@ using Soft.SourceGenerators.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 
 namespace Soft.SourceGenerators.Helpers
 {
@@ -36,6 +34,63 @@ namespace Soft.SourceGenerators.Helpers
                 case "": throw new ArgumentException($"{nameof(input)} cannot be empty", nameof(input));
                 default: return input.First().ToString().ToLower() + input.Substring(1);
             }
+        }
+
+        public static string Pluralize(this string word)
+        {
+            if (string.IsNullOrEmpty(word))
+                return word;
+
+            Dictionary<string, string> irregulars = new Dictionary<string, string>
+            {
+                { "Child", "Children" },
+                { "Person", "People" },
+                { "Man", "Men" },
+                { "Woman", "Women" },
+                { "Mouse", "Mice" },
+                { "Foot", "Feet" },
+                { "Tooth", "Teeth" },
+                { "Goose", "Geese" },
+                { "Cactus", "Cacti" },
+                { "Focus", "Foci" },
+                { "Phenomenon", "Phenomena" },
+                { "Analysis", "Analyses" },
+                { "Thesis", "Theses" }
+            };
+
+            if (irregulars.TryGetValue(word, out string plural))
+                return plural;
+
+            HashSet<string> uncountableNouns = new HashSet<string>
+            {
+                "Fish", "Sheep", "Deer", "Species", "Aircraft", "Moose", "Series"
+            };
+
+            if (uncountableNouns.Contains(word))
+                return word;
+
+            if (word.EndsWith("y", StringComparison.OrdinalIgnoreCase) && !IsVowel(word[word.Length - 2]))
+                return word.Substring(0, word.Length - 1) + "ies";
+
+            if (word.EndsWith("s", StringComparison.OrdinalIgnoreCase) ||
+                word.EndsWith("x", StringComparison.OrdinalIgnoreCase) ||
+                word.EndsWith("z", StringComparison.OrdinalIgnoreCase) ||
+                word.EndsWith("ch", StringComparison.OrdinalIgnoreCase) ||
+                word.EndsWith("sh", StringComparison.OrdinalIgnoreCase))
+                return word + "es";
+
+            if (word.EndsWith("f", StringComparison.OrdinalIgnoreCase) && !word.EndsWith("ff", StringComparison.OrdinalIgnoreCase))
+                return word.Substring(0, word.Length - 1) + "ves";
+
+            if (word.EndsWith("fe", StringComparison.OrdinalIgnoreCase) && !word.EndsWith("ffe", StringComparison.OrdinalIgnoreCase))
+                return word.Substring(0, word.Length - 2) + "ves";
+
+            return word + "s";
+        }
+
+        private static bool IsVowel(char c)
+        {
+            return "aeiou".IndexOf(char.ToLower(c)) >= 0;
         }
 
         /// <summary>

@@ -61,7 +61,7 @@ namespace Soft.SourceGenerator.NgTable.Net
 
 namespace {{basePartOfNamespace}}.DTO
 {
-{{string.Join("\n", GetDTOClasses(entityClasses, allClasses))}}
+{{string.Join("\n\n", GetDTOClasses(entityClasses, allClasses))}}
 }
 """;
 

@@ -9,7 +9,7 @@ namespace Soft.Generator.Security.Entities
 {
     public class RoleUser
     {
-        public int RolesId { get; set; }
-        public long UsersId { get; set; }
+        public int RoleId { get; set; }
+        public long UserId { get; set; }
     }
 }

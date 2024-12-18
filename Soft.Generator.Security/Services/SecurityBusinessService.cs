@@ -415,12 +415,12 @@ namespace Soft.Generator.Security.Services
 
             await _context.WithTransactionAsync(async () =>
             {
-                List<RoleUser> roleUserList = await _context.DbSet<RoleUser>().Where(x => x.RolesId == roleId).ToListAsync();
+                List<RoleUser> roleUserList = await _context.DbSet<RoleUser>().Where(x => x.RoleId == roleId).ToListAsync();
 
                 foreach (RoleUser roleUser in roleUserList)
                 {
-                    if (selectedUserIds.Contains(roleUser.UsersId))
-                        selectedUserIds.Remove(roleUser.UsersId);
+                    if (selectedUserIds.Contains(roleUser.UserId))
+                        selectedUserIds.Remove(roleUser.UserId);
                     else
                         _context.DbSet<RoleUser>().Remove(roleUser);
                 }
@@ -429,8 +429,8 @@ namespace Soft.Generator.Security.Services
                 {
                     RoleUser roleUser = new RoleUser 
                     {
-                        RolesId = roleId,
-                        UsersId = selectedUserId
+                        RoleId = roleId,
+                        UserId = selectedUserId
                     };
 
                     await _context.DbSet<RoleUser>().AddAsync(roleUser);

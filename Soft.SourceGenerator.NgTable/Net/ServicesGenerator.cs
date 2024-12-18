@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Helpers;
+using Soft.SourceGenerators;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using System;
@@ -890,6 +891,9 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static string HandleManyToManyData(SoftClass entityClass, List<SoftClass> allEntityClasses)
         {
+            if (entityClass.Properties.Count == Settings.NumberOfPropertiesWithoutAdditionalManyToManyProperties)
+                return null;
+
             string nameOfTheEntityClass = entityClass.Name;
             string nameOfTheEntityClassFirstLower = entityClass.Name.FirstCharToLower();
 
@@ -909,8 +913,8 @@ namespace {{basePartOfTheNamespace}}.Services
             if (mainEntityPrimaryKeyProperty == null)
                 return "YouNeedToDefineMainEntityAlso";
 
-            SoftAttribute extendPrimaryKeyAttribute = extendPrimaryKeyProperty.Attributes.Where(x => x.Name == "M2MExtendEntityKey").Single(); // eg. [M2MExtendEntityKey(nameof(DiscountCategory))]
-            string extendEntityPropertyName = extendPrimaryKeyAttribute.Value; // eg. "DiscountCategory"
+            SoftAttribute extendPrimaryKeyAttribute = extendPrimaryKeyProperty.Attributes.Where(x => x.Name == "M2MExtendEntityKey").Single(); // eg. [M2MExtendEntityKey(nameof(DiscountProductGroup))]
+            string extendEntityPropertyName = extendPrimaryKeyAttribute.Value; // eg. "DiscountProductGroup"
             string extendEntityClassName = manyToManyProperties.Where(x => x.IdentifierText == extendEntityPropertyName).Select(x => x.Type).Single(); // eg. Category
             SoftClass extendEntityClass = allEntityClasses.Where(x => x.Name == extendEntityClassName).Single();
             string extendEntityIdType = Helper.GetGenericIdType(extendEntityClass, allEntityClasses);
@@ -950,7 +954,7 @@ namespace {{basePartOfTheNamespace}}.Services
                     {
                         {{nameOfTheEntityClassFirstLower}} = TypeAdapter.Adapt<{{nameOfTheEntityClass}}>(selected{{nameOfTheEntityClass}}DTO, Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
                         {{nameOfTheEntityClassFirstLower}}.{{mainEntityPropertyName}} = await LoadInstanceAsync<{{mainEntityClassName}}, {{mainEntityIdType}}>({{mainEntityPropertyName.FirstCharToLower()}}Id, null);
-                        {{nameOfTheEntityClassFirstLower}}.{{extendEntityPropertyName}} = await LoadInstanceAsync<{{extendEntityClassName}}, {{extendEntityIdType}}>((long)selected{{nameOfTheEntityClass}}DTO.{{extendEntityPropertyName}}Id, null);
+                        {{nameOfTheEntityClassFirstLower}}.{{extendEntityPropertyName}} = await LoadInstanceAsync<{{extendEntityClassName}}, {{extendEntityIdType}}>(selected{{nameOfTheEntityClass}}DTO.{{extendEntityPropertyName}}Id.Value, null);
                         dbSet.Add({{nameOfTheEntityClassFirstLower}});
                     }
                     else

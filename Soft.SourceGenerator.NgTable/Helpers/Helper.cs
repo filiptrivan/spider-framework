@@ -382,6 +382,39 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return null;
         }
 
+        public static bool IsSyntaxTargetForGenerationEveryClass(SyntaxNode node)
+        {
+            if (node is ClassDeclarationSyntax classDeclaration)
+            {
+                string namespaceName = classDeclaration
+                   .Ancestors()
+                   .OfType<NamespaceDeclarationSyntax>()
+                   .Select(ns => ns.Name.ToString())
+                   .FirstOrDefault();
+
+                if (namespaceName != null)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public static ClassDeclarationSyntax GetSemanticTargetForGenerationEveryClass(GeneratorSyntaxContext context)
+        {
+            ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
+
+            string namespaceName = classDeclaration
+               .Ancestors()
+               .OfType<NamespaceDeclarationSyntax>()
+               .Select(ns => ns.Name.ToString())
+               .FirstOrDefault();
+
+            if (namespaceName != null)
+                return classDeclaration;
+
+            return null;
+        }
+
         #endregion
 
         #region Referenced Assemblies
@@ -445,7 +478,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     {
                         Name = type.Name,
                         Namespace = GetFullNamespace(type),
-                        BaseType = type.BaseType?.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat),
+                        BaseType = type.BaseType?.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat) == "object" ? null : type.BaseType?.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat),
                         IsAbstract = type.IsAbstract,
                         Properties = GetPropertiesFromReferencedAssemblies(type),
                         Attributes = GetAttributesFromReferencedAssemblies(type),
@@ -745,7 +778,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
         public static bool SkipPropertyInDTO(this SoftProperty property)
         {
-            return property.Attributes.Any(x => x.Name == "IgnorePropertyInDTO" || x.Name == "MaintanceEntityKey" || x.Name == "ExtendEntityKey");
+            return property.Attributes.Any(x => x.Name == "IgnorePropertyInDTO" || x.Name == "M2MMaintanceEntityKey" || x.Name == "M2MExtendEntityKey");
         }
 
         public static List<ClassDeclarationSyntax> GetValidationClasses(IList<ClassDeclarationSyntax> classes)

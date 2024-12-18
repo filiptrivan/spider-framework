@@ -16,7 +16,7 @@ using Soft.Generator.Shared.Attributes.EF;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 
-namespace Soft.Generator.Infrastructure.Data
+namespace Soft.Generator.Infrastructure
 {
     public class ApplicationDbContext<TUser> : DbContext, IApplicationDbContext
         where TUser : class, IUser, new()
@@ -42,14 +42,14 @@ namespace Soft.Generator.Infrastructure.Data
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<RoleUser>()
-                .HasKey(ru => new { ru.RolesId, ru.UsersId });
+                .HasKey(ru => new { ru.RoleId, ru.UserId });
 
             modelBuilder.Entity<TUser>()
                 .HasMany(e => e.Roles)
                 .WithMany()
                 .UsingEntity<RoleUser>(
-                    j => j.HasOne<Role>().WithMany().HasForeignKey(ru => ru.RolesId),
-                    j => j.HasOne<TUser>().WithMany().HasForeignKey(ru => ru.UsersId)
+                    j => j.HasOne<Role>().WithMany().HasForeignKey(ru => ru.RoleId),
+                    j => j.HasOne<TUser>().WithMany().HasForeignKey(ru => ru.UserId)
                 );
 
             if (SettingsProvider.Current.UseGoogleAsExternalProvider == false)
@@ -65,7 +65,7 @@ namespace Soft.Generator.Infrastructure.Data
 
             modelBuilder.ConfigureReferenceTypesSetNull();
             modelBuilder.ConfigureManyToManyRelationships();
-            //modelBuilder.ConfigureManyToOneRequired(); FT: Don't do now, but when we migrate PL to the prod environment (or initialize database from the start), uncomment this code.
+            modelBuilder.ConfigureManyToOneRequired();
         }
 
         public DbSet<TEntity> DbSet<TEntity>() where TEntity : class
@@ -73,7 +73,7 @@ namespace Soft.Generator.Infrastructure.Data
             return Set<TEntity>();
         }
 
-        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             foreach (EntityEntry changedEntity in ChangeTracker.Entries())
             {

@@ -59,6 +59,9 @@ namespace Soft.Generator.Infrastructure
                     throw new InvalidOperationException($"Navigation properties not found on type {clrType.Name}");
 
                 modelBuilder.Entity(clrType)
+                    .HasKey([m2mMaintanceKey.Property.Name, m2mExtendKey.Property.Name]);
+
+                modelBuilder.Entity(clrType)
                     .HasOne(maintanceNavigation.PropertyType, m2mMaintanceKey.Attribute.NavigationPropertyName)
                     .WithMany()
                     .HasForeignKey(m2mMaintanceKey.Property.Name);
