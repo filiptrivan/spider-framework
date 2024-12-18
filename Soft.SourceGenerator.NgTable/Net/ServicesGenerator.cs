@@ -79,6 +79,7 @@ namespace {{basePartOfTheNamespace}}.Services
         }
 
 """);
+
             foreach (SoftClass entityClass in entityClasses)
             {
                 string baseType = entityClass.BaseType;
@@ -894,8 +895,13 @@ namespace {{basePartOfTheNamespace}}.Services
 
             List<SoftProperty> manyToManyProperties = entityClass.Properties;
 
-            SoftProperty extendPrimaryKeyProperty = manyToManyProperties.Where(x => x.Attributes.Any(x => x.Name == "ExtendManyToMany")).SingleOrDefault();
-            SoftProperty mainEntityPrimaryKeyProperty = manyToManyProperties.Where(x => x.Attributes.Any(x => x.Name == "MainEntityManyToMany")).SingleOrDefault();
+            SoftProperty extendPrimaryKeyProperty = manyToManyProperties
+                .Where(x => x.Attributes.Any(x => x.Name == "M2MExtendEntityKey"))
+                .SingleOrDefault(); // eg. CategoriesId
+
+            SoftProperty mainEntityPrimaryKeyProperty = manyToManyProperties
+                .Where(x => x.Attributes.Any(x => x.Name == "M2MMaintanceEntityKey"))
+                .SingleOrDefault(); 
 
             if (extendPrimaryKeyProperty == null)
                 return null;
@@ -903,21 +909,23 @@ namespace {{basePartOfTheNamespace}}.Services
             if (mainEntityPrimaryKeyProperty == null)
                 return "YouNeedToDefineMainEntityAlso";
 
-            List<SoftProperty> manyToManyAdditionalProperties = manyToManyProperties.Where(x => x.IdentifierText != extendPrimaryKeyProperty.IdentifierText && x.IdentifierText != mainEntityPrimaryKeyProperty.IdentifierText).ToList();
-
-            string extendEntityClassName = extendPrimaryKeyProperty.Attributes.Where(x => x.Name == "ExtendManyToMany").Select(x => x.Value).SingleOrDefault();
-            SoftClass extendEntityClass = allEntityClasses.Where(x => x.Name == extendEntityClassName).SingleOrDefault();
+            SoftAttribute extendPrimaryKeyAttribute = extendPrimaryKeyProperty.Attributes.Where(x => x.Name == "M2MExtendEntityKey").Single(); // eg. [M2MExtendEntityKey(nameof(DiscountCategory))]
+            string extendEntityPropertyName = extendPrimaryKeyAttribute.Value; // eg. "DiscountCategory"
+            string extendEntityClassName = manyToManyProperties.Where(x => x.IdentifierText == extendEntityPropertyName).Select(x => x.Type).Single(); // eg. Category
+            SoftClass extendEntityClass = allEntityClasses.Where(x => x.Name == extendEntityClassName).Single();
             string extendEntityIdType = Helper.GetGenericIdType(extendEntityClass, allEntityClasses);
 
-            string mainEntityClassName = mainEntityPrimaryKeyProperty.Attributes.Where(x => x.Name == "MainEntityManyToMany").Select(x => x.Value).SingleOrDefault();
-            SoftClass mainEntityClass = allEntityClasses.Where(x => x.Name == mainEntityClassName).SingleOrDefault();
+            SoftAttribute mainEntityPrimaryKeyAttribute = mainEntityPrimaryKeyProperty.Attributes.Where(x => x.Name == "M2MMaintanceEntityKey").Single();
+            string mainEntityPropertyName = mainEntityPrimaryKeyAttribute.Value;
+            string mainEntityClassName = manyToManyProperties.Where(x => x.IdentifierText == mainEntityPropertyName).Select(x => x.Type).Single();
+            SoftClass mainEntityClass = allEntityClasses.Where(x => x.Name == mainEntityClassName).Single();
             string mainEntityIdType = Helper.GetGenericIdType(mainEntityClass, allEntityClasses);
 
             return $$"""
         /// <summary>
         /// Call this method when you have additional fields in M2M association
         /// </summary>
-        public async Task Update{{extendEntityClassName}}ListFor{{mainEntityClassName}}({{mainEntityIdType}} {{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}}Id, List<{{nameOfTheEntityClass}}DTO> selected{{nameOfTheEntityClass}}DTOList)
+        public async Task Update{{extendEntityClassName}}ListFor{{mainEntityClassName}}({{mainEntityIdType}} {{mainEntityPropertyName.FirstCharToLower()}}Id, List<{{nameOfTheEntityClass}}DTO> selected{{nameOfTheEntityClass}}DTOList)
         {
             if (selected{{nameOfTheEntityClass}}DTOList == null)
                 return;
@@ -929,20 +937,20 @@ namespace {{basePartOfTheNamespace}}.Services
                 // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
 
                 DbSet<{{nameOfTheEntityClass}}> dbSet = _context.DbSet<{{nameOfTheEntityClass}}>();
-                List<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}List = await dbSet.Where(x => x.{{mainEntityPrimaryKeyProperty.IdentifierText}}.Id == {{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}}Id).ToListAsync();
+                List<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}List = await dbSet.Where(x => x.{{mainEntityPropertyName}}.Id == {{mainEntityPropertyName.FirstCharToLower()}}Id).ToListAsync();
 
                 foreach ({{nameOfTheEntityClass}}DTO selected{{nameOfTheEntityClass}}DTO in selectedDTOListHelper)
                 {
                     {{nameOfTheEntityClass}}DTOValidationRules validationRules = new {{nameOfTheEntityClass}}DTOValidationRules();
                     DefaultValidatorExtensions.ValidateAndThrow(validationRules, selected{{nameOfTheEntityClass}}DTO);
 
-                    {{nameOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}} = {{nameOfTheEntityClassFirstLower}}List.Where(x => x.{{extendPrimaryKeyProperty.IdentifierText}}.Id == selected{{nameOfTheEntityClass}}DTO.{{extendPrimaryKeyProperty.IdentifierText}}Id).SingleOrDefault();
+                    {{nameOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}} = {{nameOfTheEntityClassFirstLower}}List.Where(x => x.{{extendEntityPropertyName}}.Id == selected{{nameOfTheEntityClass}}DTO.{{extendEntityPropertyName}}Id).SingleOrDefault();
 
                     if ({{nameOfTheEntityClassFirstLower}} == null)
                     {
                         {{nameOfTheEntityClassFirstLower}} = TypeAdapter.Adapt<{{nameOfTheEntityClass}}>(selected{{nameOfTheEntityClass}}DTO, Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
-                        {{nameOfTheEntityClassFirstLower}}.{{mainEntityPrimaryKeyProperty.IdentifierText}} = await LoadInstanceAsync<{{mainEntityClassName}}, {{mainEntityIdType}}>({{mainEntityPrimaryKeyProperty.IdentifierText.FirstCharToLower()}}Id, null);
-                        {{nameOfTheEntityClassFirstLower}}.{{extendPrimaryKeyProperty.IdentifierText}} = await LoadInstanceAsync<{{extendEntityClassName}}, {{extendEntityIdType}}>((long)selected{{nameOfTheEntityClass}}DTO.{{extendPrimaryKeyProperty.IdentifierText}}Id, null);
+                        {{nameOfTheEntityClassFirstLower}}.{{mainEntityPropertyName}} = await LoadInstanceAsync<{{mainEntityClassName}}, {{mainEntityIdType}}>({{mainEntityPropertyName.FirstCharToLower()}}Id, null);
+                        {{nameOfTheEntityClassFirstLower}}.{{extendEntityPropertyName}} = await LoadInstanceAsync<{{extendEntityClassName}}, {{extendEntityIdType}}>((long)selected{{nameOfTheEntityClass}}DTO.{{extendEntityPropertyName}}Id, null);
                         dbSet.Add({{nameOfTheEntityClassFirstLower}});
                     }
                     else

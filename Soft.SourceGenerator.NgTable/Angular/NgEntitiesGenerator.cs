@@ -21,12 +21,12 @@ namespace Soft.SourceGenerator.NgTable.Angular
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//#if DEBUG
-//            if (!Debugger.IsAttached)
-//            {
-//                Debugger.Launch();
-//            }
-//#endif
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationDTO(s),
@@ -54,6 +54,7 @@ import { BaseEntity } from "../../../core/entities/base-entity";
 import { TableFilterContext } from "src/app/core/entities/table-filter-context";
 import { TableFilterSortMeta } from "src/app/core/entities/table-filter-sort-meta";
 import { MimeTypes } from "src/app/core/entities/mime-type";
+{{string.Join("\n", GetEnumPropertyImports(DTOClasses, projectName))}}
 
 """);
 
@@ -63,8 +64,6 @@ import { MimeTypes } from "src/app/core/entities/mime-type";
 
                 foreach (SoftClass DTOClass in DTOClassGroup) // It can only be 2 here
                     DTOProperties.AddRange(DTOClass.Properties);
-
-                DTOProperties = DTOProperties.Where(x => x.Attributes.Any(x => x.Name == "IgnorePropertyInDTO") == false).ToList();
 
                 List<string> angularPropertyDefinitions = GetAllAngularPropertyDefinitions(DTOProperties); // FT: If, in some moment, we want to make another aproach set this to false, now it doesn't matter
                 string angularClassIdentifier = DTOClassGroup.Key.Replace("DTO", "");
@@ -225,5 +224,35 @@ export class TableFilter extends BaseEntity
 
             return additionalEntities;
         }
+
+        private static List<string> GetEnumPropertyImports(List<SoftClass> DTOClasses, string projectName)
+        {
+            List<string> result = new List<string>();
+
+            foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
+            {
+                List<SoftProperty> DTOProperties = new List<SoftProperty>();
+
+                foreach (SoftClass DTOClass in DTOClassGroup) // It can only be 2 here
+                    DTOProperties.AddRange(DTOClass.Properties);
+
+                foreach (SoftProperty property in DTOProperties)
+                {
+                    if (property.Type.IsEnum() == false)
+                        continue;
+
+                    if (result.Contains(property.IdentifierText) == false)
+                    {
+                        result.Add($$"""
+import { {{property.IdentifierText}} } from "../../enums/generated/{{projectName.FromPascalToKebabCase()}}-enums.generated";
+""");
+                    }
+                }
+            }
+
+            return result;
+        }
+
+
     }
 }

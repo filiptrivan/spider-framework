@@ -50,7 +50,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
             StringBuilder sb = new StringBuilder();
             //List<SoftProperty> properties = new List<SoftProperty>();
             List<string> angularHttpMethods = new List<string>();
-            foreach (ClassDeclarationSyntax controllerClass in controllerClasses) // FT: Big part of this method is not user because we changed the way of importing ng classes
+            foreach (ClassDeclarationSyntax controllerClass in controllerClasses) // FT: Big part of this method is not used because we changed the way of importing ng classes
             {
                 string controllerName = controllerClass.Identifier.Text.Replace("Controller", "");
 

@@ -82,9 +82,14 @@ namespace Soft.SourceGenerators.Helpers
             return c.BaseType?.Contains($"{Helper.ReadonlyObject}<") == true;
         }
 
-        public static bool IsEnumerable(this string propType)
+        public static bool IsEnumerable(this string type)
         {
-            return propType.Contains("List") || propType.Contains("IList") || propType.Contains("[]");
+            return type.Contains("List") || type.Contains("IList") || type.Contains("[]");
+        }
+
+        public static bool IsEnum(this string type)
+        {
+            return type.EndsWith("Codes") || type.EndsWith("Codes>");
         }
 
         public static bool IsBaseType(this string propType)

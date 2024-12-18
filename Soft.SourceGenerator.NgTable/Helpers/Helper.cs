@@ -36,7 +36,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         {
             "TableFilter",
             "TableResponse",
-            "TableSelection",
+            "LazyTableSelection",
             "Namebook",
             "Codebook",
             "SimpleSaveResult",
@@ -582,11 +582,29 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static string GetGeneratorOutputPath(string generatorName, IList<ClassDeclarationSyntax> classes)
         {
             ClassDeclarationSyntax settingsClass = GetSettingsClass(classes);
-            if (settingsClass == null) return null;
+
+            if (settingsClass == null) 
+                return null;
+
             List<SoftProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes);
             SoftProperty p = properties?.Where(x => x.IdentifierText == generatorName)?.SingleOrDefault();
             string outputPath = p?.Attributes?.Where(x => x.Name == "Output")?.SingleOrDefault()?.Value;
             return outputPath;
+        }
+
+        public static bool ShouldGenerateDbContext(string generatorName, IList<ClassDeclarationSyntax> classes)
+        {
+            ClassDeclarationSyntax settingsClass = GetSettingsClass(classes);
+
+            if (settingsClass == null) 
+                return false;
+
+            List<SoftProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes);
+            SoftProperty p = properties?.Where(x => x.IdentifierText == generatorName)?.SingleOrDefault();
+
+            bool.TryParse(p?.Attributes?.Where(x => x.Name == "Output")?.SingleOrDefault()?.Value, out bool shouldGeneratedDbContext);
+
+            return shouldGeneratedDbContext;
         }
 
         public static List<ClassDeclarationSyntax> GetEntityClasses(IList<ClassDeclarationSyntax> classes)
@@ -678,7 +696,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             foreach (SoftProperty prop in properties)
             {
-                if (prop.Attributes.Any(x => x.Name == "IgnorePropertyInDTO"))
+                if (prop.SkipPropertyInDTO())
                     continue;
 
                 string propType = prop.Type;
@@ -725,6 +743,11 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return props;
         }
 
+        public static bool SkipPropertyInDTO(this SoftProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "IgnorePropertyInDTO" || x.Name == "MaintanceEntityKey" || x.Name == "ExtendEntityKey");
+        }
+
         public static List<ClassDeclarationSyntax> GetValidationClasses(IList<ClassDeclarationSyntax> classes)
         {
             return classes
@@ -767,7 +790,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     {
                         result.Add($"import {{ {angularDataType} }} from \"./{importPath}{projectName.FromPascalToKebabCase()}-entities.generated\";");
                     }
-                    else if (generateClassImports && cSharpDataType.Contains($"Codes"))
+                    else if (generateClassImports && cSharpDataType.IsEnum())
                     {
                         result.Add($"import {{ {angularDataType} }} from \"../../enums/generated/{importPath}{projectName.FromPascalToKebabCase()}-enums.generated\";"); // TODO FT: When you need, implement so you can also send enums from the controller
                     }
@@ -809,7 +832,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             if (cSharpType.IsEnumerable())
                 return $"{ExtractAngularTypeFromGenericCSharpType(cSharpType)}[]";
 
-            if (cSharpType.EndsWith("Codes") || cSharpType.EndsWith("Codes>")) // Enum
+            if (cSharpType.IsEnum())
                 return cSharpType;
 
             if (cSharpType.EndsWith("MimeTypes") || cSharpType.EndsWith("MimeTypes>"))
@@ -828,7 +851,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             //if (ExtractAngularTypeFromGenericCSharpType(CSharpDataType).IsBaseType()) // TODO FT: We were checking for the C# type, which wasn't correct, but add correct code here if we need in the future
             //    return null;
 
-            if (ExtractAngularTypeFromGenericCSharpType(CSharpDataType).EndsWith("Codes"))
+            if (ExtractAngularTypeFromGenericCSharpType(CSharpDataType).IsEnum())
                 return CSharpDataType;
 
             return ExtractAngularTypeFromGenericCSharpType(CSharpDataType);
