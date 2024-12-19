@@ -14,6 +14,7 @@ using System.Text;
 namespace Soft.SourceGenerators.Net
 {
     [Generator]
+    [Obsolete("We don't use this generator, because the reflection couldn't find the generated DbSets.")]
     public class DbContextGenerator : IIncrementalGenerator
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
