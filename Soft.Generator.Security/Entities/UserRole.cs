@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Soft.Generator.Security.Entities
 {
-    public class RoleUser
+    public class UserRole
     {
         public int RoleId { get; set; }
         public long UserId { get; set; }

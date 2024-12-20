@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Soft.Generator.Shared.Attributes.EF;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using Soft.Generator.Shared.Extensions;
 
 namespace Soft.Generator.Infrastructure
 {
@@ -32,22 +33,35 @@ namespace Soft.Generator.Infrastructure
         {
         }
 
-        public DbSet<TUser> Users { get; set; }
-        public DbSet<Role> Roles { get; set; }
-        public DbSet<RoleUser> RoleUser { get; set; } // M2M
-        public DbSet<Permission> Permissions { get; set; }
+        public DbSet<TUser> User { get; set; }
+        public DbSet<Role> Role { get; set; }
+        public DbSet<UserRole> UserRole { get; set; } // M2M
+        public DbSet<Permission> Permission { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
+            // Automatically register all classes marked with the [Entity] attribute
+            List<Assembly> assemblies = AppDomain.CurrentDomain.GetAssemblies().ToList();
 
-            modelBuilder.Entity<RoleUser>()
+            List<string> alreadyEntityTypeNames = modelBuilder.Model.GetEntityTypes().Select(x => x.Name).ToList();
+
+            List<Type> entityTypes = assemblies
+                .SelectMany(assembly => assembly.GetTypes())
+                .Where(type => type != null && type.Namespace != null && type.Namespace.EndsWith(".Entities"))
+                .ToList();
+
+            foreach (Type entityType in entityTypes)
+                modelBuilder.Entity(entityType);
+
+            List<IMutableEntityType> mutableEntityTypes = modelBuilder.Model.GetEntityTypes().ToList();
+
+            modelBuilder.Entity<UserRole>()
                 .HasKey(ru => new { ru.RoleId, ru.UserId });
 
             modelBuilder.Entity<TUser>()
                 .HasMany(e => e.Roles)
                 .WithMany()
-                .UsingEntity<RoleUser>(
+                .UsingEntity<UserRole>(
                     j => j.HasOne<Role>().WithMany().HasForeignKey(ru => ru.RoleId),
                     j => j.HasOne<TUser>().WithMany().HasForeignKey(ru => ru.UserId)
                 );
@@ -63,10 +77,13 @@ namespace Soft.Generator.Infrastructure
                 modelBuilder.Entity<Permission>().Ignore(x => x.DescriptionLatin);
             }
 
-            modelBuilder.ConfigureReferenceTypesSetNull();
-            modelBuilder.ConfigureManyToManyRelationships();
-            modelBuilder.ConfigureManyToOneRequired();
+            mutableEntityTypes.ConfigureReferenceTypesSetNull(modelBuilder);
+            mutableEntityTypes.ConfigureManyToManyRelationships(modelBuilder);
+            mutableEntityTypes.ConfigureManyToOneRequired(modelBuilder);
+
+            base.OnModelCreating(modelBuilder);
         }
+
 
         public DbSet<TEntity> DbSet<TEntity>() where TEntity : class
         {

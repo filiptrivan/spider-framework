@@ -9,14 +9,10 @@ namespace Soft.Generator.Security.Entities
 {
     public class RolePermission
     {
+        [M2MMaintanceEntity(nameof(Role.Permissions))]
         public virtual Role Role { get; set; }
 
-        [M2MMaintanceEntityKey(nameof(Role))]
-        public int RoleId { get; set; }
-
+        [M2MExtendEntity(nameof(Permission.Roles))]
         public virtual Permission Permission { get; set; }
-
-        [M2MExtendEntityKey(nameof(Permission))]
-        public int PermissionId { get; set; }
     }
 }

@@ -43,7 +43,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             "BusinessObject",
             "ReadonlyObject",
             "ExcelReportOptions",
-            "RoleUser",
+            "UserRole",
             "PaginationResult",
             "TableFilterContext",
             "TableFilterSortMeta"
@@ -1430,7 +1430,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         {
             value = value?.Replace("\"", "").Replace("@", "");
 
-            string pattern = @"nameof\(([^)]*)\)";
+            string pattern = @"nameof\((?:[^.]*\.)?([^.)]*)\)"; // nameof(abc.def.ghi) => ghi
             value = value != null ? Regex.Replace(value, pattern, "$1") : null;
 
             return value;

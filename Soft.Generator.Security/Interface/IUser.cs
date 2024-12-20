@@ -18,6 +18,6 @@ namespace Soft.Generator.Security.Interface
 
         public int NumberOfFailedAttemptsInARow { get; set; }
 
-        public List<Role> Roles { get; set; }
+        public List<Role> Roles { get; }
     }
 }

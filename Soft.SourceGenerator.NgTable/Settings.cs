@@ -6,6 +6,6 @@ namespace Soft.SourceGenerators
 {
     public static class Settings
     {
-        public static int NumberOfPropertiesWithoutAdditionalManyToManyProperties = 4;
+        public static int NumberOfPropertiesWithoutAdditionalManyToManyProperties = 2;
     }
 }

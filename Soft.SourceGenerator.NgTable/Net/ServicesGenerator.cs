@@ -812,20 +812,13 @@ namespace {{basePartOfTheNamespace}}.Services
                 ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
                 : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
                 )}}
-
-                if ({{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}} != null)
+                
+                foreach ({{classNameFromTheList}} {{classNameFromTheListFirstLower}} in {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.ToList())
                 {
-                    foreach ({{classNameFromTheList}} {{classNameFromTheListFirstLower}} in {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.ToList())
-                    {
-                        if (selectedIdsHelper.Contains({{classNameFromTheListFirstLower}}.Id))
-                            selectedIdsHelper.Remove({{classNameFromTheListFirstLower}}.Id);
-                        else
-                            {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.Remove({{classNameFromTheListFirstLower}});
-                    }
-                }
-                else
-                {
-                    {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}} = new {{prop.Type}}();
+                    if (selectedIdsHelper.Contains({{classNameFromTheListFirstLower}}.Id))
+                        selectedIdsHelper.Remove({{classNameFromTheListFirstLower}}.Id);
+                    else
+                        {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.Remove({{classNameFromTheListFirstLower}});
                 }
 
                 List<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}ListToInsert = await _context.DbSet<{{classNameFromTheList}}>().Where(x => selectedIdsHelper.Contains(x.Id)).ToListAsync();
@@ -899,31 +892,34 @@ namespace {{basePartOfTheNamespace}}.Services
 
             List<SoftProperty> manyToManyProperties = entityClass.Properties;
 
-            SoftProperty extendPrimaryKeyProperty = manyToManyProperties
-                .Where(x => x.Attributes.Any(x => x.Name == "M2MExtendEntityKey"))
-                .SingleOrDefault(); // eg. CategoriesId
+            SoftProperty mainEntityProperty = manyToManyProperties
+                .Where(x => x.Attributes.Any(x => x.Name == "M2MMaintanceEntity"))
+                .SingleOrDefault(); // eg. Category
+            SoftAttribute mainEntityAttribute = mainEntityProperty.Attributes.Where(x => x.Name == "M2MMaintanceEntity").SingleOrDefault();
 
-            SoftProperty mainEntityPrimaryKeyProperty = manyToManyProperties
-                .Where(x => x.Attributes.Any(x => x.Name == "M2MMaintanceEntityKey"))
-                .SingleOrDefault(); 
+            SoftProperty extendEntityProperty = manyToManyProperties
+                .Where(x => x.Attributes.Any(x => x.Name == "M2MExtendEntity"))
+                .SingleOrDefault();
+            SoftAttribute extendEntityAttribute = extendEntityProperty.Attributes.Where(x => x.Name == "M2MExtendEntity").SingleOrDefault();
 
-            if (extendPrimaryKeyProperty == null)
+            if (mainEntityProperty == null)
                 return null;
 
-            if (mainEntityPrimaryKeyProperty == null)
-                return "YouNeedToDefineMainEntityAlso";
+            if (extendEntityProperty == null)
+                return "YouNeedToDefineExtendEntityAlso";
 
-            SoftAttribute extendPrimaryKeyAttribute = extendPrimaryKeyProperty.Attributes.Where(x => x.Name == "M2MExtendEntityKey").Single(); // eg. [M2MExtendEntityKey(nameof(DiscountProductGroup))]
-            string extendEntityPropertyName = extendPrimaryKeyAttribute.Value; // eg. "DiscountProductGroup"
-            string extendEntityClassName = manyToManyProperties.Where(x => x.IdentifierText == extendEntityPropertyName).Select(x => x.Type).Single(); // eg. Category
-            SoftClass extendEntityClass = allEntityClasses.Where(x => x.Name == extendEntityClassName).Single();
-            string extendEntityIdType = Helper.GetGenericIdType(extendEntityClass, allEntityClasses);
+            if (mainEntityAttribute?.Value != extendEntityAttribute?.Value) // FT HACK, FT TODO: For now, when we migrate UserNotification and PartnerUserPartnerNotification, we should change this.
+                return null;
 
-            SoftAttribute mainEntityPrimaryKeyAttribute = mainEntityPrimaryKeyProperty.Attributes.Where(x => x.Name == "M2MMaintanceEntityKey").Single();
-            string mainEntityPropertyName = mainEntityPrimaryKeyAttribute.Value;
-            string mainEntityClassName = manyToManyProperties.Where(x => x.IdentifierText == mainEntityPropertyName).Select(x => x.Type).Single();
+            string mainEntityPropertyName = mainEntityProperty.IdentifierText; // eg. "DiscountProductGroup"
+            string mainEntityClassName = mainEntityProperty.Type; // eg. Category
             SoftClass mainEntityClass = allEntityClasses.Where(x => x.Name == mainEntityClassName).Single();
             string mainEntityIdType = Helper.GetGenericIdType(mainEntityClass, allEntityClasses);
+
+            string extendEntityPropertyName = extendEntityProperty.IdentifierText;
+            string extendEntityClassName = extendEntityProperty.Type; 
+            SoftClass extendEntityClass = allEntityClasses.Where(x => x.Name == extendEntityClassName).Single();
+            string extendEntityIdType = Helper.GetGenericIdType(extendEntityClass, allEntityClasses);
 
             return $$"""
         /// <summary>
