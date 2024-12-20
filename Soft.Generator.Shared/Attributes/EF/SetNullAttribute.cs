@@ -8,5 +8,11 @@ namespace Soft.Generator.Shared.Attributes.EF
 {
     public class SetNullAttribute : Attribute
     {
+        public string WithManyProperty { get; set; }
+
+        public SetNullAttribute(string withManyProperty)
+        {
+            WithManyProperty = withManyProperty;
+        }
     }
 }

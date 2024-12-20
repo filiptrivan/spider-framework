@@ -21,16 +21,17 @@ namespace Soft.Generator.Infrastructure
 
                 foreach (PropertyInfo property in clrType.GetProperties())
                 {
-                    if (property.GetCustomAttribute<SetNullAttribute>() != null)
-                    {
-                        if (property.GetCustomAttribute<SetNullAttribute>() == null)
-                            throw new Exception("The property set null attribute can not be null.");
+                    SetNullAttribute attributeValue = property.GetCustomAttribute<SetNullAttribute>();
 
-                        IMutableNavigation navigation = entityType.FindNavigation(property.Name);
+                    if (attributeValue == null)
+                        continue;
 
-                        if (navigation != null)
-                            navigation.ForeignKey.DeleteBehavior = DeleteBehavior.NoAction;
-                    }
+                    modelBuilder.Entity(clrType)
+                        .HasOne(property.PropertyType, property.Name)
+                        .WithMany(attributeValue.WithManyProperty)
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .IsRequired(false)
+                        .HasForeignKey($"{property.Name}Id");
                 }
             }
         }
