@@ -56,6 +56,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
             StringBuilder sbImports = new StringBuilder();
             sbImports.Append($$"""
 import { BaseEntity } from "../../../core/entities/base-entity";
+import { TableFilter } from "src/app/core/entities/table-filter";
 import { TableFilterContext } from "src/app/core/entities/table-filter-context";
 import { TableFilterSortMeta } from "src/app/core/entities/table-filter-sort-meta";
 import { MimeTypes } from "src/app/core/entities/mime-type";
@@ -98,8 +99,6 @@ export class {{angularClassIdentifier}} extends BaseEntity
 
             }
 
-            sb.AppendLine(GetAdditionalEntities());
-
             sbImports.Append(sb);
 
             Helper.WriteToTheFile(sbImports.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-entities.generated.ts");
@@ -129,105 +128,6 @@ export class {{angularClassIdentifier}} extends BaseEntity
             }
 
             return result;
-        }
-
-        private static string GetAdditionalEntities()
-        {
-            string additionalEntities = $$"""
-
-
-// FT HACK: Fake generated class, because of api imports
-export class Namebook extends BaseEntity
-{
-    id?: number;
-    displayName?: string;
-
-    constructor(
-    {
-        id,
-        displayName,
-    }:{
-        id?: number;
-        displayName?: string;
-    } = {}
-    ) {
-        super('Namebook');
-
-        this.id = id;
-        this.displayName = displayName;
-    }
-}
-
-// FT HACK: Fake generated class, because of api imports
-export class Codebook extends BaseEntity
-{
-    code?: string;
-    displayName?: string;
-
-    constructor(
-    {
-        code,
-        displayName,
-    }:{
-        code?: string;
-        displayName?: string;
-    } = {}
-    ) {
-        super('Codebook');
-
-        this.code = code;
-        this.displayName = displayName;
-    }
-}
-
-// FT HACK: Fake generated class, because of api imports
-export class TableFilter extends BaseEntity
-{
-    filters?: Map<string, TableFilterContext[]>;
-    first?: number;
-    rows?: number;
-    sortField?: string;
-    sortOrder?: number;
-    multiSortMeta?: TableFilterSortMeta[];
-    additionalFilterIdInt?: number;
-    additionalFilterIdLong?: number;
-
-    constructor(
-    {
-        filters,
-        first,
-        rows,
-        sortField,
-        sortOrder,
-        multiSortMeta,
-        additionalFilterIdInt,
-        additionalFilterIdLong,
-    }:{
-        filters?: Map<string, TableFilterContext[]>;
-        first?: number;
-        rows?: number;
-        sortField?: string;
-        sortOrder?: number;
-        multiSortMeta?: TableFilterSortMeta[];
-        additionalFilterIdInt?: number;
-        additionalFilterIdLong?: number;
-    } = {}
-    ) {
-        super('TableFilter');
-
-        this.filters = filters;
-        this.first = first;
-        this.rows = rows;
-        this.sortField = sortField;
-        this.sortOrder = sortOrder;
-        this.multiSortMeta = multiSortMeta;
-        this.additionalFilterIdInt = additionalFilterIdInt;
-        this.additionalFilterIdLong = additionalFilterIdLong;
-    }
-}
-""";
-
-            return additionalEntities;
         }
 
         private static List<string> GetEnumPropertyImports(List<SoftClass> DTOClasses, string projectName)

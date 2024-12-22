@@ -92,11 +92,11 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { ApiSecurityService } from './api.service.security';
-import { Namebook } from '../../entities/namebook';
-import { Codebook } from '../../entities/codebook';
-import { SimpleSaveResult } from '../../entities/simple-save-result';
-import { TableFilter } from '../../entities/table-filter';
-import { TableResponse } from './../../../core/entities/table-response';
+import { Namebook } from 'src/app/core/entities/namebook';
+import { Codebook } from 'src/app/core/entities/codebook';
+import { SimpleSaveResult } from 'src/app/core/entities/simple-save-result';
+import { TableFilter } from 'src/app/core/entities/table-filter';
+import { TableResponse } from 'src/app/core/entities/table-response';
 {{string.Join("\n", importLines)}}
 
 @Injectable()
