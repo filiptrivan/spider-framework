@@ -29,29 +29,37 @@ namespace Soft.SourceGenerator.NgTable.Angular
 //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
-                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationDTO(s),
-                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationDTO(ctx))
+                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationAllReferenced(s),
+                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationAllReferenced(ctx))
                 .Where(static c => c is not null);
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-            static (spc, source) => Execute(source, spc));
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetDTOClassesFromReferencedAssemblies(context);
+
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedClassesDTO, SourceProductionContext context)
         {
-            if (classes.Count <= 1) return;
+            if (classes.Count <= 1) 
+                return;
 
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgTranslatesGenerator), classes);
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
+            //List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
+
+            if (outputPath == null)
+                return;
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
-            string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
+            //string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
 
             StringBuilder sbClassNames = new StringBuilder();
             StringBuilder sbLabels = new StringBuilder();
             List<SoftProperty> DTOProperties = new List<SoftProperty>();
 
-            foreach (SoftClass DTOClass in DTOClasses)
+            foreach (SoftClass DTOClass in referencedClassesDTO)
                 DTOProperties.AddRange(DTOClass.Properties);
 
             sbClassNames.AppendLine($$"""
@@ -61,7 +69,7 @@ import { TranslocoService } from '@jsverse/transloco';
 @Injectable({
   providedIn: 'root',
 })
-export class TranslateClassNames{{projectName}}Service {
+export class TranslateClassNamesGeneratedService {
 
     constructor(
     private translocoService: TranslocoService
@@ -72,7 +80,7 @@ export class TranslateClassNames{{projectName}}Service {
     {
         switch(name) 
         {
-{{string.Join("\n", GetCasesForClassNameTranslate(DTOClasses))}}
+{{string.Join("\n", GetCasesForClassNameTranslate(referencedClassesDTO))}}
             default:
                 return null;
         }
@@ -87,7 +95,7 @@ import { TranslocoService } from '@jsverse/transloco';
 @Injectable({
   providedIn: 'root',
 })
-export class TranslateLabels{{projectName}}Service {
+export class TranslateLabelsGeneratedService {
 
     constructor(
         private translocoService: TranslocoService
@@ -106,8 +114,8 @@ export class TranslateLabels{{projectName}}Service {
 }
 """);
             
-            Helper.WriteToTheFile(sbClassNames.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-class-names.generated.ts");
-            Helper.WriteToTheFile(sbLabels.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-labels.generated.ts");
+            Helper.WriteToTheFile(sbClassNames.ToString(), $@"{outputPath}\class-names.generated.ts");
+            Helper.WriteToTheFile(sbLabels.ToString(), $@"{outputPath}\labels.generated.ts");
         }
 
         private static List<string> GetCasesForLabelTranslate(List<SoftProperty> DTOProperties)

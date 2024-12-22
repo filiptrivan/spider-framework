@@ -17,33 +17,40 @@ namespace Soft.SourceGenerator.NgTable.Angular
     [Generator]
     public class NgValidatorsGenerator : IIncrementalGenerator
     {
-
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
-                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntitiesAndDTO(s),
-                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEntitiesAndDTO(ctx))
+                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationAllReferenced(s),
+                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationAllReferenced(ctx))
                 .Where(static c => c is not null);
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-            static (spc, source) => Execute(source, spc));
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetEntityAndDTOClassesFromReferencedAssemblies(context);
+
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
 
         }
-        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
 
-            List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
-
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgValidatorsGenerator), classes);
+
+            if (outputPath == null)
+                return;
+
+            List<SoftClass> entityClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SoftClass> DTOClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
@@ -71,28 +78,14 @@ export class Validator{{projectName}}Service {
     getValidator(formControl: SoftFormControl, className: string): SoftValidatorFn {
         switch(formControl.label + className){
 """);
-            foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
+            foreach (SoftClass DTOClass in DTOClasses) // Grouping because UserDTO.generated and UserDTO
             {
-                List<SoftProperty> DTOProperties = new List<SoftProperty>();
-                List<SoftAttribute> DTOAttributes = new List<SoftAttribute>();
+                SoftClass entityClass = entityClasses.Where(x => DTOClass.Name.Replace("DTO", "") == x.Name).SingleOrDefault(); // If it is null then we only made DTO, without entity class
 
-                ClassDeclarationSyntax nonGeneratedDTOClass = classes.Where(x => x.Identifier.Text == DTOClassGroup.Key).SingleOrDefault();
+                string validationClassConstructorBody = GetValidationClassConstructorBody(DTOClass.Properties, DTOClass.Attributes, entityClass, entityClasses);
 
-                List<SoftAttribute> softAttributes = Helper.GetAllAttributesOfTheClass(nonGeneratedDTOClass, classes);
-
-                if (softAttributes != null)
-                    DTOAttributes.AddRange(softAttributes); // FT: Its okay to add only for non generated because we will not have any attributes on the generated DTOs
-
-
-                foreach (SoftClass DTOClass in DTOClassGroup)
-                    DTOProperties.AddRange(DTOClass.Properties);
-
-                SoftClass entityClass = entityClasses.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Name).SingleOrDefault(); // If it is null then we only made DTO, without entity class
-
-                string validationClassConstructorBody = GetValidationClassConstructorBody(DTOProperties, DTOAttributes, entityClass, entityClasses);
-
-                sb.AppendLine(GetAngularValidationCases(DTOClassGroup.Key, validationClassConstructorBody));
-                sbMethods.AppendLine(GenerateAngularValidationMethods(DTOClassGroup.Key, validationClassConstructorBody, DTOProperties));
+                sb.AppendLine(GetAngularValidationCases(DTOClass.Name, validationClassConstructorBody));
+                sbMethods.AppendLine(GenerateAngularValidationMethods(DTOClass.Name, validationClassConstructorBody, DTOClass.Properties));
             }
             sb.AppendLine($$"""
             default:
@@ -105,7 +98,7 @@ export class Validator{{projectName}}Service {
 """);
             //sb.AppendLine(sbMethods.ToString());
 
-            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-validation-rules.generated.ts");
+            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}\validation-rules.generated.ts");
         }
 
         public static string GenerateAngularValidationMethods(string DTOClassName, string validationClassConstructorBody, List<SoftProperty> DTOProperties)

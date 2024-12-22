@@ -155,6 +155,8 @@ namespace Soft.SourceGenerators.Helpers
                 propType == "bool?" ||
                 propType == "DateTime" ||
                 propType == "DateTime?" ||
+                propType == "System.DateTime" ||
+                propType == "System.DateTime?" ||
                 propType == "long" ||
                 propType == "long?" ||
                 propType == "int" ||
@@ -167,7 +169,10 @@ namespace Soft.SourceGenerators.Helpers
                 propType == "double?" ||
                 propType == "byte" ||
                 propType == "byte?" ||
-                propType == "Guid";
+                propType == "System.Guid" ||
+                propType == "System.Guid?" ||
+                propType == "Guid" ||
+                propType == "Guid?";
         }
 
         public static bool HasBlobProperty(this SoftClass c)

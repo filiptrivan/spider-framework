@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,6 +26,33 @@ namespace Soft.Generator.Shared.Helpers
             var truncatedDate2 = date2.Value.AddTicks(-(date2.Value.Ticks % TimeSpan.TicksPerSecond));
 
             return truncatedDate1 == truncatedDate2;
+        }
+
+        public static T ReadAssemblyConfiguration<T>(string jsonConfigurationFile)
+        {
+            string name = typeof(T).Assembly.GetName().Name;
+            string propertyName = "AppSettings";
+            string text = ReadConfigFile(jsonConfigurationFile);
+            if (string.IsNullOrEmpty(text))
+            {
+                return default(T);
+            }
+
+            foreach (JProperty item in JObject.Parse(text)[propertyName]!.Children().OfType<JProperty>())
+            {
+                if (item.Name == name)
+                {
+                    return item.Value.ToObject<T>();
+                }
+            }
+
+            return default(T);
+        }
+
+        private static string ReadConfigFile(string jsonConfigurationFile)
+        {
+            using StreamReader streamReader = new StreamReader(jsonConfigurationFile);
+            return streamReader.ReadToEnd();
         }
     }
 }

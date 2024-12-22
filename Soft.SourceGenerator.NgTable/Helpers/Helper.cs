@@ -6,6 +6,7 @@ using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -147,6 +148,39 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                .FirstOrDefault();
 
             if (namespaceName != null && (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".GeneratorSettings")))
+                return classDeclaration;
+
+            return null;
+        }
+
+        public static bool IsSyntaxTargetForGenerationAllReferenced(SyntaxNode node)
+        {
+            if (node is ClassDeclarationSyntax classDeclaration)
+            {
+                string namespaceName = classDeclaration
+                   .Ancestors()
+                   .OfType<NamespaceDeclarationSyntax>()
+                   .Select(ns => ns.Name.ToString())
+                   .FirstOrDefault();
+
+                if (namespaceName != null)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public static ClassDeclarationSyntax GetSemanticTargetForGenerationAllReferenced(GeneratorSyntaxContext context)
+        {
+            ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
+
+            string namespaceName = classDeclaration
+               .Ancestors()
+               .OfType<NamespaceDeclarationSyntax>()
+               .Select(ns => ns.Name.ToString())
+               .FirstOrDefault();
+
+            if (namespaceName != null)
                 return classDeclaration;
 
             return null;
@@ -453,6 +487,23 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 });
         }
 
+        public static IncrementalValueProvider<List<SoftClass>> GetEntityAndDTOClassesFromReferencedAssemblies(IncrementalGeneratorInitializationContext context)
+        {
+            return context.CompilationProvider
+                .Select(static (compilation, _) =>
+                {
+                    List<SoftClass> classes = new List<SoftClass>();
+
+                    foreach (IAssemblySymbol referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
+                             .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
+                    {
+                        classes.AddRange(GetEntityAndDTOClassesFromReferencedAssemblies(referencedAssembly.GlobalNamespace));
+                    }
+
+                    return classes;
+                });
+        }
+
         private static List<SoftClass> GetEntityClassesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol)
         {
             List<SoftClass> classes = new List<SoftClass>();
@@ -464,13 +515,27 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         {
             List<SoftClass> classes = new List<SoftClass>();
             FillClassesFromReferencedAssemblies(namespaceSymbol, classes);
+            //return GetDTOClasses(classes);
             return classes.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
+        }
+
+        private static List<SoftClass> GetEntityAndDTOClassesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol)
+        {
+            List<SoftClass> classes = new List<SoftClass>();
+            FillClassesFromReferencedAssemblies(namespaceSymbol, classes);
+
+            List<SoftClass> DTOClasses = classes.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
+            List<SoftClass> entityClasses = classes.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+
+            return DTOClasses.Concat(entityClasses).ToList();
         }
 
         private static void FillClassesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol, List<SoftClass> classes)
         {
+            ImmutableArray<INamedTypeSymbol> types = namespaceSymbol.GetTypeMembers();
+
             // Add all the type members (classes, structs, etc.) in this namespace
-            foreach (INamedTypeSymbol type in namespaceSymbol.GetTypeMembers())
+            foreach (INamedTypeSymbol type in types)
             {
                 if (type.TypeKind == TypeKind.Class)
                 {
@@ -544,26 +609,52 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             foreach (AttributeData attribute in symbol.GetAttributes())
             {
-                string argumentValue = attribute.ConstructorArguments.Length > 0
-                    ?
-                    string.Join(", ", attribute.ConstructorArguments.Select(arg =>
+                string attributeName = attribute.AttributeClass.Name?.Replace("Attribute", "");
+
+                string argumentValue = null;
+
+                if (attribute.ConstructorArguments.Length > 0)
+                {
+                    if (attributeName == "StringLength")
                     {
-                        try
+                        List<string> parts = new List<string>
                         {
-                            return arg.Value?.ToString();
-                        }
-                        catch (Exception)
+                            attribute.ConstructorArguments[0].Value?.ToString() // Max length
+                        };
+
+                        var minLengthArg = attribute.NamedArguments.FirstOrDefault(na => na.Key == "MinimumLength");
+
+                        if (minLengthArg.Key != null)
                         {
-                            return arg.Values.FirstOrDefault().Value?.ToString();
+                            parts.Add($"MinimumLength={minLengthArg.Value.Value}");
                         }
-                    }))
-                    : null; // FT: Doing this because of Range(0, 5) (long tail because of null pointer exception)
+
+                        argumentValue = string.Join(", ", parts);
+                    }
+                    else
+                    {
+                        argumentValue = attribute.ConstructorArguments.Length > 0
+                        ?
+                        string.Join(", ", attribute.ConstructorArguments.Select(arg =>
+                        {
+                            try
+                            {
+                                return arg.Value?.ToString();
+                            }
+                            catch (Exception)
+                            {
+                                return arg.Values.FirstOrDefault().Value?.ToString();
+                            }
+                        }))
+                        : null; // FT: Doing this because of Range(0, 5) (long tail because of null pointer exception)
+                    }
+                }
 
                 argumentValue = GetFormatedAttributeValue(argumentValue);
 
                 SoftAttribute softAttribute = new SoftAttribute
                 {
-                    Name = attribute.AttributeClass.Name?.Replace("Attribute", ""),
+                    Name = attributeName,
                     Value = argumentValue
                 };
 
@@ -616,7 +707,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         {
             ClassDeclarationSyntax settingsClass = GetSettingsClass(classes);
 
-            if (settingsClass == null) 
+            if (settingsClass == null)
                 return null;
 
             List<SoftProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes);
@@ -629,7 +720,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         {
             ClassDeclarationSyntax settingsClass = GetSettingsClass(classes);
 
-            if (settingsClass == null) 
+            if (settingsClass == null)
                 return false;
 
             List<SoftProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes);
@@ -657,20 +748,33 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 .ToList();
         }
 
+        public static List<SoftClass> GetSoftEntityClasses(IList<SoftClass> classes)
+        {
+            return classes
+                .Where(x => x.Namespace.EndsWith(".Entities"))
+                .ToList();
+        }
+
         public static List<SoftClass> GetDTOClasses(List<SoftClass> classes)
         {
             return classes
                 .Where(x => x.Namespace.EndsWith($".{EntitiesNamespaceEnding}") || x.Namespace.EndsWith($".{DTONamespaceEnding}"))
                 .SelectMany(x =>
                 {
-                    if (x.Name.EndsWith("DTO"))
+                    if (x.Name.EndsWith("DTO") || x.Namespace.EndsWith(".DTO"))
                     {
                         return new List<SoftClass>
                         {
                             new SoftClass
                             {
                                 Name = x.Name,
-                                Properties = x.Properties
+                                Properties = x.Properties,
+                                Attributes = x.Attributes,
+                                BaseType = x.BaseType,
+                                IsAbstract = x.IsAbstract,
+                                Methods = x.Methods,
+                                Namespace = x.Namespace,
+                                IsGenerated = false,
                             }
                         };
                     }
@@ -682,12 +786,14 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                             {
                                 Name = $"{x.Name}DTO",
                                 Properties = GetDTOSoftProps(x, classes),
+                                Namespace = x.Namespace.Replace(".Entities", ".DTO"),
                                 IsGenerated = true
                             },
                             new SoftClass
                             {
                                 Name = $"{x.Name}SaveBodyDTO",
                                 Properties = new List<SoftProperty> { new SoftProperty { IdentifierText = $"{x.Name}DTO", Type = $"{x.Name}DTO" } },
+                                Namespace = x.Namespace.Replace(".Entities", ".DTO"),
                                 IsGenerated = true
                             },
                         };

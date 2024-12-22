@@ -39,9 +39,14 @@ namespace Soft.SourceGenerator.NgTable.Angular
         }
         private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
-            if (classes.Count <= 1) return; // FT: one because of config settings
+            if (classes.Count <= 1) 
+                return; // FT: one because of config settings
 
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgEntitiesGenerator), classes);
+
+            if (outputPath == null)
+                return;
+
             List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);

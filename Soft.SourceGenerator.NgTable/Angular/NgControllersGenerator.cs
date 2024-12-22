@@ -42,8 +42,13 @@ namespace Soft.SourceGenerator.NgTable.Angular
         }
         private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedClassesDTO, SourceProductionContext context)
         {
-            if (classes.Count <= 1) return; // FT: one because of config settings
+            if (classes.Count <= 1) 
+                return; // FT: one because of config settings
+
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgControllersGenerator), classes);
+
+            if (outputPath == null)
+                return;
 
             List<ClassDeclarationSyntax> controllerClasses = Helper.GetControllerClasses(classes);
 
