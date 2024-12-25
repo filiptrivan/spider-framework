@@ -61,17 +61,17 @@ namespace Soft.SourceGenerator.NgTable.Angular
             sb.AppendLine($$"""
 import { ValidationErrors } from '@angular/forms';
 import { SoftFormControl, SoftValidatorFn } from 'src/app/core/components/soft-form-control/soft-form-control';
-import { validatePrecisionScale } from '../../../../core/services/helper-functions';
+import { validatePrecisionScale } from 'src/app/core/services/helper-functions';
 import { TranslocoService } from '@jsverse/transloco';
 import { Injectable } from '@angular/core';
 
 @Injectable({
     providedIn: 'root',
 })
-export class Validator{{projectName}}Service {
+export class ValidatorServiceGenerated {
 
     constructor(
-        private translocoService: TranslocoService
+        protected translocoService: TranslocoService
     ) {
     }
 

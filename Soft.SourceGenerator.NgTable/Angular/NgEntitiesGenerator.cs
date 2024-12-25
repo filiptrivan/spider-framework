@@ -55,7 +55,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
             StringBuilder sb = new StringBuilder();
             StringBuilder sbImports = new StringBuilder();
             sbImports.Append($$"""
-import { BaseEntity } from "../../../core/entities/base-entity";
+import { BaseEntity } from "src/app/core/entities/base-entity";
 import { TableFilter } from "src/app/core/entities/table-filter";
 import { TableFilterContext } from "src/app/core/entities/table-filter-context";
 import { TableFilterSortMeta } from "src/app/core/entities/table-filter-sort-meta";

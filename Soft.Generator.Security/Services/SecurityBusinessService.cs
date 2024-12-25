@@ -28,7 +28,7 @@ using System;
 
 namespace Soft.Generator.Security.Services
 {
-    public class SecurityBusinessService<TUser> : SecurityBusinessServiceGenerated<TUser> where TUser : class, IUser, new()
+    public class SecurityBusinessService<TUser> : BusinessServiceGenerated<TUser> where TUser : class, IUser, new()
     {
         private readonly IApplicationDbContext _context;
         private readonly IJwtAuthManager _jwtAuthManagerService;
@@ -37,7 +37,7 @@ namespace Soft.Generator.Security.Services
         private readonly EmailingService _emailingService;
         private readonly BlobContainerClient _blobContainerClient;
 
-        public SecurityBusinessService(IApplicationDbContext context, IJwtAuthManager jwtAuthManagerService, EmailingService emailingService, AuthenticationService authenticationService, AuthorizationBusinessService<TUser> authorizationService, 
+        public SecurityBusinessService(IApplicationDbContext context, IJwtAuthManager jwtAuthManagerService, EmailingService emailingService, AuthenticationService authenticationService, AuthorizationBusinessService<TUser> authorizationService,
             ExcelService excelService, BlobContainerClient blobContainerClient)
             : base(context, excelService, authorizationService, blobContainerClient)
         {
@@ -51,7 +51,8 @@ namespace Soft.Generator.Security.Services
 
         #region Authentication
 
-        // Login
+        #region Login
+
         public async Task SendLoginVerificationEmail(LoginDTO loginDTO)
         {
             LoginDTOValidationRules validationRules = new LoginDTOValidationRules();
@@ -59,13 +60,16 @@ namespace Soft.Generator.Security.Services
 
             string userEmail = null;
             long userId = 0;
+
             await _context.WithTransactionAsync(async () =>
             {
                 TUser user = await Authenticate(loginDTO);
                 userEmail = user.Email;
                 userId = user.Id;
             });
+
             string verificationCode = _jwtAuthManagerService.GenerateAndSaveLoginVerificationCode(userEmail, userId, loginDTO.BrowserId);
+
             try
             {
                 await _emailingService.SendVerificationEmailAsync(userEmail, verificationCode);
@@ -82,9 +86,9 @@ namespace Soft.Generator.Security.Services
             VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
             validationRules.ValidateAndThrow(verificationRequestDTO);
 
+            // FT: Can not be null, if its null it already has thrown
             LoginVerificationTokenDTO loginVerificationTokenDTO = _jwtAuthManagerService.ValidateAndGetLoginVerificationTokenDTO(
-                verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
-            // TODO FT: Log somewhere good and bad request
+                verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email);
 
             JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email, loginVerificationTokenDTO.BrowserId);
 
@@ -99,7 +103,6 @@ namespace Soft.Generator.Security.Services
             {
                 TUser user = await GetUserByEmailAsync(payload.Email); // FT: Check if user already exist in the database
                 DbSet<TUser> userDbSet = _context.DbSet<TUser>();
-                bool isNewUser = false;
 
                 if (user == null)
                 {
@@ -107,18 +110,17 @@ namespace Soft.Generator.Security.Services
                     {
                         Email = payload.Email,
                         HasLoggedInWithExternalProvider = true,
-                        NumberOfFailedAttemptsInARow = 0
                     };
+
                     await userDbSet.AddAsync(user);
                     await _context.SaveChangesAsync(); // Adding the new user which is logged in first time
-                    isNewUser = true;
                 }
                 else
                 {
-                    if (user.NumberOfFailedAttemptsInARow > SettingsProvider.Current.NumberOfFailedLoginAttemptsInARowToDisableUser)
-                        throw new BusinessException(SharedTerms.DisabledAccountException); // TODO FT: We will let this for now, because now there is no other way to make the user can't login
+                    if (user.IsDisabled == true)
+                        throw new BusinessException(SharedTerms.DisabledAccountException);
 
-                    if (user.HasLoggedInWithExternalProvider == false)
+                    if (user.HasLoggedInWithExternalProvider != true)
                         await userDbSet.ExecuteUpdateAsync(x => x.SetProperty(x => x.HasLoggedInWithExternalProvider, true)); // There is no need for SaveChangesAsync because we don't need to update the version of the user
                 }
 
@@ -128,63 +130,10 @@ namespace Soft.Generator.Security.Services
             });
         }
 
+        #endregion
 
-        // Forgot password
-        public async Task SendForgotPasswordVerificationEmail(ForgotPasswordDTO forgotPasswordDTO)
-        {
-            ForgotPasswordDTOValidationRules validationRules = new ForgotPasswordDTOValidationRules();
-            validationRules.ValidateAndThrow(forgotPasswordDTO);
+        #region Registration
 
-            string userEmail = null;
-            long userId = 0;
-
-            await _context.WithTransactionAsync(async () =>
-            {
-                TUser user = await GetUserByEmailAsync(forgotPasswordDTO.Email);
-
-                if (user == null)
-                    throw new BusinessException(SharedTerms.ResetPasswordEmailDoesNotExistException);
-
-                userEmail = user.Email;
-                userId = user.Id;
-            });
-
-            string verificationCode = _jwtAuthManagerService.GenerateAndSaveForgotPasswordVerificationCode(userEmail, userId, forgotPasswordDTO.NewPassword, forgotPasswordDTO.BrowserId);
-
-            try
-            {
-                await _emailingService.SendVerificationEmailAsync(userEmail, verificationCode);
-            }
-            catch (Exception)
-            {
-                _jwtAuthManagerService.RemoveForgotPasswordVerificationTokensByEmail(userEmail); // We didn't send email, set all verification tokens invalid then
-                throw;
-            }
-        }
-
-        public async Task<AuthResultDTO> ForgotPassword(VerificationTokenRequestDTO verificationRequestDTO)
-        {
-            VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
-            validationRules.ValidateAndThrow(verificationRequestDTO);
-
-            ForgotPasswordVerificationTokenDTO forgotPasswordVerificationTokenDTO = _jwtAuthManagerService.ValidateAndGetForgotPasswordVerificationTokenDTO(
-                verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
-
-            await _context.WithTransactionAsync(async () =>
-            {
-                TUser user = await LoadInstanceAsync<TUser, long>(forgotPasswordVerificationTokenDTO.UserId, null);
-                user.Password = BCrypt.Net.BCrypt.EnhancedHashPassword(forgotPasswordVerificationTokenDTO.NewPassword);
-                _context.DbSet<TUser>().Update(user);
-                await _context.SaveChangesAsync();
-            });
-
-            // TODO FT: Log somewhere good and bad request
-            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(forgotPasswordVerificationTokenDTO.UserId, forgotPasswordVerificationTokenDTO.Email, forgotPasswordVerificationTokenDTO.BrowserId);
-
-            return GetAuthResultDTO(forgotPasswordVerificationTokenDTO.UserId, forgotPasswordVerificationTokenDTO.Email, jwtAuthResultDTO);
-        }
-
-        // Registration
         public async Task<RegistrationVerificationResultDTO> SendRegistrationVerificationEmail(RegistrationDTO registrationDTO)
         {
             RegistrationVerificationResultDTO registrationResultDTO = new RegistrationVerificationResultDTO();
@@ -198,7 +147,7 @@ namespace Soft.Generator.Security.Services
 
                 if (user == null)
                 {
-                    string verificationCode = _jwtAuthManagerService.GenerateAndSaveRegistrationVerificationCode(registrationDTO.Email, registrationDTO.Password, registrationDTO.BrowserId);
+                    string verificationCode = _jwtAuthManagerService.GenerateAndSaveRegistrationVerificationCode(registrationDTO.Email, registrationDTO.BrowserId);
 
                     try
                     {
@@ -210,11 +159,7 @@ namespace Soft.Generator.Security.Services
                         throw;
                     }
                 }
-                else if (user.HasLoggedInWithExternalProvider && user.Password == null)
-                {
-                    throw new BusinessException(SharedTerms.OnlyThirdPartyAccountButTriedToLoginException);
-                }
-                else if (user.Password != null)
+                else
                 {
                     throw new BusinessException(SharedTerms.SameEmailAlreadyExistsException);
                 }
@@ -238,9 +183,6 @@ namespace Soft.Generator.Security.Services
                 user = new TUser
                 {
                     Email = registrationVerificationTokenDTO.Email,
-                    Password = BCrypt.Net.BCrypt.EnhancedHashPassword(registrationVerificationTokenDTO.Password),
-                    HasLoggedInWithExternalProvider = false, // FT: He couldn't do this if already has account
-                    NumberOfFailedAttemptsInARow = 0
                 };
 
                 await _context.DbSet<TUser>().AddAsync(user);
@@ -252,6 +194,8 @@ namespace Soft.Generator.Security.Services
 
             return GetAuthResultDTO(user.Id, user.Email, jwtAuthResultDTO);
         }
+
+        #endregion
 
         public async Task<AuthResultDTO> RefreshToken(RefreshTokenRequestDTO refreshTokenRequestDTO)
         {
@@ -328,21 +272,10 @@ namespace Soft.Generator.Security.Services
                     .SingleOrDefaultAsync();
 
                 if (currentUser == null)
-                    throw new BusinessException(SharedTerms.AuthenticationEmailDoesNotExistException); // TODO FT: Resources
+                    throw new BusinessException(SharedTerms.AuthenticationEmailDoesNotExistException);
 
-                if (currentUser.NumberOfFailedAttemptsInARow > SettingsProvider.Current.NumberOfFailedLoginAttemptsInARowToDisableUser)
-                    throw new BusinessException(SharedTerms.DisabledAccountException); // TODO FT: We will let this for now, because now there is no other way to make the user can't login
-
-                if (currentUser.Password == null)
-                    throw new BusinessException(SharedTerms.OnlyThirdPartyAccountButTriedToLoginException);
-
-                if (BCrypt.Net.BCrypt.EnhancedVerify(loginDTO.Password, currentUser.Password) == false)
-                {
-                    // TODO FT: Maybe this has not sence if we have 2fa with email and forgot password option
-                    //currentUser.NumberOfFailedAttemptsInARow++;
-                    //await _context.SaveChangesAsync();
-                    throw new BusinessException(SharedTerms.AuthenticationIncorectPasswordException);
-                }
+                if (currentUser.IsDisabled == true)
+                    throw new BusinessException(SharedTerms.DisabledAccountException);
 
                 return currentUser;
             });
@@ -427,7 +360,7 @@ namespace Soft.Generator.Security.Services
 
                 foreach (long selectedUserId in selectedUserIds)
                 {
-                    UserRole roleUser = new UserRole 
+                    UserRole roleUser = new UserRole
                     {
                         RoleId = roleId,
                         UserId = selectedUserId
@@ -435,7 +368,7 @@ namespace Soft.Generator.Security.Services
 
                     await _context.DbSet<UserRole>().AddAsync(roleUser);
                 }
-                
+
 
                 await _context.SaveChangesAsync();
             });

@@ -44,12 +44,6 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         }
 
         [HttpPost]
-        public async Task SendForgotPasswordVerificationEmail(ForgotPasswordDTO forgotPasswordDTO)
-        {
-            await _securityBusinessService.SendForgotPasswordVerificationEmail(forgotPasswordDTO);
-        }
-
-        [HttpPost]
         public async Task<RegistrationVerificationResultDTO> SendRegistrationVerificationEmail(RegistrationDTO registrationDTO)
         {
             return await _securityBusinessService.SendRegistrationVerificationEmail(registrationDTO);

@@ -83,7 +83,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
                 if (Helper.BaseClassNames.Contains(ngType))
                     continue;
 
-                importLines.Add($"import {{ {ngType} }} from '../../entities/generated/{projectName.FromPascalToKebabCase()}-entities.generated';");
+                importLines.Add($"import {{ {ngType} }} from '../../entities/{projectName.FromPascalToKebabCase()}-entities.generated';");
             }
 
             sb.AppendLine($$"""

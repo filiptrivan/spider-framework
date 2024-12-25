@@ -63,14 +63,14 @@ namespace Soft.SourceGenerator.NgTable.Net
 
 namespace {{basePartOfTheNamespace}}.Services
 {
-    {{(isSecurityProject ? $"public class {projectName}BusinessServiceGenerated<TUser> : BusinessServiceBase where TUser : class, IUser, new()" : $"public class {projectName}BusinessServiceGenerated : BusinessServiceBase")}}
+    {{(isSecurityProject ? $"public class BusinessServiceGenerated<TUser> : BusinessServiceBase where TUser : class, IUser, new()" : $"public class BusinessServiceGenerated : BusinessServiceBase")}}
     {
         private readonly IApplicationDbContext _context;
         private readonly ExcelService _excelService;
         {{(isSecurityProject ? "private readonly AuthorizationBusinessService<TUser> _authorizationService;" : "private readonly AuthorizationBusinessService _authorizationService;")}}
         private readonly BlobContainerClient _blobContainerClient;
 
-        public {{projectName}}BusinessServiceGenerated(IApplicationDbContext context, ExcelService excelService, {{(isSecurityProject ? "AuthorizationBusinessService<TUser> authorizationService" : "AuthorizationBusinessService authorizationService")}}, BlobContainerClient blobContainerClient)
+        public BusinessServiceGenerated(IApplicationDbContext context, ExcelService excelService, {{(isSecurityProject ? "AuthorizationBusinessService<TUser> authorizationService" : "AuthorizationBusinessService authorizationService")}}, BlobContainerClient blobContainerClient)
         : base(context, blobContainerClient)
         {
             _context = context;
@@ -287,7 +287,7 @@ namespace {{basePartOfTheNamespace}}.Services
 }
 """);
 
-            context.AddSource($"{projectName}BusinessService.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
+            context.AddSource($"BusinessService.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
         #region Save

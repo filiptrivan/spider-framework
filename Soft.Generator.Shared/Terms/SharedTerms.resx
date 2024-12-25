@@ -149,7 +149,7 @@
     <value>You can't use the application with two different IP addresses at the same time, please login again.</value>
     <comment>Ne možete da koristite aplikaciju sa dve različite IP adrese u isto vreme, molimo vas da se prijavite ponovo.</comment>
   </data>
-  <data name="OnlyThirdPartyAccountButTriedToLoginException" xml:space="preserve">
+  <data name="OnlyThirdPartyAccountButTriedToRegisterOrLoginException" xml:space="preserve">
     <value>Your account already exists with third-party (eg. Google) authentication. If you want to set up a password as well, please use the 'Forgot password?' option to reset it or log in to your profile and add a password.</value>
     <comment>Vaš nalog je već registrovan putem treće strane (npr. Google). Ako želite da dodate i lozinku, koristite opciju „Zaboravili ste lozinku?”, ili se prijavite na profil i postavite lozinku.</comment>
   </data>

@@ -21,7 +21,6 @@ namespace Soft.Generator.Security.Interface
         IImmutableDictionary<string, RefreshTokenDTO> UsersRefreshTokensReadOnlyDictionary { get; }
         IImmutableDictionary<string, RegistrationVerificationTokenDTO> UsersRegistrationVerificationTokensReadOnlyDictionary { get; }
         IImmutableDictionary<string, LoginVerificationTokenDTO> UsersLoginVerificationTokensReadOnlyDictionary { get; }
-        IImmutableDictionary<string, ForgotPasswordVerificationTokenDTO> UsersForgotPasswordVerificationTokensReadOnlyDictionary { get; }
 
         // Refresh
         JwtAuthResultDTO GenerateAccessAndRefreshTokens(long userId, string userEmail, string ipAddress, string browserId);
@@ -38,14 +37,9 @@ namespace Soft.Generator.Security.Interface
         string GenerateAndSaveLoginVerificationCode(string userEmail, long userId, string browserId);
         void RemoveLoginVerificationTokensByEmail(string email);
 
-        // Forgot password verification
-        ForgotPasswordVerificationTokenDTO ValidateAndGetForgotPasswordVerificationTokenDTO(string verificationToken, string browserId, string email);
-        string GenerateAndSaveForgotPasswordVerificationCode(string userEmail, long userId, string newPassword, string browserId);
-        void RemoveForgotPasswordVerificationTokensByEmail(string email);
-
         // Registration verification
         RegistrationVerificationTokenDTO ValidateAndGetRegistrationVerificationTokenDTO(string verificationToken, string browserId, string email);
-        string GenerateAndSaveRegistrationVerificationCode(string userEmail, string password, string browserId);
+        string GenerateAndSaveRegistrationVerificationCode(string userEmail, string browserId);
         void RemoveRegistrationVerificationTokensByEmail(string email);
     }
 }

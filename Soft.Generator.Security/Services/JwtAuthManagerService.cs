@@ -30,9 +30,6 @@ namespace Soft.Generator.Security.Services
         public IImmutableDictionary<string, LoginVerificationTokenDTO> UsersLoginVerificationTokensReadOnlyDictionary => _usersLoginVerificationTokens.ToImmutableDictionary();
         private readonly ConcurrentDictionary<string, LoginVerificationTokenDTO> _usersLoginVerificationTokens = new ConcurrentDictionary<string, LoginVerificationTokenDTO>();
 
-        public IImmutableDictionary<string, ForgotPasswordVerificationTokenDTO> UsersForgotPasswordVerificationTokensReadOnlyDictionary => _usersForgotPasswordVerificationTokens.ToImmutableDictionary();
-        private readonly ConcurrentDictionary<string, ForgotPasswordVerificationTokenDTO> _usersForgotPasswordVerificationTokens = new ConcurrentDictionary<string, ForgotPasswordVerificationTokenDTO>();
-
         private static readonly Random Random = new Random();
 
         public JwtAuthManagerService()
@@ -289,6 +286,7 @@ namespace Soft.Generator.Security.Services
                 .OrderByDescending(x => x.Value.ExpireAt)
                 .FirstOrDefault();
 
+            // TODO FT: Append additional info in the Log 
             if (verificationTokenKey != lastVerificationToken.Key)
                 throw new ExpiredVerificationException(SharedTerms.LatestVerificationCodeException);
 
@@ -307,50 +305,6 @@ namespace Soft.Generator.Security.Services
 
             string code = GenerateVerificationCodeKey();
             _usersLoginVerificationTokens.AddOrUpdate(code, loginVerificationTokenDTO, (_, _) => loginVerificationTokenDTO);
-            return code;
-        }
-
-        #endregion
-
-        #region Forgot password
-
-        public ForgotPasswordVerificationTokenDTO ValidateAndGetForgotPasswordVerificationTokenDTO(string verificationTokenKey, string browserId, string email)
-        {
-            RemoveExpiredForgotPasswordVerificationTokens();
-
-            // FT: Doing this because there is a chance of generating two same codes.
-            ForgotPasswordVerificationTokenDTO forgotPasswordVerificationTokenDTO = _usersForgotPasswordVerificationTokens.Where(x => x.Key == verificationTokenKey && x.Value.Email == email && x.Value.BrowserId == browserId).SingleOrDefault().Value;
-
-            if (forgotPasswordVerificationTokenDTO == null)
-                throw new ExpiredVerificationException(); // We can not give allow user to send again from here, because it is deleted
-
-            KeyValuePair<string, ForgotPasswordVerificationTokenDTO> lastVerificationToken = _usersForgotPasswordVerificationTokens
-                .Where(x => x.Value.Email == forgotPasswordVerificationTokenDTO.Email)
-                .OrderByDescending(x => x.Value.ExpireAt)
-                .FirstOrDefault();
-
-            if (verificationTokenKey != lastVerificationToken.Key)
-                throw new ExpiredVerificationException(SharedTerms.LatestVerificationCodeException);
-
-            return forgotPasswordVerificationTokenDTO;
-        }
-
-        /// <summary>
-        /// userId because the user exists, when verify registration, user doesn't exist and we are making the userId
-        /// </summary>
-        public string GenerateAndSaveForgotPasswordVerificationCode(string userEmail, long userId, string newPassword, string browserId)
-        {
-            ForgotPasswordVerificationTokenDTO forgotPasswordVerificationTokenDTO = new ForgotPasswordVerificationTokenDTO
-            {
-                Email = userEmail,
-                UserId = userId,
-                NewPassword = newPassword,
-                BrowserId = browserId,
-                ExpireAt = DateTime.Now.AddMinutes(SettingsProvider.Current.VerificationTokenExpiration),
-            };
-
-            string code = GenerateVerificationCodeKey();
-            _usersForgotPasswordVerificationTokens.AddOrUpdate(code, forgotPasswordVerificationTokenDTO, (_, _) => forgotPasswordVerificationTokenDTO);
             return code;
         }
 
@@ -380,12 +334,11 @@ namespace Soft.Generator.Security.Services
             return registrationVerificationTokenDTO;
         }
 
-        public string GenerateAndSaveRegistrationVerificationCode(string userEmail, string password, string browserId)
+        public string GenerateAndSaveRegistrationVerificationCode(string userEmail, string browserId)
         {
             RegistrationVerificationTokenDTO registrationVerificationTokenDTO = new RegistrationVerificationTokenDTO
             {
                 Email = userEmail,
-                Password = password,
                 BrowserId = browserId,
                 ExpireAt = DateTime.Now.AddMinutes(SettingsProvider.Current.VerificationTokenExpiration),
             };
@@ -420,24 +373,6 @@ namespace Soft.Generator.Security.Services
             foreach (var expiredToken in expiredTokens)
             {
                 _usersLoginVerificationTokens.TryRemove(expiredToken.Key, out _);
-            }
-        }
-
-        public void RemoveForgotPasswordVerificationTokensByEmail(string email)
-        {
-            var verificationTokens = _usersForgotPasswordVerificationTokens.Where(x => x.Value.Email == email).ToList();
-            foreach (var verificationToken in verificationTokens)
-            {
-                _usersForgotPasswordVerificationTokens.TryRemove(verificationToken.Key, out _);
-            }
-        }
-
-        private void RemoveExpiredForgotPasswordVerificationTokens()
-        {
-            var expiredTokens = _usersForgotPasswordVerificationTokens.Where(x => x.Value.ExpireAt < DateTime.Now).ToList();
-            foreach (var expiredToken in expiredTokens)
-            {
-                _usersForgotPasswordVerificationTokens.TryRemove(expiredToken.Key, out _);
             }
         }
 

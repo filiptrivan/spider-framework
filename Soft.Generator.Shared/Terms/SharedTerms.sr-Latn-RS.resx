@@ -156,7 +156,7 @@
   <data name="TwoDifferentIpAddressesRefreshException" xml:space="preserve">
     <value>Ne možete da koristite aplikaciju sa dve različite IP adrese u isto vreme, molimo vas da se prijavite ponovo.</value>
   </data>
-  <data name="OnlyThirdPartyAccountButTriedToLoginException" xml:space="preserve">
+  <data name="OnlyThirdPartyAccountButTriedToRegisterOrLoginException" xml:space="preserve">
     <value>Vaš nalog je već registrovan putem treće strane (npr. Google). Ako želite da dodate i lozinku, koristite opciju „Zaboravili ste lozinku?”, ili se prijavite na profil i postavite lozinku.</value>
   </data>
   <data name="SameEmailAlreadyExistsException" xml:space="preserve">

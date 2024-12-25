@@ -27,7 +27,6 @@ namespace Soft.Generator.Security
         /// It is actually a modified refresh token
         /// </summary>
         public int VerificationTokenExpiration { get; set; } 
-        public int NumberOfFailedLoginAttemptsInARowToDisableUser { get; set; }
         public bool AllowTheUseOfAppWithDifferentIpAddresses { get; set; }
         public int AllowedBrowsersForTheSingleUser { get; set; }
 

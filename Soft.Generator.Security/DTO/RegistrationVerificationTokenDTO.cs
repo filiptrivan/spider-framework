@@ -9,7 +9,6 @@ namespace Soft.Generator.Security.DTO
     public class RegistrationVerificationTokenDTO
     {
         public string Email { get; set; }
-        public string Password { get; set; }
         public string BrowserId { get; set; }
         public DateTime ExpireAt { get; set; }
     }

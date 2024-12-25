@@ -171,9 +171,9 @@ namespace Soft.Generator.Shared.Terms {
         /// <summary>
         ///   Looks up a localized string similar to Your account already exists with third-party (eg. Google) authentication. If you want to set up a password as well, please use the &apos;Forgot password?&apos; option to reset it or log in to your profile and add a password..
         /// </summary>
-        public static string OnlyThirdPartyAccountButTriedToLoginException {
+        public static string OnlyThirdPartyAccountButTriedToRegisterOrLoginException {
             get {
-                return ResourceManager.GetString("OnlyThirdPartyAccountButTriedToLoginException", resourceCulture);
+                return ResourceManager.GetString("OnlyThirdPartyAccountButTriedToRegisterOrLoginException", resourceCulture);
             }
         }
         
