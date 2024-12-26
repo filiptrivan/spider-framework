@@ -97,6 +97,7 @@ import { Codebook } from 'src/app/core/entities/codebook';
 import { SimpleSaveResult } from 'src/app/core/entities/simple-save-result';
 import { TableFilter } from 'src/app/core/entities/table-filter';
 import { TableResponse } from 'src/app/core/entities/table-response';
+import { LazyLoadSelectedIdsResult } from 'src/app/core/entities/lazy-load-selected-ids-result';
 {{string.Join("\n", importLines)}}
 
 @Injectable()
@@ -160,7 +161,7 @@ export class ApiGeneratedService extends ApiSecurityService {
         return this.http.post(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, {{...environment.httpOptions, responseType: 'text'}});
     }}";
                 }
-                else if (cSharpReturnType.Contains("TableResponseDTO") || skipSpinner)
+                else if (cSharpReturnType.Contains("TableResponseDTO") || cSharpReturnType.Contains("LazyLoadSelectedIdsResultDTO") || skipSpinner)
                 {
                     result = @$"
     {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{ 

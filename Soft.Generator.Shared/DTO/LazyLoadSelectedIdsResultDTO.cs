@@ -10,11 +10,9 @@ namespace Soft.Generator.Shared.DTO
     /// FT: For now, we only used this for the basic 2 property (or different one to many associations) M2M associations. 
     /// We should consider using this DTO also for > 2 properties M2M associations
     /// </summary>
-    public class LazyTableSelectionDTO<T> where T : struct
+    public class LazyLoadSelectedIdsResultDTO<ID> where ID : struct
     {
-        public TableFilterDTO TableFilter { get; set; }
-        public List<T> SelectedIds { get; set; }
-        public List<T> UnselectedIds { get; set; }
-        public bool? IsAllSelected { get; set; }
+        public List<ID> SelectedIds { get; set; }
+        public int TotalRecordsSelected { get; set; }
     }
 }

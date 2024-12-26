@@ -235,6 +235,20 @@ namespace Soft.SourceGenerators.Helpers
                 return $"{baseClass}DTO";
         }
 
+        public static string GetTableFilterAdditionalFilterPropertyName(this string idType)
+        {
+            if (idType == "int" || idType == "int?")
+            {
+                return "AdditionalFilterIdInt";
+            }
+            else if (idType == "long" || idType == "long?")
+            {
+                return "AdditionalFilterIdLong";
+            }
+
+            return null;
+        }
+
         public static string GetBaseType(this ClassDeclarationSyntax c)
         {
             TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>

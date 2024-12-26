@@ -695,7 +695,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
             foreach (SoftProperty prop in enumerablePropertiesOfTheEntityClass) // List<Role> Roles
             {
-                string classNameFromTheList = GetClassNameFromTheList(prop.Type); // Role
+                string classNameFromTheList = GetClassNameFromTheListType(prop.Type); // Role
                 string classNameFromTheListFirstLower = classNameFromTheList.FirstCharToLower(); // role
                 SoftClass classFromTheList = allEntityClasses.Where(x => x.Name == classNameFromTheList).Single(); // Role
 
@@ -715,7 +715,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 //classNameFromTheListDisplayNameProp = classNameFromTheListDisplayNameProp ?? classFromTheListFromTheReferencedProjects.Att.Where(x => ).FirstOrDefault() // TODO FT: Continue to do this...
                 List<SoftProperty> classFromTheListProperties = classFromTheList.Properties;
 
-                SoftProperty manyToManyPropFromTheListProperties = classFromTheListProperties.Where(x => x.Type.IsEnumerable() && GetClassNameFromTheList(x.Type) == nameOfTheEntityClass).SingleOrDefault(); // List<User> Users
+                SoftProperty manyToManyPropFromTheListProperties = classFromTheListProperties.Where(x => x.Type.IsEnumerable() && GetClassNameFromTheListType(x.Type) == nameOfTheEntityClass).SingleOrDefault(); // List<User> Users
                 SoftProperty manyToOneProp = classFromTheListProperties.Where(x => x.Type.PropTypeIsManyToOne() && prop.Type == nameOfTheEntityClass).SingleOrDefault(); // User / Userando
 
                 if (manyToOneProp != null)
@@ -828,21 +828,53 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-        public async Task Update{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}TableSelection(IQueryable<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}Query, {{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, LazyTableSelectionDTO<{{idTypeOfTheClassFromTheList}}> tableSelectionDTO)
+        /// <summary>
+        /// It's mandatory to pass queryable ordered by the same field as the table data
+        /// </summary>
+        public async Task<LazyLoadSelectedIdsResultDTO<{{idTypeOfTheClassFromTheList}}>> LazyLoadSelected{{classNameFromTheList}}IdsFor{{nameOfTheEntityClass}}(TableFilterDTO tableFilterDTO, IQueryable<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}Query)
+        {
+            LazyLoadSelectedIdsResultDTO<{{idTypeOfTheClassFromTheList}}> lazyLoadSelectedIdsResultDTO = new();
+
+            {{classNameFromTheListFirstLower}}Query = {{classNameFromTheListFirstLower}}Query
+                .Skip(tableFilterDTO.First)
+                .Take(tableFilterDTO.Rows)
+                .Where(x => x.{{manyToManyPropFromTheListProperties.IdentifierText}}
+                    .Any(x => x.Id == tableFilterDTO.{{idTypeOfTheClassFromTheList.GetTableFilterAdditionalFilterPropertyName()}}));
+
+            await _context.WithTransactionAsync(async () =>
+            {
+                PaginationResult<{{classNameFromTheList}}> paginationResult = await Load{{classNameFromTheList}}ListForPagination(tableFilterDTO, {{classNameFromTheListFirstLower}}Query);
+
+                lazyLoadSelectedIdsResultDTO.SelectedIds = await paginationResult.Query
+                    .Select(x => x.Id)
+                    .ToListAsync();
+
+                int count = await _context.DbSet<{{classNameFromTheList}}>()
+                    .Where(x => x.{{manyToManyPropFromTheListProperties.IdentifierText}}
+                        .Any(x => x.Id == tableFilterDTO.{{idTypeOfTheClassFromTheList.GetTableFilterAdditionalFilterPropertyName()}}))
+                    .CountAsync();
+
+                lazyLoadSelectedIdsResultDTO.TotalRecordsSelected = count;
+            });
+
+            return lazyLoadSelectedIdsResultDTO;
+        }
+
+        public async Task Update{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}WithLazyTableSelection(IQueryable<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}Query, {{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, LazyTableSelectionDTO<{{idTypeOfTheClassFromTheList}}> lazyTableSelectionDTO)
         {
             await _context.WithTransactionAsync(async () =>
             {
                 List<{{idTypeOfTheClassFromTheList}}> {{classNameFromTheListFirstLower}}ListToInsert = null;
 
-                if (tableSelectionDTO.IsAllSelected == true)
+                if (lazyTableSelectionDTO.IsAllSelected == true)
                 {
-                    {{classNameFromTheListFirstLower}}ListToInsert = await {{classNameFromTheListFirstLower}}Query.Where(x => tableSelectionDTO.UnselectedIds.Contains(x.Id) == false).Select(x => x.Id).ToListAsync();
+                    {{classNameFromTheListFirstLower}}ListToInsert = await {{classNameFromTheListFirstLower}}Query.Where(x => lazyTableSelectionDTO.UnselectedIds.Contains(x.Id) == false).Select(x => x.Id).ToListAsync();
                 }
-                else if (tableSelectionDTO.IsAllSelected == false)
+                else if (lazyTableSelectionDTO.IsAllSelected == false)
                 {
-                    {{classNameFromTheListFirstLower}}ListToInsert = await {{classNameFromTheListFirstLower}}Query.Where(x => tableSelectionDTO.SelectedIds.Contains(x.Id) == true).Select(x => x.Id).ToListAsync();
+                    {{classNameFromTheListFirstLower}}ListToInsert = await {{classNameFromTheListFirstLower}}Query.Where(x => lazyTableSelectionDTO.SelectedIds.Contains(x.Id) == true).Select(x => x.Id).ToListAsync();
                 }
-                else if (tableSelectionDTO.IsAllSelected == null)
+                else if (lazyTableSelectionDTO.IsAllSelected == null)
                 {
                     {{((entityClass.IsEntityBusinessObject() || entityClass.IsEntityReadonlyObject() == false)
                     ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
@@ -852,8 +884,8 @@ namespace {{basePartOfTheNamespace}}.Services
                     List<{{idTypeOfTheClassFromTheList}}> alreadySelected = {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}} == null ? new List<{{idTypeOfTheClassFromTheList}}>() : {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.Select(x => x.Id).ToList();
 
                     {{classNameFromTheListFirstLower}}ListToInsert = alreadySelected
-                        .Union(tableSelectionDTO.SelectedIds)
-                        .Except(tableSelectionDTO.UnselectedIds)
+                        .Union(lazyTableSelectionDTO.SelectedIds)
+                        .Except(lazyTableSelectionDTO.UnselectedIds)
                         .ToList();
                 }
 
@@ -872,7 +904,7 @@ namespace {{basePartOfTheNamespace}}.Services
             return result;
         }
 
-        static string GetClassNameFromTheList(string propType)
+        static string GetClassNameFromTheListType(string propType)
         {
             string[] parts = propType.Split('<');
             return parts[parts.Length-1].Replace(">", "");

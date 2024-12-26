@@ -47,7 +47,8 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             "UserRole",
             "PaginationResult",
             "TableFilterContext",
-            "TableFilterSortMeta"
+            "TableFilterSortMeta",
+            "LazyLoadSelectedIdsResult",
         };
 
         #region Syntax and Semantic targets
@@ -1010,7 +1011,11 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             if (cSharpType.Contains("TableResponseDTO"))
             {
-                result = "TableResponse";
+                result = $"TableResponse<{parts[parts.Length-1].Replace("DTO", "")}>";
+            }
+            else if (cSharpType.Contains("LazyLoadSelectedIdsResultDTO"))
+            {
+                result = "LazyLoadSelectedIdsResult";
             }
             else if (cSharpType.Contains("NamebookDTO"))
             {
