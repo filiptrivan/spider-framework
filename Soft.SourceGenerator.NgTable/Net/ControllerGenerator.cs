@@ -1,30 +1,26 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using Soft.SourceGenerator.NgTable.Angular;
 using Soft.SourceGenerator.NgTable.Helpers;
-using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
 namespace Soft.SourceGenerators.Net
 {
     [Generator]
-    [Obsolete("We don't use this generator, because the reflection couldn't find the generated DbSets.")]
-    public class DbContextGenerator : IIncrementalGenerator
+    public class ControllerGenerator
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//#if DEBUG
-//            if (!Debugger.IsAttached)
-//            {
-//                Debugger.Launch();
-//            }
-//#endif
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEveryClass(s),
@@ -41,22 +37,17 @@ namespace Soft.SourceGenerators.Net
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectEntityClasses, SourceProductionContext context)
         {
-            return;
-
             if (classes.Count < 1)
                 return;
 
-            bool shouldGenerateDbContext = Helper.ShouldStartGenerator(nameof(DbContextGenerator), classes);
+            bool shouldGenerateController = Helper.ShouldStartGenerator(nameof(ControllerGenerator), classes);
 
-            if (shouldGenerateDbContext == false)
+            if (shouldGenerateController == false)
                 return;
 
             List<SoftClass> projectClasses = Helper.GetSoftClasses(classes);
 
-            SoftClass customDbContextClass = projectClasses.Where(x => x.BaseType != null && x.BaseType.Contains("ApplicationDbContext<")).SingleOrDefault();
-
-            //if (customDbContextClass == null)
-            //    return;
+            List<SoftClass> customControllers = projectClasses.Where(x => x.Namespace.EndsWith(".Controllers")).ToList();
 
             List<SoftClass> allEntityClasses = projectClasses.Concat(referencedProjectEntityClasses).ToList();
 
@@ -72,52 +63,18 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Soft.Generator.Infrastructure;
 using System.Data;
 {{string.Join("\n", Helper.GetEntityClassesUsings(referencedProjectEntityClasses))}}
+{{string.Join("\n", Helper.GetDTOClassesUsings(referencedProjectEntityClasses))}}
 
 namespace {{basePartOfTheNamespace}}
 {
-    public partial class {{projectName}}ApplicationDbContext
+    public partial class {{projectName}}BaseController
     {
-{{string.Join("\n", GetDbSetDefinitionsOfReferencedProjects(referencedProjectEntityClasses))}}
+
     }
 }
 """;
 
-            context.AddSource($"{projectName}ApplicationDbContext.generated", SourceText.From(result, Encoding.UTF8));
+            context.AddSource($"{projectName}BaseController.generated", SourceText.From(result, Encoding.UTF8));
         }
-
-        private static List<string> GetDbSetDefinitionsOfReferencedProjects(List<SoftClass> referencedProjectEntityClasses)
-        {
-            List<string> result = new List<string>();
-
-            foreach (SoftClass referencedProjectEntityClass in referencedProjectEntityClasses)
-            {
-                if (referencedProjectEntityClass.Namespace.StartsWith("Soft.Generator") ||
-                    referencedProjectEntityClass.Name == "UserExtended")
-                    continue;
-
-                result.Add($$"""
-        public DbSet<{{referencedProjectEntityClass.Name}}> {{GetDbContextPropertyName(referencedProjectEntityClass)}} { get; set; } {{GetDbContextPropertyComment(referencedProjectEntityClass)}}
-""");
-            }
-
-            return result;
-        }
-        
-        private static string GetDbContextPropertyName(SoftClass referencedProjectEntityClass)
-        {
-            if (referencedProjectEntityClass.BaseType == null)
-                return referencedProjectEntityClass.Name;
-            else
-                return referencedProjectEntityClass.Name.Pluralize();
-        }
-
-        private static string GetDbContextPropertyComment(SoftClass referencedProjectEntityClass)
-        {
-            if (referencedProjectEntityClass.BaseType == null)
-                return "// M2M";
-            else
-                return null;
-        }
-
     }
 }

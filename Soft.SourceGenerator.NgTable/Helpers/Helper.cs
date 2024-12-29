@@ -690,6 +690,28 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return methods;
         }
 
+        public static List<string> GetEntityClassesUsings(List<SoftClass> referencedProjectEntityClasses)
+        {
+            List<string> namespaces = referencedProjectEntityClasses
+                .Where(x => x.Namespace.EndsWith(".Entities"))
+                .Select(x => $"using {x.Namespace};")
+                .Distinct()
+                .ToList();
+
+            return namespaces;
+        }
+
+        public static List<string> GetDTOClassesUsings(List<SoftClass> referencedProjectEntityClasses)
+        {
+            List<string> namespaces = referencedProjectEntityClasses
+                .Where(x => x.Namespace.EndsWith(".Entities"))
+                .Select(x => $"using {x.Namespace.Replace(".Entities", ".DTO")};")
+                .Distinct()
+                .ToList();
+
+            return namespaces;
+        }
+
         #endregion
 
         #region Class list filters
@@ -717,7 +739,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return outputPath;
         }
 
-        public static bool ShouldGenerateDbContext(string generatorName, IList<ClassDeclarationSyntax> classes)
+        public static bool ShouldStartGenerator(string generatorName, IList<ClassDeclarationSyntax> classes)
         {
             ClassDeclarationSyntax settingsClass = GetSettingsClass(classes);
 
@@ -727,9 +749,9 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             List<SoftProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes);
             SoftProperty p = properties?.Where(x => x.IdentifierText == generatorName)?.SingleOrDefault();
 
-            bool.TryParse(p?.Attributes?.Where(x => x.Name == "Output")?.SingleOrDefault()?.Value, out bool shouldGeneratedDbContext);
+            bool.TryParse(p?.Attributes?.Where(x => x.Name == "Output")?.SingleOrDefault()?.Value, out bool shouldStart);
 
-            return shouldGeneratedDbContext;
+            return shouldStart;
         }
 
         public static List<ClassDeclarationSyntax> GetEntityClasses(IList<ClassDeclarationSyntax> classes)
