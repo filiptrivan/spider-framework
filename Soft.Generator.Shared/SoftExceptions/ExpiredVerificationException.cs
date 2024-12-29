@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Soft.Generator.Shared.Terms;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +10,7 @@ namespace Soft.Generator.Shared.SoftExceptions
     public class ExpiredVerificationException : Exception
     {
         // Constructor
-        public ExpiredVerificationException() : base("Expired verification link") { }
+        public ExpiredVerificationException() : base(SharedTerms.ExpiredVerificationCodeException) { }
 
         // Constructor with message
         public ExpiredVerificationException(string message) : base(message) { }

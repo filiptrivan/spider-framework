@@ -12,6 +12,7 @@ using System.IO;
 using System.Diagnostics;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
+using static System.Net.WebRequestMethods;
 
 namespace Soft.SourceGenerator.NgTable.Angular
 {
@@ -20,12 +21,12 @@ namespace Soft.SourceGenerator.NgTable.Angular
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//#if DEBUG
-//            if (!Debugger.IsAttached)
-//            {
-//                Debugger.Launch();
-//            }
-//#endif
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationDTO(s),
@@ -38,10 +39,15 @@ namespace Soft.SourceGenerator.NgTable.Angular
         }
         private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
-            if (classes.Count <= 1) return; // FT: one because of config settings
+            if (classes.Count <= 1) 
+                return; // FT: one because of config settings
 
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgEntitiesGenerator), classes);
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
+
+            if (outputPath == null)
+                return;
+
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
@@ -49,9 +55,12 @@ namespace Soft.SourceGenerator.NgTable.Angular
             StringBuilder sb = new StringBuilder();
             StringBuilder sbImports = new StringBuilder();
             sbImports.Append($$"""
-import { BaseEntity } from "../../../core/entities/base-entity";
+import { BaseEntity } from "src/app/core/entities/base-entity";
+import { TableFilter } from "src/app/core/entities/table-filter";
 import { TableFilterContext } from "src/app/core/entities/table-filter-context";
 import { TableFilterSortMeta } from "src/app/core/entities/table-filter-sort-meta";
+import { MimeTypes } from "src/app/core/entities/mime-type";
+{{string.Join("\n", GetEnumPropertyImports(DTOClasses, projectName))}}
 
 """);
 
@@ -62,8 +71,7 @@ import { TableFilterSortMeta } from "src/app/core/entities/table-filter-sort-met
                 foreach (SoftClass DTOClass in DTOClassGroup) // It can only be 2 here
                     DTOProperties.AddRange(DTOClass.Properties);
 
-                List<string> angularPropertyDefinitions = GetAllAngularPropertyDefinitions(DTOProperties, true); // FT: If, in some moment, we want to make another aproach set this to false, now it doesn't matter
-                List<string> nullableAngularPropertyDefinitions = GetAllAngularPropertyDefinitions(DTOProperties, true);
+                List<string> angularPropertyDefinitions = GetAllAngularPropertyDefinitions(DTOProperties); // FT: If, in some moment, we want to make another aproach set this to false, now it doesn't matter
                 string angularClassIdentifier = DTOClassGroup.Key.Replace("DTO", "");
 
                 sbImports.Append(string.Join("\n", Helper.GetAngularImports(DTOProperties, projectName)));
@@ -79,7 +87,7 @@ export class {{angularClassIdentifier}} extends BaseEntity
     {
         {{string.Join(",\n\t\t", DTOProperties.Select(x => x.IdentifierText.FirstCharToLower()))}}
     }:{
-        {{string.Join("\n\t\t", nullableAngularPropertyDefinitions)}}     
+        {{string.Join("\n\t\t", angularPropertyDefinitions)}}     
     } = {}
     ) {
         super('{{angularClassIdentifier}}'); 
@@ -91,27 +99,20 @@ export class {{angularClassIdentifier}} extends BaseEntity
 
             }
 
-            sb.AppendLine(GetAdditionalEntities());
-
             sbImports.Append(sb);
 
             Helper.WriteToTheFile(sbImports.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-entities.generated.ts");
         }
 
-        private static List<string> GetAllAngularPropertyDefinitions(List<SoftProperty> DTOProperties, bool alwaysNullable = false)
+        private static List<string> GetAllAngularPropertyDefinitions(List<SoftProperty> DTOProperties)
         {
             List<string> result = new List<string>();
-            foreach (SoftProperty DTOProp in DTOProperties) // FT: Trying to solve constant generating duplicate properties in angular with distinct
+            foreach (SoftProperty DTOProp in DTOProperties)
             {
                 string DTOPropLowerCase = DTOProp.IdentifierText.FirstCharToLower();
-                string angularIdentifierText;
-                if (DTOProp.Type.IsTypeNullable() || alwaysNullable == true)
-                    angularIdentifierText = $"{DTOPropLowerCase}?";
-                else
-                    angularIdentifierText = DTOPropLowerCase;
 
-                string angularDataType = Helper.GetAngularDataType(DTOProp.Type);
-                result.Add($"{angularIdentifierText}: {angularDataType};");
+                string angularDataType = Helper.GetAngularType(DTOProp.Type);
+                result.Add($"{DTOPropLowerCase}?: {angularDataType};");
             }
 
             return result;
@@ -129,103 +130,34 @@ export class {{angularClassIdentifier}} extends BaseEntity
             return result;
         }
 
-        private static string GetAdditionalEntities()
+        private static List<string> GetEnumPropertyImports(List<SoftClass> DTOClasses, string projectName)
         {
-            string additionalEntities = $$"""
+            List<string> result = new List<string>();
 
+            foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
+            {
+                List<SoftProperty> DTOProperties = new List<SoftProperty>();
 
-// FT HACK: Fake generated class, because of api imports
-export class Namebook extends BaseEntity
-{
-    id?: number;
-    displayName?: string;
+                foreach (SoftClass DTOClass in DTOClassGroup) // It can only be 2 here
+                    DTOProperties.AddRange(DTOClass.Properties);
 
-    constructor(
-    {
-        id,
-        displayName,
-    }:{
-        id?: number;
-        displayName?: string;
-    } = {}
-    ) {
-        super('Namebook');
+                foreach (SoftProperty property in DTOProperties)
+                {
+                    if (property.Type.IsEnum() == false)
+                        continue;
 
-        this.id = id;
-        this.displayName = displayName;
-    }
-}
+                    if (result.Contains(property.IdentifierText) == false)
+                    {
+                        result.Add($$"""
+import { {{property.IdentifierText}} } from "../../enums/generated/{{projectName.FromPascalToKebabCase()}}-enums.generated";
+""");
+                    }
+                }
+            }
 
-// FT HACK: Fake generated class, because of api imports
-export class Codebook extends BaseEntity
-{
-    code?: string;
-    displayName?: string;
-
-    constructor(
-    {
-        code,
-        displayName,
-    }:{
-        code?: string;
-        displayName?: string;
-    } = {}
-    ) {
-        super('Codebook');
-
-        this.code = code;
-        this.displayName = displayName;
-    }
-}
-
-// FT HACK: Fake generated class, because of api imports
-export class TableFilter extends BaseEntity
-{
-    filters?: Map<string, TableFilterContext[]>;
-    first?: number;
-    rows?: number;
-    sortField?: string;
-    sortOrder?: number;
-    multiSortMeta?: TableFilterSortMeta[];
-    additionalFilterIdInt?: number;
-    additionalFilterIdLong?: number;
-
-    constructor(
-    {
-        filters,
-        first,
-        rows,
-        sortField,
-        sortOrder,
-        multiSortMeta,
-        additionalFilterIdInt,
-        additionalFilterIdLong,
-    }:{
-        filters?: Map<string, TableFilterContext[]>;
-        first?: number;
-        rows?: number;
-        sortField?: string;
-        sortOrder?: number;
-        multiSortMeta?: TableFilterSortMeta[];
-        additionalFilterIdInt?: number;
-        additionalFilterIdLong?: number;
-    } = {}
-    ) {
-        super('TableFilter');
-
-        this.filters = filters;
-        this.first = first;
-        this.rows = rows;
-        this.sortField = sortField;
-        this.sortOrder = sortOrder;
-        this.multiSortMeta = multiSortMeta;
-        this.additionalFilterIdInt = additionalFilterIdInt;
-        this.additionalFilterIdLong = additionalFilterIdLong;
-    }
-}
-""";
-
-            return additionalEntities;
+            return result;
         }
+
+
     }
 }

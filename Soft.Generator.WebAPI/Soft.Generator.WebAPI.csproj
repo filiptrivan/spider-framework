@@ -24,8 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Soft.Generator.AngularEntities\Soft.Generator.AngularGenerator.csproj" />
-    <ProjectReference Include="..\Soft.Generator.Business\Soft.Generator.Business.csproj" />
     <ProjectReference Include="..\Soft.Generator.Infrastructure\Soft.Generator.Infrastructure.csproj" />
     <ProjectReference Include="..\Soft.Generator.Security\Soft.Generator.Security.csproj" />
     <ProjectReference Include="..\Soft.Generator.Shared\Soft.Generator.Shared.csproj" />

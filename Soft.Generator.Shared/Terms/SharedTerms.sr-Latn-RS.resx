@@ -33,7 +33,7 @@
     Each data row contains a name, and value. The row also contains a 
     type or mimetype. Type corresponds to a .NET class that support 
     text/value conversion through the TypeConverter architecture. 
-    Classes that don't support this are serialized and stored with the 
+    Classes that don't support this are serialized and businessSystemd with the 
     mimetype set.
     
     The mimetype is used for serialized objects, and tells the 
@@ -128,5 +128,53 @@
   </data>
   <data name="GlobalError" xml:space="preserve">
     <value>Dogodila se greška u sistemu, naš tim je obavešten i otkloniće je u najkraćem mogućem roku. Hvala Vam na strpljenju. Kod greške:</value>
+  </data>
+  <data name="Password" xml:space="preserve">
+    <value>Šifra</value>
+  </data>
+  <data name="UserExcel" xml:space="preserve">
+    <value>Korisnici</value>
+  </data>
+  <data name="RoleExcel" xml:space="preserve">
+    <value>Uloge</value>
+  </data>
+  <data name="NotificationExcel" xml:space="preserve">
+    <value>Notifikacije</value>
+  </data>
+  <data name="UnauthorizedAccessExceptionMessage" xml:space="preserve">
+    <value>Nemate potrebnu dozvolu da biste izvršili operaciju.</value>
+  </data>
+  <data name="ExpiredVerificationCodeException" xml:space="preserve">
+    <value>Vaš verifikacioni kod je istekao. Zatražite novi kod da biste nastavili.</value>
+  </data>
+  <data name="LatestVerificationCodeException" xml:space="preserve">
+    <value>Poslato je više verifikacionih kodova, molimo Vas da unesete poslednji.</value>
+  </data>
+  <data name="ExpiredRefreshTokenException" xml:space="preserve">
+    <value>Vaša sesija je istekla, molimo Vas da se prijavite ponovo.</value>
+  </data>
+  <data name="TwoDifferentIpAddressesRefreshException" xml:space="preserve">
+    <value>Ne možete da koristite aplikaciju sa dve različite IP adrese u isto vreme, molimo vas da se prijavite ponovo.</value>
+  </data>
+  <data name="OnlyThirdPartyAccountButTriedToRegisterOrLoginException" xml:space="preserve">
+    <value>Vaš nalog je već registrovan putem treće strane (npr. Google). Ako želite da dodate i lozinku, koristite opciju „Zaboravili ste lozinku?”, ili se prijavite na profil i postavite lozinku.</value>
+  </data>
+  <data name="SameEmailAlreadyExistsException" xml:space="preserve">
+    <value>Nalog sa ovom email adresom već postoji.</value>
+  </data>
+  <data name="DisabledAccountException" xml:space="preserve">
+    <value>Vaš nalog je trenutno blokiran. Obratite se administratoru za pomoć.</value>
+  </data>
+  <data name="AuthenticationEmailDoesNotExistException" xml:space="preserve">
+    <value>Nalog sa unetom email adresom ne postoji. Molimo vas da proverite unesenu adresu ili kreirate novi nalog.</value>
+  </data>
+  <data name="AuthenticationIncorectPasswordException" xml:space="preserve">
+    <value>Pogrešna lozinka. Molimo vas da pokušate ponovo ili resetujete lozinku ako ste je zaboravili.</value>
+  </data>
+  <data name="ResetPasswordEmailDoesNotExistException" xml:space="preserve">
+    <value>Nalog sa unetom email adresom ne postoji. Molimo vas da proverite unesenu adresu ili kreirate novi nalog.</value>
+  </data>
+  <data name="EmailAccountVerificationTitle" xml:space="preserve">
+    <value>Verifikacija naloga</value>
   </data>
 </root>

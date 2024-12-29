@@ -41,14 +41,12 @@ namespace Soft.SourceGenerator.NgTable.Net
         {
             if (classes.Count <= 1) return;
 
-            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
-
-            string outputPath = Helper.GetGeneratorOutputPath(nameof(FluentValidationGenerator), classes);
+            List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
 
             StringBuilder sb = new StringBuilder();
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0]);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0].Namespace);
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
@@ -67,14 +65,14 @@ namespace {{basePartOfNamespace}}.ValidationRules
 
                 ClassDeclarationSyntax nonGeneratedDTOClass = classes.Where(x => x.Identifier.Text == DTOClassGroup.Key).SingleOrDefault();
                 List<SoftAttribute> softAttributes = Helper.GetAllAttributesOfTheClass(nonGeneratedDTOClass, classes);
+
                 if (softAttributes != null)
                     DTOAttributes.AddRange(softAttributes); // FT: Its okay to add only for non generated because we will not have any attributes on the generated DTOs
-
 
                 foreach (SoftClass DTOClass in DTOClassGroup)
                     DTOProperties.AddRange(DTOClass.Properties);
 
-                ClassDeclarationSyntax entityClass = entityClasses.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Identifier.Text).SingleOrDefault(); // If it is null then we only made DTO, without entity class
+                SoftClass entityClass = entityClasses.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Name).SingleOrDefault(); // If it is null then we only made DTO, without entity class
 
                 sb.AppendLine($$"""
     public class {{DTOClassGroup.Key}}ValidationRules : AbstractValidator<{{DTOClassGroup.Key}}>
@@ -91,7 +89,6 @@ namespace {{basePartOfNamespace}}.ValidationRules
 }
 """);
 
-            //Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}");
             context.AddSource($"{projectName}ValidationRules.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
@@ -101,7 +98,7 @@ namespace {{basePartOfNamespace}}.ValidationRules
         /// <param name="DTOProperties">Including the attributes</param>
         /// <param name="entityClass">User</param>
         /// <returns>List of rules: eg. [RuleFor(x => x.Username).Length(0, 70), RuleFor(x => x.Email).Length(0, 70)]</returns>
-        public static List<string> GetValidationRules(List<SoftProperty> DTOProperties, List<SoftAttribute> DTOAttributes, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        public static List<string> GetValidationRules(List<SoftProperty> DTOProperties, List<SoftAttribute> DTOAttributes, SoftClass entityClass, List<SoftClass> entityClasses)
         {
             // [RuleFor(x => x.Username).Length(0, 70);, RuleFor(x => x.Email).Length(0, 70);]
             List<string> validationRulesOnDTO = new List<string>(); // priority - 1.
@@ -126,10 +123,11 @@ namespace {{basePartOfNamespace}}.ValidationRules
             {
                 validationRulesOnEntity.AddRange(GetRulesOnEntity(entityClass, entityClasses));
 
-                List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses);
+                List<SoftProperty> entityProperties = entityClass.Properties;
                 foreach (SoftProperty prop in entityProperties)
                 {
                     string rule = GetRuleForProp(prop);
+
                     if (rule != null)
                         validationRulesOnEntityProperties.Add(rule);
                 }
@@ -142,20 +140,23 @@ namespace {{basePartOfNamespace}}.ValidationRules
 
         static string GetRuleForProp(SoftProperty prop)
         {
-            List<string> singleRulesOnProperty;
-            string propType = prop.Type;
-            string propName = prop.IdentifierText;
+            List<string> singleRulesOnProperty = GetSingleRulesForProp(prop); // NotEmpty(), Length(0, 70);
+            string propName = GetPropNameForRule(prop, singleRulesOnProperty);
 
-            singleRulesOnProperty = GetSingleRulesForProp(prop); // NotEmpty(), Length(0, 70)
-
-            if (singleRulesOnProperty.Count == 0 || propType.IsEnumerable())
+            if (propName == null || singleRulesOnProperty.Count == 0 || prop.Type.IsEnumerable())
                 return null;
 
-            if (propType.IsBaseType() == false)  // FT: if it is not base type and not enumerable than it's many to one for sure, and the validation can only be for id to be required
+            // FT: If there is no Required nor ManyToOneRequired attribute, we should let user save null to database
+            if (prop.Attributes.Any(x => x.Name == "Required" || x.Name == "ManyToOneRequired") == false)
             {
-                propName = $"{propName}Id";
-                if (singleRulesOnProperty.Count > 1)
-                    propName = "YOU CAN'T DEFINE ANYTHING THAN REQUIRED VALIDATION FOR MANY TO ONE PROPERTY";
+                if (prop.Type == "string")
+                {
+                    singleRulesOnProperty.Add($"Unless(i => string.IsNullOrEmpty(i.{propName}))");
+                }
+                else
+                {
+                    singleRulesOnProperty.Add($"Unless(i => i.{propName} == null)");
+                }
             }
 
             return $"RuleFor(x => x.{propName}).{string.Join(".", singleRulesOnProperty)};";
@@ -176,12 +177,19 @@ namespace {{basePartOfNamespace}}.ValidationRules
                     case "Required":
                         singleRules.Add("NotEmpty()");
                         break;
+                    case "ManyToOneRequired":
+                        singleRules.Add("NotEmpty()");
+                        break;
                     case "Column":
                         if (attribute.Value.Contains("VARCHAR"))
                             singleRules.Add($"Length(0, {FindNumberBetweenVarcharParentheses(attribute.Value)})");
                         break;
                     case "StringLength":
-                        singleRules.Add($"Length({FindMinValueForStringLength(attribute.Value)}, {FindMaxValueForStringLength(attribute.Value)})");
+                        string minValue = FindMinValueForStringLength(attribute.Value);
+                        if (minValue == null)
+                            singleRules.Add($"Length({FindMaxValueForStringLength(attribute.Value)})");
+                        else
+                            singleRules.Add($"Length({minValue}, {FindMaxValueForStringLength(attribute.Value)})");
                         break;
                     case "Precision":
                         singleRules.Add($"PrecisionScale({attribute.Value}, false)"); // FT: only here the attribute.Value should be two values eg. 6, 7
@@ -204,15 +212,30 @@ namespace {{basePartOfNamespace}}.ValidationRules
             return singleRules;
         }
 
+        private static string GetPropNameForRule(SoftProperty prop, List<string> singleRulesOnProperty)
+        {
+            string propName = prop.IdentifierText;
+
+            if (prop.Type.PropTypeIsManyToOne())  // FT: if it is not base type and not enumerable than it's many to one for sure, and the validation can only be for id to be required
+            {
+                propName = $"{prop.IdentifierText}Id";
+
+                if (singleRulesOnProperty.Count > 1)
+                    propName = "YOU CAN'T DEFINE ANYTHING THEN Required/ManyToOneRequired VALIDATION FOR MANY TO ONE PROPERTY";
+            }
+
+            return propName;
+        }
+
         /// <summary>
         /// Looking for attributes on the class not on the properties
         /// </summary>
         /// <param name="entityClass"></param>
         /// <returns></returns>
-        static List<string> GetRulesOnEntity(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        static List<string> GetRulesOnEntity(SoftClass entityClass, List<SoftClass> entityClasses)
         {
             List<string> ruleFors = new List<string>();
-            List<SoftAttribute> entityAttributes = Helper.GetAllAttributesOfTheClass(entityClass, entityClasses);
+            List<SoftAttribute> entityAttributes = entityClass.Attributes;
 
             foreach (SoftAttribute attribute in entityAttributes)
             {
@@ -265,7 +288,7 @@ namespace {{basePartOfNamespace}}.ValidationRules
             if (match.Success)
                 return match.Groups[1].Value;
             else
-                return "0";
+                return null;
         }
 
         /// <summary>

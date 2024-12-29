@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Soft.Generator.Shared.Terms;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +10,7 @@ namespace Soft.Generator.Shared.SoftExceptions
     public class UnauthorizedException : Exception
     {
         // Constructor
-        public UnauthorizedException() : base("Unauthorized access.") { }
+        public UnauthorizedException() : base(SharedTerms.UnauthorizedAccessExceptionMessage) { }
 
         // Constructor with message
         public UnauthorizedException(string message) : base(message) { }

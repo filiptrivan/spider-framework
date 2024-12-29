@@ -36,14 +36,13 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
-            if (classes.Count == 0) return;
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
+            if (classes.Count <= 1) return;
+
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
 
             ClassDeclarationSyntax mapperClass = Helper.GetManualyWrittenMapperClass(classes);
 
             StringBuilder sb = new StringBuilder();
-            //List<string> usings = new List<string>(); // FT: Obsolete, we can just use the one namespace for all DTOs
-            StringBuilder sbUsings = new StringBuilder();
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
 
@@ -69,9 +68,9 @@ namespace {{basePartOfNamespace}}.ExcelProperties
 
                 foreach (SoftProperty prop in Helper.GetPropsToExcludeFromExcelExport(DTOClassGroup.Key, DTOClasses, mapperClass))
                 {
-                    //propertyNames.Add($"new ExcelHeader {{ Name=\"{prop.IdentifierText}\", DataType=typeof({prop.Type}) }}"); // FT: if you need prop.Type also, you need to make method like earlyer, look at the commits on GitHub
                     propertyNames.Add($"\"{prop.IdentifierText}\"");
                 }
+
                 sb.AppendLine($$"""
             return new string[] { {{string.Join(", ", propertyNames)}} };
         }
@@ -82,8 +81,7 @@ namespace {{basePartOfNamespace}}.ExcelProperties
 }
 """);
 
-            sbUsings.AppendLine(sb.ToString());
-            context.AddSource("ExcelPropertiesToExclude.generated", SourceText.From(sbUsings.ToString(), Encoding.UTF8));
+            context.AddSource("ExcelPropertiesToExclude.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
     }
 }

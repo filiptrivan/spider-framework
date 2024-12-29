@@ -20,46 +20,56 @@ using Microsoft.AspNetCore.Authorization;
 using Soft.Generator.Security.Entities;
 using Soft.Generator.Shared.DTO;
 using Mapster;
+using Azure.Storage.Blobs;
+using Microsoft.IdentityModel.Tokens;
+using Soft.Generator.Shared.Terms;
+using Nucleus.Core.BusinessObject;
+using System;
 
 namespace Soft.Generator.Security.Services
 {
-    public class SecurityBusinessService : SecurityBusinessServiceGenerated
+    public class SecurityBusinessService<TUser> : BusinessServiceGenerated<TUser> where TUser : class, IUser, new()
     {
         private readonly IApplicationDbContext _context;
         private readonly IJwtAuthManager _jwtAuthManagerService;
         private readonly AuthenticationService _authenticationService;
-        private readonly AuthorizationService _authorizationService;
+        private readonly AuthorizationBusinessService<TUser> _authorizationService;
         private readonly EmailingService _emailingService;
+        private readonly BlobContainerClient _blobContainerClient;
 
-        public SecurityBusinessService(IApplicationDbContext context, IJwtAuthManager jwtAuthManagerService, EmailingService emailingService, AuthenticationService authenticationService, AuthorizationService authorizationService, 
-            ExcelService excelService)
-            : base(context, excelService, authorizationService)
+        public SecurityBusinessService(IApplicationDbContext context, IJwtAuthManager jwtAuthManagerService, EmailingService emailingService, AuthenticationService authenticationService, AuthorizationBusinessService<TUser> authorizationService,
+            ExcelService excelService, BlobContainerClient blobContainerClient)
+            : base(context, excelService, authorizationService, blobContainerClient)
         {
             _context = context;
             _jwtAuthManagerService = jwtAuthManagerService;
             _emailingService = emailingService;
             _authenticationService = authenticationService;
             _authorizationService = authorizationService;
+            _blobContainerClient = blobContainerClient;
         }
 
         #region Authentication
 
-        // Login
-        public async Task SendLoginVerificationEmail<TUser>(LoginDTO loginDTO) where TUser : class, IUser, new()
+        #region Login
+
+        public async Task SendLoginVerificationEmail(LoginDTO loginDTO)
         {
             LoginDTOValidationRules validationRules = new LoginDTOValidationRules();
             validationRules.ValidateAndThrow(loginDTO);
 
             string userEmail = null;
             long userId = 0;
+
             await _context.WithTransactionAsync(async () =>
             {
-                TUser user = await Authenticate<TUser>(loginDTO);
+                TUser user = await Authenticate(loginDTO);
                 userEmail = user.Email;
                 userId = user.Id;
-
             });
+
             string verificationCode = _jwtAuthManagerService.GenerateAndSaveLoginVerificationCode(userEmail, userId, loginDTO.BrowserId);
+
             try
             {
                 await _emailingService.SendVerificationEmailAsync(userEmail, verificationCode);
@@ -71,25 +81,27 @@ namespace Soft.Generator.Security.Services
             }
         }
 
-        public LoginResultDTO Login(VerificationTokenRequestDTO verificationRequestDTO)
+        public AuthResultDTO Login(VerificationTokenRequestDTO verificationRequestDTO)
         {
             VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
             validationRules.ValidateAndThrow(verificationRequestDTO);
 
+            // FT: Can not be null, if its null it already has thrown
             LoginVerificationTokenDTO loginVerificationTokenDTO = _jwtAuthManagerService.ValidateAndGetLoginVerificationTokenDTO(
-                verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
-            // TODO FT: Log somewhere good and bad request
-            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(loginVerificationTokenDTO.BrowserId, loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email);
-            return GetLoginResultDTO(loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email, jwtAuthResultDTO);
+                verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email);
+
+            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email, loginVerificationTokenDTO.BrowserId);
+
+            return GetAuthResultDTO(loginVerificationTokenDTO.UserId, loginVerificationTokenDTO.Email, jwtAuthResultDTO);
         }
 
-        public async Task<LoginResultDTO> LoginExternal<TUser>(ExternalProviderDTO externalProviderDTO, string googleClientId) where TUser : class, IUser, new()
+        public async Task<AuthResultDTO> LoginExternal(ExternalProviderDTO externalProviderDTO, string googleClientId)
         {
             GoogleJsonWebSignature.Payload payload = await ValidateGoogleToken(externalProviderDTO.IdToken, googleClientId);
 
             return await _context.WithTransactionAsync(async () =>
             {
-                TUser user = await GetUserByEmailAsync<TUser>(payload.Email); // FT: Check if user already exist in the database
+                TUser user = await GetUserByEmailAsync(payload.Email); // FT: Check if user already exist in the database
                 DbSet<TUser> userDbSet = _context.DbSet<TUser>();
 
                 if (user == null)
@@ -98,168 +110,111 @@ namespace Soft.Generator.Security.Services
                     {
                         Email = payload.Email,
                         HasLoggedInWithExternalProvider = true,
-                        NumberOfFailedAttemptsInARow = 0
                     };
+
                     await userDbSet.AddAsync(user);
                     await _context.SaveChangesAsync(); // Adding the new user which is logged in first time
                 }
                 else
                 {
-                    if (user.NumberOfFailedAttemptsInARow > SettingsProvider.Current.NumberOfFailedLoginAttemptsInARowToDisableUser)
-                        throw new BusinessException("Your account is disabled, please contact the administrator.");
+                    if (user.IsDisabled == true)
+                        throw new BusinessException(SharedTerms.DisabledAccountException);
 
-                    if (user.HasLoggedInWithExternalProvider == false)
+                    if (user.HasLoggedInWithExternalProvider != true)
                         await userDbSet.ExecuteUpdateAsync(x => x.SetProperty(x => x.HasLoggedInWithExternalProvider, true)); // There is no need for SaveChangesAsync because we don't need to update the version of the user
                 }
 
-                JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(externalProviderDTO.BrowserId, user.Id, user.Email);
+                JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(user.Id, user.Email, externalProviderDTO.BrowserId);
 
-                return GetLoginResultDTO(user.Id, user.Email, jwtAuthResultDTO);
+                return GetAuthResultDTO(user.Id, user.Email, jwtAuthResultDTO);
             });
         }
 
+        #endregion
 
-        // Forgot password
-        public async Task SendForgotPasswordVerificationEmail<TUser>(ForgotPasswordDTO forgotPasswordDTO) where TUser : class, IUser, new()
-        {
-            ForgotPasswordDTOValidationRules validationRules = new ForgotPasswordDTOValidationRules();
-            validationRules.ValidateAndThrow(forgotPasswordDTO);
+        #region Registration
 
-            string userEmail = null;
-            long userId = 0;
-            await _context.WithTransactionAsync(async () =>
-            {
-                TUser user = await GetUserByEmailAsync<TUser>(forgotPasswordDTO.Email);
-                if (user == null)
-                    throw new BusinessException("The user with the forwarded email does not exist in the system.");
-                userEmail = user.Email;
-                userId = user.Id;
-            });
-            string verificationCode = _jwtAuthManagerService.GenerateAndSaveForgotPasswordVerificationCode(userEmail, userId, forgotPasswordDTO.NewPassword, forgotPasswordDTO.BrowserId);
-            try
-            {
-                await _emailingService.SendVerificationEmailAsync(userEmail, verificationCode);
-            }
-            catch (Exception)
-            {
-                _jwtAuthManagerService.RemoveForgotPasswordVerificationTokensByEmail(userEmail); // We didn't send email, set all verification tokens invalid then
-                throw;
-            }
-        }
-
-        public async Task<LoginResultDTO> ForgotPassword<TUser>(VerificationTokenRequestDTO verificationRequestDTO) where TUser : class, IUser, new()
-        {
-            VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
-            validationRules.ValidateAndThrow(verificationRequestDTO);
-
-            ForgotPasswordVerificationTokenDTO forgotPasswordVerificationTokenDTO = _jwtAuthManagerService.ValidateAndGetForgotPasswordVerificationTokenDTO(
-                verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
-            await _context.WithTransactionAsync(async () =>
-            {
-                TUser user = await LoadInstanceAsync<TUser, long>(forgotPasswordVerificationTokenDTO.UserId, null);
-                user.Password = BCrypt.Net.BCrypt.EnhancedHashPassword(forgotPasswordVerificationTokenDTO.NewPassword);
-                _context.DbSet<TUser>().Update(user);
-                await _context.SaveChangesAsync();
-            });
-            // TODO FT: Log somewhere good and bad request
-            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(forgotPasswordVerificationTokenDTO.BrowserId, forgotPasswordVerificationTokenDTO.UserId, forgotPasswordVerificationTokenDTO.Email);
-            return GetLoginResultDTO(forgotPasswordVerificationTokenDTO.UserId, forgotPasswordVerificationTokenDTO.Email, jwtAuthResultDTO);
-        }
-
-        // Registration
-        public async Task<RegistrationVerificationResultDTO> SendRegistrationVerificationEmail<TUser>(RegistrationDTO registrationDTO) where TUser : class, IUser, new()
+        public async Task<RegistrationVerificationResultDTO> SendRegistrationVerificationEmail(RegistrationDTO registrationDTO)
         {
             RegistrationVerificationResultDTO registrationResultDTO = new RegistrationVerificationResultDTO();
 
-            try
-            {
-                RegistrationDTOValidationRules validationRules = new RegistrationDTOValidationRules();
-                validationRules.ValidateAndThrow(registrationDTO);
+            RegistrationDTOValidationRules validationRules = new RegistrationDTOValidationRules();
+            validationRules.ValidateAndThrow(registrationDTO);
 
-                await _context.WithTransactionAsync(async () =>
+            await _context.WithTransactionAsync(async () =>
+            {
+                TUser user = await GetUserByEmailAsync(registrationDTO.Email);
+
+                if (user == null)
                 {
-                    TUser user = await GetUserByEmailAsync<TUser>(registrationDTO.Email);
+                    string verificationCode = _jwtAuthManagerService.GenerateAndSaveRegistrationVerificationCode(registrationDTO.Email, registrationDTO.BrowserId);
 
-                    if (user == null)
+                    try
                     {
-                        string verificationCode = _jwtAuthManagerService.GenerateAndSaveRegistrationVerificationCode(registrationDTO.Email, registrationDTO.Password, registrationDTO.BrowserId);
-                        try
-                        {
-                            await _emailingService.SendVerificationEmailAsync(registrationDTO.Email, verificationCode);
-                        }
-                        catch (Exception)
-                        {
-                            _jwtAuthManagerService.RemoveRegistrationVerificationTokensByEmail(registrationDTO.Email); // We didn't send email, set all verification tokens invalid then
-                            throw;
-                        }
-                        registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UserDoesNotExistAndDoesNotHaveValidToken; // FT: We don't need to show the message to the user here, we will route him to another page
+                        await _emailingService.SendVerificationEmailAsync(registrationDTO.Email, verificationCode);
                     }
-                    else if (user.HasLoggedInWithExternalProvider && user.Password == null)
+                    catch (Exception)
                     {
-                        registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UserWithoutPasswordExists;
-                        registrationResultDTO.Message = "Your account already exists with third-party (eg. Google) authentication. If you want to set up an password as well, please log in to your profile and add a password.";
+                        _jwtAuthManagerService.RemoveRegistrationVerificationTokensByEmail(registrationDTO.Email); // We didn't send email, set all verification tokens invalid then
+                        throw;
                     }
-                    else if (user.Password != null)
-                    {
-                        registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UserWithPasswordExists;
-                        registrationResultDTO.Message = "An account with this email address already exists in the system.";
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                registrationResultDTO.Status = RegistrationVerificationResultStatusCodes.UnexpectedError;
-                // TODO FT: log it
-                throw;
-            }
+                }
+                else
+                {
+                    throw new BusinessException(SharedTerms.SameEmailAlreadyExistsException);
+                }
+            });
 
             return registrationResultDTO;
         }
 
-        public async Task<LoginResultDTO> Register<TUser>(VerificationTokenRequestDTO verificationRequestDTO) where TUser : class, IUser, new()
+        public async Task<AuthResultDTO> Register(VerificationTokenRequestDTO verificationRequestDTO)
         {
             VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
             validationRules.ValidateAndThrow(verificationRequestDTO);
 
             RegistrationVerificationTokenDTO registrationVerificationTokenDTO = _jwtAuthManagerService.ValidateAndGetRegistrationVerificationTokenDTO(
                 verificationRequestDTO.VerificationCode, verificationRequestDTO.BrowserId, verificationRequestDTO.Email); // FT: Can not be null, if its null it already has thrown
+
             TUser user = null;
+
             await _context.WithTransactionAsync(async () =>
             {
                 user = new TUser
                 {
                     Email = registrationVerificationTokenDTO.Email,
-                    Password = BCrypt.Net.BCrypt.EnhancedHashPassword(registrationVerificationTokenDTO.Password),
-                    HasLoggedInWithExternalProvider = false, // FT: He couldn't do this if already has account
-                    NumberOfFailedAttemptsInARow = 0
                 };
+
                 await _context.DbSet<TUser>().AddAsync(user);
                 await _context.SaveChangesAsync();
             });
-            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(verificationRequestDTO.BrowserId, user.Id, user.Email); // FT: User can't be null, it would throw earlier if he is
+
+            JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(user.Id, user.Email, verificationRequestDTO.BrowserId); // FT: User can't be null, it would throw earlier if he is
             //await SaveLoginAndReturnDomainAsync(loginDTO); // FT: Is ipAddress == null is checked here // TODO FT: Log it
-            return GetLoginResultDTO(user.Id, user.Email, jwtAuthResultDTO);
+
+            return GetAuthResultDTO(user.Id, user.Email, jwtAuthResultDTO);
         }
 
+        #endregion
 
-        public async Task<LoginResultDTO> GetLoginResultDTOAsync<TUser>(RefreshTokenRequestDTO request) where TUser : class, IUser, new()
+        public async Task<AuthResultDTO> RefreshToken(RefreshTokenRequestDTO refreshTokenRequestDTO)
         {
-            if (string.IsNullOrWhiteSpace(request.RefreshToken))
-                throw new UnauthorizedException();
+            if (string.IsNullOrWhiteSpace(refreshTokenRequestDTO.RefreshToken))
+                throw new SecurityTokenException(SharedTerms.ExpiredRefreshTokenException); // FT: It's not realy this reason, but it's easier then realy explaining the user what has happened, this could happen if he deleted the cache from the browser
+
             string accessToken = await _authenticationService.GetAccessTokenAsync();
-            List<Claim> principalClaims = _jwtAuthManagerService.GetPrincipalClaimsForAccessToken(request, accessToken);
+            List<Claim> claims = _jwtAuthManagerService.GetClaimsForTheAccessToken(refreshTokenRequestDTO, accessToken);
 
-            long accesTokenUserId = _authenticationService.GetCurrentUserId();
-            string accessTokenUserEmail = _authenticationService.GetCurrentUserEmail();
+            long accesTokenUserId = long.Parse(claims.FirstOrDefault(x => x.Type == ClaimTypes.PrimarySid)?.Value);
+            string accessTokenUserEmail = claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
 
-            string emailFromTheDb = await GetCurrentUserEmailByIdAsync<TUser>(accesTokenUserId);
+            string emailFromTheDb = await GetCurrentUserEmailByIdAsync(accesTokenUserId);
             if (emailFromTheDb != accessTokenUserEmail) // The email from db changed, and the user is using the old one in access token
                 _jwtAuthManagerService.RemoveRefreshTokenByEmail(accessTokenUserEmail);
 
-            //JwtAuthResultDTO jwtResult = _jwtAuthManagerService.RefreshDevHack(request, accesTokenUserId, emailFromTheDb, principalClaims); FT: REFRESH HACK
-            JwtAuthResultDTO jwtResult = _jwtAuthManagerService.Refresh(request, accesTokenUserId, emailFromTheDb, principalClaims);
+            JwtAuthResultDTO jwtResult = _jwtAuthManagerService.Refresh(refreshTokenRequestDTO, accesTokenUserId, emailFromTheDb);
 
-            return new LoginResultDTO
+            return new AuthResultDTO
             {
                 UserId = (long)jwtResult.UserId, // Here it will always be user, if there is not, it will break earlier
                 Email = jwtResult.UserEmail,
@@ -268,7 +223,7 @@ namespace Soft.Generator.Security.Services
             };
         }
 
-        public async Task<string> GetCurrentUserEmailByIdAsync<TUser>(long id) where TUser : class, IUser, new()
+        public async Task<string> GetCurrentUserEmailByIdAsync(long id)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -276,7 +231,7 @@ namespace Soft.Generator.Security.Services
             });
         }
 
-        public async Task<TUser> GetUserByEmailAsync<TUser>(string email) where TUser : class, IUser
+        public async Task<TUser> GetUserByEmailAsync(string email)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -288,24 +243,18 @@ namespace Soft.Generator.Security.Services
 
         #region Helpers
 
-        private JwtAuthResultDTO GetJwtAuthResultWithRefreshDTO(string browserId, long userId, string userEmail)
+        private JwtAuthResultDTO GetJwtAuthResultWithRefreshDTO(long userId, string userEmail, string browserId)
         {
-            List<Claim> claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.PrimarySid, userId.ToString()),
-                new Claim(ClaimTypes.Email, userEmail),
-            };
-
             string ipAddress = _authenticationService.GetIPAddress();
 
-            JwtAuthResultDTO jwtAuthResult = _jwtAuthManagerService.GenerateAccessAndRefreshTokens(userEmail, claims, ipAddress, browserId, userId);
+            JwtAuthResultDTO jwtAuthResult = _jwtAuthManagerService.GenerateAccessAndRefreshTokens(userId, userEmail, ipAddress, browserId);
 
             return jwtAuthResult;
         }
 
-        private LoginResultDTO GetLoginResultDTO(long userId, string userEmail, JwtAuthResultDTO jwtAuthResultDTO)
+        private AuthResultDTO GetAuthResultDTO(long userId, string userEmail, JwtAuthResultDTO jwtAuthResultDTO)
         {
-            return new LoginResultDTO
+            return new AuthResultDTO
             {
                 UserId = userId,
                 Email = userEmail,
@@ -314,7 +263,7 @@ namespace Soft.Generator.Security.Services
             };
         }
 
-        private async Task<TUser> Authenticate<TUser>(LoginDTO loginDTO) where TUser : class, IUser, new()
+        private async Task<TUser> Authenticate(LoginDTO loginDTO)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -323,17 +272,10 @@ namespace Soft.Generator.Security.Services
                     .SingleOrDefaultAsync();
 
                 if (currentUser == null)
-                    throw new BusinessException("You have entered a wrong email."); // TODO FT: Resources
+                    throw new BusinessException(SharedTerms.AuthenticationEmailDoesNotExistException);
 
-                if (currentUser.NumberOfFailedAttemptsInARow > SettingsProvider.Current.NumberOfFailedLoginAttemptsInARowToDisableUser) // FT: It could never be 21 if the value from settings is 20, but putting > just in case
-                    throw new BusinessException($"You have entered the wrong password {SettingsProvider.Current.NumberOfFailedLoginAttemptsInARowToDisableUser} times in a row, your account has been disabled, please click on \"Forgot password?\".");
-
-                if (BCrypt.Net.BCrypt.EnhancedVerify(loginDTO.Password, currentUser.Password) == false)
-                {
-                    currentUser.NumberOfFailedAttemptsInARow++;
-                    await _context.SaveChangesAsync();
-                    throw new BusinessException("You have entered a wrong password.");
-                }
+                if (currentUser.IsDisabled == true)
+                    throw new BusinessException(SharedTerms.DisabledAccountException);
 
                 return currentUser;
             });
@@ -354,13 +296,13 @@ namespace Soft.Generator.Security.Services
 
         #region User
 
-        public async Task<List<NamebookDTO<int>>> LoadRoleNamebookListForUserExtended<TUser>(long userId) where TUser : class, IUser, new()
+        public async Task<List<NamebookDTO<int>>> LoadRoleNamebookListForUserExtended(long userId)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                await _authorizationService.AuthorizeAndThrowAsync<TUser>(Enums.PermissionCodes.ReadRole);
+                //await _authorizationService.AuthorizeAndThrowAsync<TUser>(Enums.PermissionCodes.ReadRole);
 
-                return _context.DbSet<TUser>()
+                return await _context.DbSet<TUser>()
                     .AsNoTracking()
                     .Where(x => x.Id == userId)
                     .SelectMany(x => x.Roles)
@@ -370,11 +312,11 @@ namespace Soft.Generator.Security.Services
                         Id = role.Id,
                         DisplayName = role.Name,
                     })
-                    .ToList();
+                    .ToListAsync();
             });
         }
 
-        public async Task UpdateRoleListForUser<TUser>(long userId, List<int> selectedRoleIds) where TUser : class, IUser, new()
+        public async Task UpdateRoleListForUser(long userId, List<int> selectedRoleIds)
         {
             await _context.WithTransactionAsync(async () =>
             {
@@ -399,40 +341,40 @@ namespace Soft.Generator.Security.Services
 
         #region Role
 
-        public async Task UpdateUserListForRole<TUser>(int roleId, List<long> selectedUserIds) where TUser : class, IUser, new()
+        public async Task UpdateUserListForRole(int roleId, List<long> selectedUserIds)
         {
             if (selectedUserIds == null)
                 return;
 
             await _context.WithTransactionAsync(async () =>
             {
-                List<RoleUser> roleUserList = await _context.DbSet<RoleUser>().Where(x => x.RolesId == roleId).ToListAsync();
+                List<UserRole> roleUserList = await _context.DbSet<UserRole>().Where(x => x.RoleId == roleId).ToListAsync();
 
-                foreach (RoleUser roleUser in roleUserList)
+                foreach (UserRole roleUser in roleUserList)
                 {
-                    if (selectedUserIds.Contains(roleUser.UsersId))
-                        selectedUserIds.Remove(roleUser.UsersId);
+                    if (selectedUserIds.Contains(roleUser.UserId))
+                        selectedUserIds.Remove(roleUser.UserId);
                     else
-                        _context.DbSet<RoleUser>().Remove(roleUser);
+                        _context.DbSet<UserRole>().Remove(roleUser);
                 }
 
                 foreach (long selectedUserId in selectedUserIds)
                 {
-                    RoleUser roleUser = new RoleUser 
+                    UserRole roleUser = new UserRole
                     {
-                        RolesId = roleId,
-                        UsersId = selectedUserId
+                        RoleId = roleId,
+                        UserId = selectedUserId
                     };
 
-                    await _context.DbSet<RoleUser>().AddAsync(roleUser);
+                    await _context.DbSet<UserRole>().AddAsync(roleUser);
                 }
-                
+
 
                 await _context.SaveChangesAsync();
             });
         }
 
-        public async Task<List<NamebookDTO<long>>> LoadUserExtendedNamebookListForRole<TUser>(long roleId) where TUser : class, IUser, new()
+        public async Task<List<NamebookDTO<long>>> LoadUserExtendedNamebookListForRole(long roleId)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -450,13 +392,13 @@ namespace Soft.Generator.Security.Services
             });
         }
 
-        public async Task<RoleDTO> SaveRoleAndReturnDTOExtendedAsync<TUser>(RoleSaveBodyDTO roleSaveBodyDTO) where TUser : class, IUser, new()
+        public async Task<RoleDTO> SaveRoleAndReturnDTOExtendedAsync(RoleSaveBodyDTO roleSaveBodyDTO)
         {
             return await _context.WithTransactionAsync(async () =>
             {
                 RoleDTO savedRoleDTO = await SaveRoleAndReturnDTOAsync(roleSaveBodyDTO.RoleDTO);
 
-                await UpdateUserListForRole<TUser>(savedRoleDTO.Id, roleSaveBodyDTO.SelectedUserIds);
+                await UpdateUserListForRole(savedRoleDTO.Id, roleSaveBodyDTO.SelectedUserIds);
                 await UpdatePermissionListForRole(savedRoleDTO.Id, roleSaveBodyDTO.SelectedPermissionIds);
 
                 return savedRoleDTO;
@@ -465,112 +407,101 @@ namespace Soft.Generator.Security.Services
 
         #endregion
 
-        #region Notification
+        //#region Notification
 
-        public async Task UpdateUserListForNotification<TUser>(long notificationId, bool isMarkAsRead, List<long> selectedUserIds) where TUser : class, IUser, new()
-        {
-            if (selectedUserIds == null)
-                return;
+        //public async Task UpdateUserListForNotification<TUser>(long notificationId, bool isMarkAsRead, List<long> selectedUserIds) where TUser : class, IUser, new()
+        //{
+        //    if (selectedUserIds == null)
+        //        return;
 
-            await _context.WithTransactionAsync(async () =>
-            {
-                List<NotificationUser> notificationUserList = await _context.DbSet<NotificationUser>().Where(x => x.NotificationsId == notificationId).ToListAsync();
+        //    await _context.WithTransactionAsync(async () =>
+        //    {
+        //        List<NotificationUser> notificationUserList = await _context.DbSet<NotificationUser>().Where(x => x.NotificationsId == notificationId).ToListAsync();
 
-                foreach (NotificationUser notificationUser in notificationUserList)
-                {
-                    if (selectedUserIds.Contains(notificationUser.UsersId))
-                        selectedUserIds.Remove(notificationUser.UsersId);
-                    else
-                        _context.DbSet<NotificationUser>().Remove(notificationUser);
-                }
+        //        foreach (NotificationUser notificationUser in notificationUserList)
+        //        {
+        //            if (selectedUserIds.Contains(notificationUser.UsersId))
+        //                selectedUserIds.Remove(notificationUser.UsersId);
+        //            else
+        //                _context.DbSet<NotificationUser>().Remove(notificationUser);
+        //        }
 
-                foreach (long selectedUserId in selectedUserIds)
-                {
-                    NotificationUser notificationUser = new NotificationUser
-                    {
-                        NotificationsId = notificationId,
-                        UsersId = selectedUserId,
-                        IsMarkedAsRead = isMarkAsRead,
-                    };
+        //        foreach (long selectedUserId in selectedUserIds)
+        //        {
+        //            NotificationUser notificationUser = new NotificationUser
+        //            {
+        //                NotificationsId = notificationId,
+        //                UsersId = selectedUserId,
+        //                IsMarkedAsRead = isMarkAsRead,
+        //            };
 
-                    await _context.DbSet<NotificationUser>().AddAsync(notificationUser);
-                }
+        //            await _context.DbSet<NotificationUser>().AddAsync(notificationUser);
+        //        }
 
 
-                await _context.SaveChangesAsync();
-            });
-        }
+        //        await _context.SaveChangesAsync();
+        //    });
+        //}
 
-        public async Task<List<NamebookDTO<long>>> LoadUserExtendedNamebookListForNotification<TUser>(long notificationId) where TUser : class, IUser, new()
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                await _authorizationService.AuthorizeAndThrowAsync<TUser>(PermissionCodes.ReadUserExtended);
+        //public async Task<List<NamebookDTO<long>>> LoadUserExtendedNamebookListForNotification<TUser>(long notificationId) where TUser : class, IUser, new()
+        //{
+        //    return await _context.WithTransactionAsync(async () =>
+        //    {
+        //        await _authorizationService.AuthorizeAndThrowAsync<TUser>(PermissionCodes.ReadUserExtended);
 
-                return await _context.DbSet<TUser>()
-                    .AsNoTracking()
-                    .Where(x => x.Notifications.Any(x => x.Id == notificationId))
-                    .Select(x => new NamebookDTO<long>
-                    {
-                        Id = x.Id,
-                        DisplayName = x.Email,
-                    })
-                    .ToListAsync();
-            });
-        }
+        //        return await _context.DbSet<TUser>()
+        //            .AsNoTracking()
+        //            .Where(x => x.Notifications.Any(x => x.Id == notificationId))
+        //            .Select(x => new NamebookDTO<long>
+        //            {
+        //                Id = x.Id,
+        //                DisplayName = x.Email,
+        //            })
+        //            .ToListAsync();
+        //    });
+        //}
 
-        public async Task<NotificationDTO> SaveNotificationAndReturnDTOExtendedAsync<TUser>(NotificationSaveBodyDTO notificationSaveBodyDTO) where TUser : class, IUser, new()
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                NotificationDTO savedNotificationDTO = await SaveNotificationAndReturnDTOAsync(notificationSaveBodyDTO.NotificationDTO);
+        //public async Task<TableResponseDTO<NotificationDTO>> LoadNotificationListForTheCurrentUser<TUser>(TableFilterDTO tableFilterDTO) where TUser : class, IUser, new()
+        //{
+        //    TableResponseDTO<NotificationDTO> result = new TableResponseDTO<NotificationDTO>();
+        //    long currentUserId = _authenticationService.GetCurrentUserId(); // FT: Not doing user.Notifications, because he could have a lot of them.
 
-                await UpdateUserListForNotification<TUser>(savedNotificationDTO.Id, notificationSaveBodyDTO.IsMarkedAsRead, notificationSaveBodyDTO.SelectedUserIds);
+        //    await _context.WithTransactionAsync(async () =>
+        //    {
+        //        int count = await _context.DbSet<NotificationUser>().Where(x => x.UsersId == currentUserId).CountAsync();
 
-                return savedNotificationDTO;
-            });
-        }
+        //        List<NotificationDTO> notificationsDTO = await _context.DbSet<TUser>()
+        //            .Where(x => x.Id == currentUserId)
+        //            .SelectMany(x => x.Notifications)
+        //            .OrderByDescending(x => x.CreatedAt)
+        //            .Skip(tableFilterDTO.First)
+        //            .Take(tableFilterDTO.Rows)
+        //            .Select(x => new NotificationDTO
+        //            {
+        //                Id = x.Id,
+        //                Title = x.Title,
+        //                Description = x.Description,
+        //                IsMarkedAsRead = _context.DbSet<NotificationUser>().Where(i => i.NotificationsId == x.Id).Select(x => x.IsMarkedAsRead).SingleOrDefault()
+        //            })
+        //            .ToListAsync();
+        //        result.Data = notificationsDTO;
+        //        result.TotalRecords = count;
+        //    });
 
-        public async Task<TableResponseDTO<NotificationDTO>> LoadNotificationListForTheCurrentUser<TUser>(TableFilterDTO tableFilterDTO) where TUser : class, IUser, new()
-        {
-            TableResponseDTO<NotificationDTO> result = new TableResponseDTO<NotificationDTO>();
-            long currentUserId = _authenticationService.GetCurrentUserId(); // FT: Not doing user.Notifications, because he could have a lot of them.
+        //    return result;
+        //}
 
-            await _context.WithTransactionAsync(async () =>
-            {
-                int count = await _context.DbSet<NotificationUser>().Where(x => x.UsersId == currentUserId).CountAsync();
+        //public async Task<int> GetUnreadNotificationCountForTheCurrentUser()
+        //{
+        //    long currentUserId = _authenticationService.GetCurrentUserId();
 
-                List<NotificationDTO> notificationsDTO = await _context.DbSet<TUser>()
-                    .Where(x => x.Id == currentUserId)
-                    .SelectMany(x => x.Notifications)
-                    .OrderByDescending(x => x.CreatedAt)
-                    .Skip(tableFilterDTO.First)
-                    .Take(tableFilterDTO.Rows)
-                    .Select(x => new NotificationDTO
-                    {
-                        Id = x.Id,
-                        Title = x.Title,
-                        Description = x.Description,
-                        IsMarkedAsRead = _context.DbSet<NotificationUser>().Where(i => i.NotificationsId == x.Id).Select(x => x.IsMarkedAsRead).SingleOrDefault()
-                    })
-                    .ToListAsync();
-                result.Data = notificationsDTO;
-                result.TotalRecords = count;
-            });
+        //    return await _context.WithTransactionAsync(async () =>
+        //    {
+        //        return await _context.DbSet<NotificationUser>().Where(x => x.UsersId == currentUserId && x.IsMarkedAsRead == false).CountAsync();
+        //    });
+        //}
 
-            return result;
-        }
-
-        public async Task<int> GetUnreadNotificationCountForTheCurrentUser()
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                long currentUserId = _authenticationService.GetCurrentUserId();
-                return await _context.DbSet<NotificationUser>().Where(x => x.UsersId == currentUserId && x.IsMarkedAsRead != true).CountAsync();
-            });
-        }
-
-        #endregion
+        //#endregion
 
     }
 }

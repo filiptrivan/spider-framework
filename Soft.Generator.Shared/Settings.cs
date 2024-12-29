@@ -13,11 +13,15 @@ namespace Soft.Generator.Shared
 
     public class Settings
     {
+        public string ConnectionString { get; set; }
+
+
         public string EmailSender { get; set; }
         public string SmtpHost { get; set; }
         public int SmtpPort { get; set; }
         public string SmtpUser { get; set; }
         public string SmtpPass { get; set; }
+
 
         public string JwtKey { get; set; }
         public string JwtIssuer { get; set; }
@@ -25,5 +29,9 @@ namespace Soft.Generator.Shared
         public int ClockSkewMinutes { get; set; }
         public string FrontendUrl { get; set; }
 
+
+        public string BlobStorageConnectionString { get; set; }
+        public string BlobStorageUrl { get; set; }
+        public string BlobStorageContainerName { get; set; }
     }
 }

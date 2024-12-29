@@ -15,36 +15,31 @@ using System.Net;
 
 namespace Soft.Generator.Security.Interface
 {
+    // TODO FT: Sort the arguments of the methods
     public interface IJwtAuthManager
     {
         IImmutableDictionary<string, RefreshTokenDTO> UsersRefreshTokensReadOnlyDictionary { get; }
         IImmutableDictionary<string, RegistrationVerificationTokenDTO> UsersRegistrationVerificationTokensReadOnlyDictionary { get; }
         IImmutableDictionary<string, LoginVerificationTokenDTO> UsersLoginVerificationTokensReadOnlyDictionary { get; }
-        IImmutableDictionary<string, ForgotPasswordVerificationTokenDTO> UsersForgotPasswordVerificationTokensReadOnlyDictionary { get; }
 
         // Refresh
-        JwtAuthResultDTO GenerateAccessAndRefreshTokens(string userEmail, List<Claim> claims, string ipAddress, string browserId, long userId);
-        JwtAuthResultDTO Refresh(RefreshTokenRequestDTO request, long dbUserId, string dbUserEmail, List<Claim> principalClaims);
-        JwtAuthResultDTO RefreshDevHack(RefreshTokenRequestDTO request, long dbUserId, string dbUserEmail, List<Claim> principalClaims);
-        List<Claim> GetPrincipalClaimsForAccessToken(RefreshTokenRequestDTO request, string accessToken);
+        JwtAuthResultDTO GenerateAccessAndRefreshTokens(long userId, string userEmail, string ipAddress, string browserId);
+        List<Claim> GenerateClaims(long userId, string userEmail);
+        JwtAuthResultDTO Refresh(RefreshTokenRequestDTO request, long dbUserId, string dbUserEmail);
+        List<Claim> GetClaimsForTheAccessToken(RefreshTokenRequestDTO request, string accessToken);
         void RemoveExpiredRefreshTokens();
         void RemoveRefreshTokenByEmail(string email);
-        (ClaimsPrincipal, JwtSecurityToken) DecodeJwtToken(string token);
-        void RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email);
+        public void Logout(string browserId, string email);
+        bool RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email);
 
         // Login verification
         LoginVerificationTokenDTO ValidateAndGetLoginVerificationTokenDTO(string verificationToken, string browserId, string email);
         string GenerateAndSaveLoginVerificationCode(string userEmail, long userId, string browserId);
         void RemoveLoginVerificationTokensByEmail(string email);
 
-        // Forgot password verification
-        ForgotPasswordVerificationTokenDTO ValidateAndGetForgotPasswordVerificationTokenDTO(string verificationToken, string browserId, string email);
-        string GenerateAndSaveForgotPasswordVerificationCode(string userEmail, long userId, string newPassword, string browserId);
-        void RemoveForgotPasswordVerificationTokensByEmail(string email);
-
         // Registration verification
         RegistrationVerificationTokenDTO ValidateAndGetRegistrationVerificationTokenDTO(string verificationToken, string browserId, string email);
-        string GenerateAndSaveRegistrationVerificationCode(string userEmail, string password, string browserId);
+        string GenerateAndSaveRegistrationVerificationCode(string userEmail, string browserId);
         void RemoveRegistrationVerificationTokensByEmail(string email);
     }
 }

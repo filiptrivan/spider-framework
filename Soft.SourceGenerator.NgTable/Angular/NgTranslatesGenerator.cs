@@ -29,57 +29,93 @@ namespace Soft.SourceGenerator.NgTable.Angular
 //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
-                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationDTO(s),
-                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationDTO(ctx))
+                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationAllReferenced(s),
+                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationAllReferenced(ctx))
                 .Where(static c => c is not null);
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-            static (spc, source) => Execute(source, spc));
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetDTOClassesFromReferencedAssemblies(context);
+
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedClassesDTO, SourceProductionContext context)
         {
-            if (classes.Count <= 1) return;
+            if (classes.Count <= 1) 
+                return;
 
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgTranslatesGenerator), classes);
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
+            //List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
+
+            if (outputPath == null)
+                return;
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
-            string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
+            //string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
 
             StringBuilder sbClassNames = new StringBuilder();
             StringBuilder sbLabels = new StringBuilder();
             List<SoftProperty> DTOProperties = new List<SoftProperty>();
 
-            foreach (SoftClass DTOClass in DTOClasses)
+            foreach (SoftClass DTOClass in referencedClassesDTO)
                 DTOProperties.AddRange(DTOClass.Properties);
 
             sbClassNames.AppendLine($$"""
-export function getTranslatedClassName{{projectName}}(name: string): string
-{
-    switch(name) 
+import { Injectable } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class TranslateClassNamesGeneratedService {
+
+    constructor(
+    private translocoService: TranslocoService
+    ) {
+    }
+
+    translate(name: string): string
     {
-{{string.Join("\n", GetCasesForClassNameTranslate(DTOClasses))}}
-        default:
-            return null;
+        switch(name) 
+        {
+{{string.Join("\n", GetCasesForClassNameTranslate(referencedClassesDTO))}}
+            default:
+                return null;
+        }
     }
 }
 """);
 
             sbLabels.AppendLine($$"""
-export function getTranslatedLabel{{projectName}}(name: string): string
-{
-    switch(name) 
+import { Injectable } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class TranslateLabelsGeneratedService {
+
+    constructor(
+        private translocoService: TranslocoService
+    ) {
+    }
+
+    translate(name: string): string
     {
+        switch(name) 
+        {
 {{string.Join("\n", GetCasesForLabelTranslate(DTOProperties))}}
-        default:
-            return null;
+            default:
+                return null;
+        }
     }
 }
 """);
             
-            Helper.WriteToTheFile(sbClassNames.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-class-names.generated.ts");
-            Helper.WriteToTheFile(sbLabels.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-labels.generated.ts");
+            Helper.WriteToTheFile(sbClassNames.ToString(), $@"{outputPath}\class-names.generated.ts");
+            Helper.WriteToTheFile(sbLabels.ToString(), $@"{outputPath}\labels.generated.ts");
         }
 
         private static List<string> GetCasesForLabelTranslate(List<SoftProperty> DTOProperties)
@@ -88,15 +124,20 @@ export function getTranslatedLabel{{projectName}}(name: string): string
             
             foreach (SoftProperty DTOProperty in DTOProperties.DistinctBy(x => x.IdentifierText))
             {
-                if (DTOProperty.IdentifierText.EndsWith("Id") && DTOProperty.IdentifierText != "Id")
-                    DTOProperty.IdentifierText = DTOProperty.IdentifierText.Substring(0, DTOProperty.IdentifierText.Length - 2);
+                string propName = DTOProperty.IdentifierText;
 
-                if (DTOProperty.IdentifierText.EndsWith("DisplayName") && DTOProperty.IdentifierText != "DisplayName")
+                if (propName.EndsWith("Id") && propName != "Id")
+                    propName = propName.Substring(0, propName.Length - 2);
+
+                if (propName.EndsWith("DisplayName") && propName != "DisplayName")
                     continue;
 
+                if (propName.EndsWith("CommaSeparated") && propName != "CommaSeparated")
+                    propName = propName.Replace("CommaSeparated", "");
+
                 result.Add($$""""
-        case '{{DTOProperty.IdentifierText.FirstCharToLower()}}':
-            return $localize`:@@{{DTOProperty.IdentifierText}}:{{DTOProperty.IdentifierText}}`;
+            case '{{propName.FirstCharToLower()}}':
+                return this.translocoService.translate('{{propName}}');
 """");
             }
 
@@ -110,8 +151,8 @@ export function getTranslatedLabel{{projectName}}(name: string): string
             foreach (string className in DTOclasses.DistinctBy(x => x.Name).Select(x => x.Name.Replace("DTO", "")))
             {
                 result.Add($$""""
-        case '{{className}}':
-            return $localize`:@@{{className}}:{{className}}`;
+            case '{{className}}':
+                return this.translocoService.translate('{{className}}');
 """");
             }
 

@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace Soft.Generator.Security.DTO
 {
-    public class RoleSaveBodyDTO
+    public partial class RoleSaveBodyDTO
     {
+        //public RoleDTO RoleDTO { get; set; }
         public List<int> SelectedPermissionIds {  get; set; }
         public List<long> SelectedUserIds { get; set; }
-        public RoleDTO RoleDTO { get; set; }
     }
 }

@@ -46,12 +46,15 @@ namespace Soft.SourceGenerator.NgTable.Angular
         }
         private static void Execute(IList<EnumDeclarationSyntax> enums, IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
         {
-            if (enums.Count == 0) return;
-
-            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
+            if (enums.Count == 0) 
+                return;
 
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgEnumsGenerator), classes);
-            if (outputPath == null) return;
+
+            if (outputPath == null) 
+                return;
+
+            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security

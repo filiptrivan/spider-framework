@@ -6,6 +6,7 @@ using OfficeOpenXml.FormulaParsing.Excel.Functions.RefAndLookup;
 using Soft.Generator.Security.DTO;
 using Soft.Generator.Security.Interface;
 using Soft.Generator.Shared.SoftExceptions;
+using Soft.Generator.Shared.Terms;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.IdentityModel.Tokens.Jwt;
@@ -29,9 +30,6 @@ namespace Soft.Generator.Security.Services
         public IImmutableDictionary<string, LoginVerificationTokenDTO> UsersLoginVerificationTokensReadOnlyDictionary => _usersLoginVerificationTokens.ToImmutableDictionary();
         private readonly ConcurrentDictionary<string, LoginVerificationTokenDTO> _usersLoginVerificationTokens = new ConcurrentDictionary<string, LoginVerificationTokenDTO>();
 
-        public IImmutableDictionary<string, ForgotPasswordVerificationTokenDTO> UsersForgotPasswordVerificationTokensReadOnlyDictionary => _usersForgotPasswordVerificationTokens.ToImmutableDictionary();
-        private readonly ConcurrentDictionary<string, ForgotPasswordVerificationTokenDTO> _usersForgotPasswordVerificationTokens = new ConcurrentDictionary<string, ForgotPasswordVerificationTokenDTO>();
-
         private static readonly Random Random = new Random();
 
         public JwtAuthManagerService()
@@ -41,71 +39,52 @@ namespace Soft.Generator.Security.Services
         #region Refresh
 
         /// <summary>
-        /// 1. Stole refresh but doesn't have access - we validate if he has access ()
+        /// 1. Stole refresh but doesn't have access - we validate if he has access
         /// 2. Stole a refresh from one user, he has his own valid access - we log both of them out because they have different emails
         /// 3. Stole access but no refresh
         /// 4. Stole both - we can't do anything to him, we only try to stop him if he's on a different ip address
         /// </summary>
-        public JwtAuthResultDTO Refresh(RefreshTokenRequestDTO request, long dbUserId, string dbUserEmail, List<Claim> principalClaims)
+        public JwtAuthResultDTO Refresh(RefreshTokenRequestDTO request, long userIdFromAccessToken, string userEmailFromAccessToken)
         {
             RemoveExpiredRefreshTokens();
-            // FT: We can assume that dbUserEmail and refreshTokenEmail are the same, because if they are not anyway we will go through and delete everything
-            RemoveTokensForMoreThenAllowedBrowsers(dbUserEmail);
+            // FT: We can assume that userEmailFromAccessToken and refreshTokenEmail are the same, because if they are not anyway we will go through and delete everything
+            RemoveTokensForMoreThenAllowedBrowsers(userEmailFromAccessToken);
 
             // FT: Sometimes in development mode, when the multiple tabs are open, on the save of the angular app we refresh the tabs in the same time, so we don't even manage to change the value of the refresh token in the local storage,
             // and we send another request with the same refresh token as the previous one, and since we deleted it, it doesn't exist
             if (!_usersRefreshTokens.TryGetValue(request.RefreshToken, out RefreshTokenDTO existingRefreshToken))
             {
-                throw new SecurityTokenException("Invalid token, login again."); // The token has expired
+                throw new SecurityTokenException(SharedTerms.ExpiredRefreshTokenException);
             }
             // Unauthenticating both user, this could happen if someone stoled access token (aleksa.trivan), and has own valid refresh token (filip.trivan), he could indefinedly generate access tokens for the (aleksa.trivan) then
             // This is not solving this problem (hacker can not change claims in the jwt token): https://stackoverflow.com/questions/27301557/if-you-can-decode-jwt-how-are-they-secure we are doing that with Decoding JWT token.
             // It is not posible for the user to change the email of the refresh token, even if it is, if the user change the email in the refresh token, it doesn't matter, we will find based on the refresh token code not email
-            if (existingRefreshToken.Email != dbUserEmail) // FT: Could happen if someone gives me access and refresh for different users, i don't know which of these he stole so i unauthenticate both
+            if (existingRefreshToken.Email != userEmailFromAccessToken) // FT: Could happen if someone gives me access and refresh for different users, i don't know which of these he stole so i unauthenticate both
             {
                 RemoveRefreshTokenByEmail(existingRefreshToken.Email);
-                RemoveRefreshTokenByEmail(dbUserEmail);
-                throw new SecurityTokenException("Invalid token, login again.");
+                RemoveRefreshTokenByEmail(userEmailFromAccessToken);
+                throw new HackerException("The email can't be different in refresh and access token.");
             }
             if (SettingsProvider.Current.AllowTheUseOfAppWithDifferentIpAddresses == false && IsRefreshTokenWithNewIpAddress(existingRefreshToken.Email, existingRefreshToken.IpAddress) == true)
             {
                 // cuvas device-ove koje je cesto korisio, guras ih u familiju uredjaja, po nekom algoritmu odredi neki koji ti se cini sumnjiv i
                 // na njemu mu trazi multifaktor aut. ako je klijent uopste trazio multifaktor
                 RemoveRefreshTokenByEmail(existingRefreshToken.Email); // Don't need to delete for userDTO also, because we already did that
-                throw new SecurityTokenException("Please login again, you can't use the application with two different IP addresses at the same time.");
+                throw new SecurityTokenException(SharedTerms.TwoDifferentIpAddressesRefreshException);
             }
 
-            return GenerateAccessAndRefreshTokens(dbUserEmail, principalClaims, existingRefreshToken.IpAddress, request.BrowserId, dbUserId); // need to recover the original claims
-        }
-
-        // FT: REFRESH HACK
-        public JwtAuthResultDTO RefreshDevHack(RefreshTokenRequestDTO request, long dbUserId, string dbUserEmail, List<Claim> principalClaims)
-        {
-            RefreshTokenDTO refreshTokenDTO = new RefreshTokenDTO
-            {
-                BrowserId = request.BrowserId,
-                Email = "filiptrivan5@gmail.com",
-                ExpireAt = DateTime.Now.AddDays(30),
-                IpAddress = "1",
-                TokenString = request.RefreshToken,
-            };
-
-            _usersRefreshTokens.AddOrUpdate("1", refreshTokenDTO, (_, _) => refreshTokenDTO);
-
-            if (!_usersRefreshTokens.TryGetValue(request.RefreshToken, out RefreshTokenDTO existingRefreshToken))
-            {
-                throw new SecurityTokenException("Invalid token, login again."); // The token has expired
-            }
-
-            return GenerateAccessAndRefreshTokens(dbUserEmail, principalClaims, existingRefreshToken.IpAddress, request.BrowserId, dbUserId); // need to recover the original claims
+            return GenerateAccessAndRefreshTokens(userIdFromAccessToken, userEmailFromAccessToken, existingRefreshToken.IpAddress, request.BrowserId); // need to recover the original claims
         }
 
         /// <summary>
         /// Password and verificationExpiration (minutes) are only needed if we are registering the account, for email verification
         /// </summary>
-        public JwtAuthResultDTO GenerateAccessAndRefreshTokens(string userEmail, List<Claim> claims, string ipAddress, string browserId, long userId)
+        public JwtAuthResultDTO GenerateAccessAndRefreshTokens(long userId, string userEmail, string ipAddress, string browserId)
         {
+            List<Claim> claims = GenerateClaims(userId, userEmail);
+
             string accessToken = GenerateAccessToken(claims);
+
             RefreshTokenDTO refreshTokenDTO = new RefreshTokenDTO
             {
                 Email = userEmail,
@@ -114,7 +93,9 @@ namespace Soft.Generator.Security.Services
                 TokenString = GenerateRandomTokenString(),
                 ExpireAt = DateTime.Now.AddMinutes(SettingsProvider.Current.RefreshTokenExpiration),
             };
-            RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(browserId, userEmail); // And email also, because the one man can be logged in on the same browser as multiple users
+
+            RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(browserId, userEmail); // FT: Email also because the hacker could manipulate browserId, but he can't email
+
             // It will always generate new token,
             // it is beneficial if the user open the application from different devices
             // if the user open the application on the multiple tabs in the same browser, we are working with the local storage so it will not make the difference
@@ -125,6 +106,15 @@ namespace Soft.Generator.Security.Services
                 UserEmail = userEmail,
                 AccessToken = accessToken,
                 Token = refreshTokenDTO
+            };
+        }
+
+        public List<Claim> GenerateClaims(long userId, string userEmail)
+        {
+            return new List<Claim>
+            {
+                new Claim(ClaimTypes.PrimarySid, userId.ToString()),
+                new Claim(ClaimTypes.Email, userEmail),
             };
         }
 
@@ -148,14 +138,14 @@ namespace Soft.Generator.Security.Services
             return accessToken;
         }
 
-        public List<Claim> GetPrincipalClaimsForAccessToken(RefreshTokenRequestDTO request, string accessToken)
+        public List<Claim> GetClaimsForTheAccessToken(RefreshTokenRequestDTO request, string accessToken)
         {
             List<Claim> principalClaims;
 
             try
             {
-                var (principal, jwtToken) = DecodeJwtToken(accessToken);
-                principalClaims = principal.Claims.ToList();
+                JwtSecurityToken jwtToken = ValidateJwtToken(accessToken); // FT: We are not validating the jwt token here, we are just reading claims so we don't need to go to the database
+                principalClaims = jwtToken.Claims.ToList();
             }
             catch (Exception)
             {
@@ -166,18 +156,15 @@ namespace Soft.Generator.Security.Services
             return principalClaims; // FT: Its not possible to return null, if there is no exception it will return, if there is the catch block will throw
         }
 
-        /// <summary>
-        /// FT: I don't know do i even need to validate this old access token for Refresh
-        /// </summary>
-        public (ClaimsPrincipal, JwtSecurityToken) DecodeJwtToken(string token)
+        private JwtSecurityToken ValidateJwtToken(string accessToken)
         {
-            if (string.IsNullOrWhiteSpace(token))
-                throw new SecurityTokenException("Invalid token.");
+            if (string.IsNullOrWhiteSpace(accessToken))
+                throw new SecurityTokenException(SharedTerms.ExpiredRefreshTokenException); // FT: It's not realy this reason, but it's easier then realy explaining the user what has happened, this could happen if he deleted the cache from the browser
 
             byte[] secretKey = Encoding.UTF8.GetBytes(SettingsProvider.Current.JwtKey);
 
-            ClaimsPrincipal principal = new JwtSecurityTokenHandler()
-                .ValidateToken(token,
+            new JwtSecurityTokenHandler()
+                .ValidateToken(accessToken,
                     new TokenValidationParameters
                     {
                         ValidateIssuer = true,
@@ -189,25 +176,48 @@ namespace Soft.Generator.Security.Services
                         ValidateLifetime = false, // If the token has expired, it will not be valid, so we don't need to do something like this: if (existingRefreshToken.ExpireAt - jwtToken.ExpireAt > SettingsProvider.Current.RefreshTokenExpiration - SettingsProvider.Current.AccessTokenExpiration) ...
                         ClockSkew = TimeSpan.FromMinutes(SettingsProvider.Current.ClockSkewMinutes)
                     },
-            out var validatedToken);
+            out SecurityToken validatedToken);
 
             JwtSecurityToken jwtToken = validatedToken as JwtSecurityToken;
 
             if (jwtToken == null || !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256Signature)) // Validating JWT token, checking if it has changed claims etc.
-                throw new SecurityTokenException("Invalid token.");
+                throw new HackerException("Hacker is trying to change the jwt token.");
 
-            return (principal, jwtToken);
+            return jwtToken;
         }
 
-        public void RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email)
+        /// <summary>
+        /// FT: If the malicious user is deleting browser id, and sending request with refresh token like that we will delete every refresh token for that user
+        /// </summary>
+        public void Logout(string browserId, string email)
+        {
+            bool foundTheUser = RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(browserId, email);
+
+            if (foundTheUser == false)
+            {
+                RemoveRefreshTokenByEmail(email);
+            }
+        }
+
+        /// <summary>
+        /// If we found the user => true
+        /// If we didn't find the user => false
+        /// </summary>
+        public bool RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email)
         {
             // TODO FT: Log if the email is null
 
-            KeyValuePair<string, RefreshTokenDTO> refreshToken = _usersRefreshTokens.Where(x => x.Value.BrowserId == browserId && x.Value.Email == email).SingleOrDefault(); // FT: REFRESH HACK
-            if (!string.IsNullOrEmpty(refreshToken.Key))
-                _usersRefreshTokens.TryRemove(refreshToken.Key, out _);
+            KeyValuePair<string, RefreshTokenDTO> refreshToken = _usersRefreshTokens.Where(x => x.Value.BrowserId == browserId && x.Value.Email == email).SingleOrDefault();
+
+            if (string.IsNullOrEmpty(refreshToken.Key))
+            {
+                return false;
+            }
             else
-                RemoveRefreshTokenByEmail(email); // FT: if someone deleted the browser id, he could't log out if we don't do this.
+            {
+                _usersRefreshTokens.TryRemove(refreshToken.Key, out _);
+                return true;
+            }
         }
 
         public void RemoveExpiredRefreshTokens()
@@ -257,7 +267,6 @@ namespace Soft.Generator.Security.Services
 
         #endregion
 
-
         #region Verification
 
         #region Login
@@ -270,17 +279,16 @@ namespace Soft.Generator.Security.Services
             LoginVerificationTokenDTO loginVerificationTokenDTO = _usersLoginVerificationTokens.Where(x => x.Key == verificationTokenKey && x.Value.Email == email && x.Value.BrowserId == browserId).SingleOrDefault().Value;
 
             if (loginVerificationTokenDTO == null)
-            {
-                throw new ExpiredVerificationException("The verification code has expired."); // We can not give allow user to send again from here, because it is deleted
-            }
+                throw new ExpiredVerificationException(); // FT: We can not allow user to "send again" from here, because it is deleted
+
             KeyValuePair<string, LoginVerificationTokenDTO> lastVerificationToken = _usersLoginVerificationTokens
                 .Where(x => x.Value.Email == loginVerificationTokenDTO.Email)
                 .OrderByDescending(x => x.Value.ExpireAt)
                 .FirstOrDefault();
+
+            // TODO FT: Append additional info in the Log 
             if (verificationTokenKey != lastVerificationToken.Key)
-            {
-                throw new ExpiredVerificationException("Please, use the latest code sent.");
-            }
+                throw new ExpiredVerificationException(SharedTerms.LatestVerificationCodeException);
 
             return loginVerificationTokenDTO;
         }
@@ -302,52 +310,6 @@ namespace Soft.Generator.Security.Services
 
         #endregion
 
-        #region Forgot password
-
-        public ForgotPasswordVerificationTokenDTO ValidateAndGetForgotPasswordVerificationTokenDTO(string verificationTokenKey, string browserId, string email)
-        {
-            RemoveExpiredForgotPasswordVerificationTokens();
-
-            // FT: Doing this because there is a chance of generating two same codes.
-            ForgotPasswordVerificationTokenDTO forgotPasswordVerificationTokenDTO = _usersForgotPasswordVerificationTokens.Where(x => x.Key == verificationTokenKey && x.Value.Email == email && x.Value.BrowserId == browserId).SingleOrDefault().Value;
-
-            if (forgotPasswordVerificationTokenDTO == null)
-            {
-                throw new ExpiredVerificationException("The verification code has expired."); // We can not give allow user to send again from here, because it is deleted
-            }
-            KeyValuePair<string, ForgotPasswordVerificationTokenDTO> lastVerificationToken = _usersForgotPasswordVerificationTokens
-                .Where(x => x.Value.Email == forgotPasswordVerificationTokenDTO.Email)
-                .OrderByDescending(x => x.Value.ExpireAt)
-                .FirstOrDefault();
-            if (verificationTokenKey != lastVerificationToken.Key)
-            {
-                throw new ExpiredVerificationException("Please, use the latest code sent.");
-            }
-
-            return forgotPasswordVerificationTokenDTO;
-        }
-
-        /// <summary>
-        /// userId because the user exists, when verify registration, user doesn't exist and we are making the userId
-        /// </summary>
-        public string GenerateAndSaveForgotPasswordVerificationCode(string userEmail, long userId, string newPassword, string browserId)
-        {
-            ForgotPasswordVerificationTokenDTO forgotPasswordVerificationTokenDTO = new ForgotPasswordVerificationTokenDTO
-            {
-                Email = userEmail,
-                UserId = userId,
-                NewPassword = newPassword,
-                BrowserId = browserId,
-                ExpireAt = DateTime.Now.AddMinutes(SettingsProvider.Current.VerificationTokenExpiration),
-            };
-
-            string code = GenerateVerificationCodeKey();
-            _usersForgotPasswordVerificationTokens.AddOrUpdate(code, forgotPasswordVerificationTokenDTO, (_, _) => forgotPasswordVerificationTokenDTO);
-            return code;
-        }
-
-        #endregion
-
         #region Registration
 
         public RegistrationVerificationTokenDTO ValidateAndGetRegistrationVerificationTokenDTO(string verificationTokenKey, string browserId, string email)
@@ -359,27 +321,24 @@ namespace Soft.Generator.Security.Services
                 .Where(x => x.Key == verificationTokenKey && x.Value.Email == email && x.Value.BrowserId == browserId).SingleOrDefault().Value;
 
             if (registrationVerificationTokenDTO == null)
-            {
-                throw new ExpiredVerificationException("The verification code has expired."); // We can not give allow user to send again from here, because it is deleted
-            }
+                throw new ExpiredVerificationException(); // We can not give allow user to send again from here, because it is deleted
+
             KeyValuePair<string, RegistrationVerificationTokenDTO> lastVerificationToken = _usersRegistrationVerificationTokens
                 .Where(x => x.Value.Email == registrationVerificationTokenDTO.Email)
                 .OrderByDescending(x => x.Value.ExpireAt)
                 .FirstOrDefault();
+
             if (verificationTokenKey != lastVerificationToken.Key)
-            {
-                throw new ExpiredVerificationException("Please, use the latest code sent.");
-            }
+                throw new ExpiredVerificationException(SharedTerms.LatestVerificationCodeException);
 
             return registrationVerificationTokenDTO;
         }
 
-        public string GenerateAndSaveRegistrationVerificationCode(string userEmail, string password, string browserId)
+        public string GenerateAndSaveRegistrationVerificationCode(string userEmail, string browserId)
         {
             RegistrationVerificationTokenDTO registrationVerificationTokenDTO = new RegistrationVerificationTokenDTO
             {
                 Email = userEmail,
-                Password = password,
                 BrowserId = browserId,
                 ExpireAt = DateTime.Now.AddMinutes(SettingsProvider.Current.VerificationTokenExpiration),
             };
@@ -414,24 +373,6 @@ namespace Soft.Generator.Security.Services
             foreach (var expiredToken in expiredTokens)
             {
                 _usersLoginVerificationTokens.TryRemove(expiredToken.Key, out _);
-            }
-        }
-
-        public void RemoveForgotPasswordVerificationTokensByEmail(string email)
-        {
-            var verificationTokens = _usersForgotPasswordVerificationTokens.Where(x => x.Value.Email == email).ToList();
-            foreach (var verificationToken in verificationTokens)
-            {
-                _usersForgotPasswordVerificationTokens.TryRemove(verificationToken.Key, out _);
-            }
-        }
-
-        private void RemoveExpiredForgotPasswordVerificationTokens()
-        {
-            var expiredTokens = _usersForgotPasswordVerificationTokens.Where(x => x.Value.ExpireAt < DateTime.Now).ToList();
-            foreach (var expiredToken in expiredTokens)
-            {
-                _usersForgotPasswordVerificationTokens.TryRemove(expiredToken.Key, out _);
             }
         }
 

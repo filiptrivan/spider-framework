@@ -12,14 +12,10 @@ namespace Soft.Generator.Security.Interface
     {
         public string Email { get; set; }
 
-        public string Password { get; set; }
+        public bool? HasLoggedInWithExternalProvider { get; set; }
 
-        public bool HasLoggedInWithExternalProvider { get; set; }
+        public bool? IsDisabled { get; set; }
 
-        public int NumberOfFailedAttemptsInARow { get; set; }
-
-        public List<Role> Roles { get; set; }
-
-        public List<Notification> Notifications { get; set; }
+        public List<Role> Roles { get; }
     }
 }

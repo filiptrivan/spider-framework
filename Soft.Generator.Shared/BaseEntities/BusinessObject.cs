@@ -3,18 +3,18 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Soft.Generator.Shared.BaseEntities
 {
-    public class BusinessObject<T> : IBusinessObject<T>
+    public class BusinessObject<T> : IBusinessObject<T> where T : struct
     {
-        public T Id { get; protected set; }
+        public T Id { get; private set; } // FT: Protected doesn't work with Mappster
 
         [Required]
-        public int Version { get; protected set; }
+        public int Version { get; private set; }
 
         [Required]
-        public DateTime CreatedAt { get; protected set; }
+        public DateTime CreatedAt { get; private set; }
 
         [Required]
-        public DateTime ModifiedAt { get; protected set; }
+        public DateTime ModifiedAt { get; private set; }
 
         public void SetVersion(int version)
         {

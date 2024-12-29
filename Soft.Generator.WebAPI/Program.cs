@@ -10,6 +10,11 @@ using System.Transactions;
 
 namespace Soft.Generator.WebAPI
 {
+    /// <summary>
+    /// TODO NEXT:
+    /// Many to many
+    /// Validacija
+    /// </summary>
     public class Program
     {
         public static void Main(string[] args)

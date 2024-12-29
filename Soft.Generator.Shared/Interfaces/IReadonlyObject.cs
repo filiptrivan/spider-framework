@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Soft.Generator.Shared.Interfaces
 {
-    public interface IReadonlyObject<T>
+    public interface IReadonlyObject<T> where T : struct
     {
         public T Id { get; }
         //public DateTime CreatedAt { get; }

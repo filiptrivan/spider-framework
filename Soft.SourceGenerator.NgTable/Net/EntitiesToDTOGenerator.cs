@@ -11,6 +11,7 @@ using System.IO;
 using Soft.SourceGenerators.Helpers;
 using System.Diagnostics;
 using Soft.SourceGenerator.NgTable.Angular;
+using Soft.SourceGenerators.Models;
 
 namespace Soft.SourceGenerator.NgTable.Net
 {
@@ -31,50 +32,156 @@ namespace Soft.SourceGenerator.NgTable.Net
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEntities(ctx))
                 .Where(static c => c is not null);
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-                static (spc, source) => Execute(source, spc));
+            IncrementalValueProvider<List<SoftClass>> referencedProjectEntityClasses = Helper.GetEntityClassesFromReferencedAssemblies(context);
+
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectEntityClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
+
+            //context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
+            //    static (spc, source) => Execute(source, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectEntityClasses, SourceProductionContext context)
         {
-            if (classes.Count <= 1) return;
-            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
-            List<ClassDeclarationSyntax> uninheritedEntityClasses = Helper.GetUninheritedClasses(entityClasses);
+            if (classes.Count <= 1) 
+                return;
 
-            string outputPath = Helper.GetGeneratorOutputPath(nameof(EntitiesToDTOGenerator), classes);
+            List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
+            List<SoftClass> allClasses = entityClasses.Concat(referencedProjectEntityClasses).ToList();
 
-            StringBuilder sb = new StringBuilder();
-
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0]);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0].Namespace);
 
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
-            sb.AppendLine($$"""
-using Soft.Generator.Shared.DTO;
-using Soft.Generator.Security.DTO;
+            string result = $$"""
+{{GetUsings()}}
 
-namespace {{basePartOfNamespace}}.DTO // FT: Don't change namespace in generator, it's mandatory for partial classes
+namespace {{basePartOfNamespace}}.DTO
 {
-""");
-            foreach (ClassDeclarationSyntax c in entityClasses)
-            {
-                string baseClass = c.GetDTOBaseType();
+{{string.Join("\n\n", GetDTOClasses(entityClasses, allClasses))}}
+}
+""";
 
-                sb.AppendLine($$"""
-    public partial class {{c.Identifier.Text}}DTO {{(baseClass == null ? "" : $": {baseClass}")}}
+            context.AddSource($"{projectName}DTOList.generated", SourceText.From(result, Encoding.UTF8));
+        }
+
+        private static List<string> GetDTOClasses(List<SoftClass> entityClasses, List<SoftClass> allClasses)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftClass entityClass in entityClasses)
+            {
+                string DTObaseType = entityClass.GetDTOBaseType();
+
+                // Add table selection base class to SaveBodyDTO if there is some attribute on the class
+                result.Add($$"""
+    public partial class {{entityClass.Name}}DTO {{(DTObaseType == null ? "" : $": {DTObaseType}")}}
     {
-        {{string.Join("\n\t\t", Helper.GetDTOWithoutBaseProps(c, entityClasses))}}
+{{string.Join("\n", GetDTOPropertiesWithoutBaseType(entityClass, allClasses))}}
+    }
+
+    public partial class {{entityClass.Name}}SaveBodyDTO
+    {
+        public {{entityClass.Name}}DTO {{entityClass.Name}}DTO { get; set; }
     }
 """);
             }
 
-            sb.AppendLine($$"""
-}
-""");
-
-            context.AddSource($"{projectName}DTOList.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
+            return result;
         }
 
+        /// <summary>
+        /// Getting the properties of the DTO based on the entity class, we don't include base type properties because of the inheritance
+        /// </summary>
+        private static List<string> GetDTOPropertiesWithoutBaseType(SoftClass entityClass, List<SoftClass> allClasses)
+        {
+            List<string> DTOproperties = new List<string>(); // public string Email { get; set; }
+
+            List<SoftProperty> propertiesOfTheCurrentClass = entityClass.Properties.Where(x => x.ClassIdentifierText == entityClass.Name).ToList();
+
+            foreach (SoftProperty prop in propertiesOfTheCurrentClass)
+            {
+                if (prop.SkipPropertyInDTO())
+                    continue;
+
+                string propType = prop.Type;
+                string propName = prop.IdentifierText;
+
+                if (propType.PropTypeIsManyToOne())
+                {
+                    DTOproperties.Add($$"""
+        public string {{propName}}DisplayName { get; set; }
+""");
+                    SoftClass manyToOneClass = allClasses.Where(x => x.Name == propType).Single();
+                    DTOproperties.Add($$"""
+        public {{Helper.GetGenericIdType(manyToOneClass, allClasses)}}? {{propName}}Id { get; set; }
+""");
+                    continue;
+                }
+                else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
+                {
+                    DTOproperties.Add($$"""
+        public string {{propName}}CommaSeparated { get; set; }
+""");
+                    continue;
+                }
+                else if (propType == "byte[]")
+                {
+                    DTOproperties.Add($$"""
+        public string {{propName}} { get; set; }
+""");
+                    continue;
+                }
+                else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "Map"))
+                {
+                    string DTOListPropType = propType.Replace(">", "DTO>");
+                    DTOproperties.Add($$"""
+        /// <summary>
+        /// Made only for manual mapping, it's not included in the mapping library.
+        /// </summary>
+        public {{DTOListPropType}} {{propName}}DTOList { get; set; }
+""");
+                    continue;
+                }
+                else if (propType.IsEnumerable())
+                {
+                    continue;
+                }
+                else if (propType.IsBaseType() && propType != "string")
+                {
+                    propType = $"{prop.Type}?".Replace("??", "?");
+                }
+                else if (prop.Attributes.Any(x => x.Name == "BlobName"))
+                {
+                    DTOproperties.Add($$"""
+        public string {{propName}}Data { get; set; }
+""");
+                }
+                else if (propType != "string")
+                {
+                    propType = "UNSUPPORTED TYPE";
+                }
+
+                // string
+                DTOproperties.Add($$"""
+        public {{propType}} {{propName}} { get; set; }
+""");
+            }
+
+            return DTOproperties;
+        }
+
+        private static string GetUsings()
+        {
+            return $$"""
+using Microsoft.AspNetCore.Http;
+using Soft.Generator.Shared.DTO;
+using Soft.Generator.Security.DTO;
+using Soft.Generator.Shared.Helpers;
+""";
+        }
     }
 }

@@ -17,7 +17,6 @@ namespace Soft.SourceGenerator.NgTable.Angular
     [Generator]
     public class NgValidatorsGenerator : IIncrementalGenerator
     {
-
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
 //#if DEBUG
@@ -28,22 +27,30 @@ namespace Soft.SourceGenerator.NgTable.Angular
 //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
-                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntitiesAndDTO(s),
-                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEntitiesAndDTO(ctx))
+                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationAllReferenced(s),
+                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationAllReferenced(ctx))
                 .Where(static c => c is not null);
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-            static (spc, source) => Execute(source, spc));
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetEntityAndDTOClassesFromReferencedAssemblies(context);
+
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
 
         }
-        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
 
-            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(classes);
-
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgValidatorsGenerator), classes);
+
+            if (outputPath == null)
+                return;
+
+            List<SoftClass> entityClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SoftClass> DTOClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
@@ -54,44 +61,47 @@ namespace Soft.SourceGenerator.NgTable.Angular
             sb.AppendLine($$"""
 import { ValidationErrors } from '@angular/forms';
 import { SoftFormControl, SoftValidatorFn } from 'src/app/core/components/soft-form-control/soft-form-control';
-import { validatePrecisionScale } from '../../../../core/services/helper-functions';
+import { validatePrecisionScale } from 'src/app/core/services/helper-functions';
+import { TranslocoService } from '@jsverse/transloco';
+import { Injectable } from '@angular/core';
 
-export function getValidator{{projectName}}(formControl: SoftFormControl, className: string): SoftValidatorFn {
-    switch(formControl.label + className){
+@Injectable({
+    providedIn: 'root',
+})
+export class ValidatorServiceGenerated {
+
+    constructor(
+        protected translocoService: TranslocoService
+    ) {
+    }
+
+    getValidator(formControl: SoftFormControl, className: string): SoftValidatorFn {
+        switch(formControl.label + className){
 """);
-            foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
+            foreach (SoftClass DTOClass in DTOClasses) // Grouping because UserDTO.generated and UserDTO
             {
-                List<SoftProperty> DTOProperties = new List<SoftProperty>();
-                List<SoftAttribute> DTOAttributes = new List<SoftAttribute>();
+                SoftClass entityClass = entityClasses.Where(x => DTOClass.Name.Replace("DTO", "") == x.Name).SingleOrDefault(); // If it is null then we only made DTO, without entity class
 
-                ClassDeclarationSyntax nonGeneratedDTOClass = classes.Where(x => x.Identifier.Text == DTOClassGroup.Key).SingleOrDefault();
-                List<SoftAttribute> softAttributes = Helper.GetAllAttributesOfTheClass(nonGeneratedDTOClass, classes);
-                if (softAttributes != null)
-                    DTOAttributes.AddRange(softAttributes); // FT: Its okay to add only for non generated because we will not have any attributes on the generated DTOs
+                string validationClassConstructorBody = GetValidationClassConstructorBody(DTOClass.Properties, DTOClass.Attributes, entityClass, entityClasses);
 
-
-                foreach (SoftClass DTOClass in DTOClassGroup)
-                    DTOProperties.AddRange(DTOClass.Properties);
-
-                ClassDeclarationSyntax entityClass = entityClasses.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Identifier.Text).SingleOrDefault(); // If it is null then we only made DTO, without entity class
-
-                string validationClassConstructorBody = GetValidationClassConstructorBody(DTOProperties, DTOAttributes, entityClass, entityClasses);
-
-                sb.AppendLine(GetAngularValidationCases(DTOClassGroup.Key, validationClassConstructorBody));
-                sbMethods.AppendLine(GenerateAngularValidationMethods(DTOClassGroup.Key, validationClassConstructorBody));
+                sb.AppendLine(GetAngularValidationCases(DTOClass.Name, validationClassConstructorBody));
+                sbMethods.AppendLine(GenerateAngularValidationMethods(DTOClass.Name, validationClassConstructorBody, DTOClass.Properties));
             }
             sb.AppendLine($$"""
-        default:
-            return null;
+            default:
+                return null;
+        }
     }
+
+{{sbMethods}}
 }
 """);
-            sb.AppendLine(sbMethods.ToString());
+            //sb.AppendLine(sbMethods.ToString());
 
-            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-validation-rules.generated.ts");
+            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}\validation-rules.generated.ts");
         }
 
-        public static string GenerateAngularValidationMethods(string DTOClassName, string validationClassConstructorBody)
+        public static string GenerateAngularValidationMethods(string DTOClassName, string validationClassConstructorBody, List<SoftProperty> DTOProperties)
         {
             string validationClassName = DTOClassName.Replace("DTO", "");
 
@@ -100,14 +110,15 @@ export function getValidator{{projectName}}(formControl: SoftFormControl, classN
             StringBuilder sb = new StringBuilder();
 
             foreach (string validationRulePropName in validationRulePropNames)
-                sb.AppendLine(GenerateAngularValidationMethod(validationRulePropName, validationClassName, validationClassConstructorBody));
+                sb.AppendLine(GenerateAngularValidationMethod(validationRulePropName, validationClassName, validationClassConstructorBody, DTOProperties));
 
             return sb.ToString();
         }
 
-        public static string GenerateAngularValidationMethod(string validationRulePropName, string classNameForValidation, string input)
+        public static string GenerateAngularValidationMethod(string validationRulePropName, string classNameForValidation, string input, List<SoftProperty> DTOProperties)
         {
-            string parameterFirstLower = validationRulePropName.FirstCharToLower();
+            string validationRulePropNameFirstLower = AdjustManyToOnePropertyNameForValidation(validationRulePropName);
+
             string pattern = $@"RuleFor\(x => x\.{validationRulePropName}\)(.*?);";
             Match match = Regex.Match(input, pattern, RegexOptions.Singleline);
 
@@ -120,34 +131,37 @@ export function getValidator{{projectName}}(formControl: SoftFormControl, classN
 
             List<string> ruleStatements = new List<string>(); // eg. const {ruleName}: boolean = typeof value !== 'undefined' && value !== '';
             List<string> validationMessages = new List<string>(); // eg. must have a minimum of {min} and a maximum of {max} characters
+            List<string> translocoVariables = new List<string>(); // eg. [max, min]
             List<string> translationTags = new List<string>(); // eg. Length, IsEmpty
             List<string> ruleNames = new List<string>(); // eg. notEmptyRule
 
-            PopulateListOfStrings(rules, ruleStatements, validationMessages, ruleNames, translationTags);
+            PopulateListOfStrings(rules, DTOProperties, validationRulePropName, ruleStatements, validationMessages, translocoVariables, ruleNames, translationTags);
 
             string allRules = string.Join(" && ", ruleNames);
 
             string result = $@"
-export function {parameterFirstLower}{classNameForValidation}Validator(control: SoftFormControl): SoftValidatorFn {{
-    const validator: SoftValidatorFn = (): ValidationErrors | null => {{
-        const value = control.value;
+    {validationRulePropNameFirstLower}{classNameForValidation}Validator(control: SoftFormControl): SoftValidatorFn {{
+        const validator: SoftValidatorFn = (): ValidationErrors | null => {{
+            const value = control.value;
 
-{string.Join("\n", ruleStatements)}
+    {string.Join("\n", ruleStatements)}
 
-        const {parameterFirstLower}Valid = {allRules};
+            const {validationRulePropNameFirstLower}Valid = {allRules};
 
-        return {parameterFirstLower}Valid ? null : {{ _ : $localize`:@@{string.Join("", translationTags)}:The field {validationMessages.ToCommaSeparatedString()}.` }};
-    }};
-    {(ruleNames.Any(x => x == "notEmptyRule") ? "validator.hasNotEmptyRule = true;" : "")}
-    return validator;
-}}";
+            return {validationRulePropNameFirstLower}Valid ? null : {{ _ : this.translocoService.translate('{string.Join("", translationTags)}', {{{string.Join(", ", translocoVariables)}}}) }};
+        }};
+        {(ruleNames.Any(x => x == "notEmptyRule") ? "validator.hasNotEmptyRule = true;" : "")}
+        return validator;
+    }}";
 
             return result;
         }
 
-        public static void PopulateListOfStrings(string rules, List<string> ruleStatements, List<string> validationMessages, List<string> ruleNames, List<string> translationTags)
+        public static void PopulateListOfStrings(string rules, List<SoftProperty> DTOProperties, string validationRulePropName, List<string> ruleStatements, List<string> validationMessages, List<string> translocoVariables, List<string> ruleNames, List<string> translationTags)
         {
-            if (rules.Contains("NotEmpty"))
+            SoftProperty property = DTOProperties.Where(x => x.IdentifierText == validationRulePropName).Single();
+
+            if (rules.Contains("NotEmpty") || property.Type == "int" || property.Type == "long" || property.Type == "byte")
             {
                 string ruleName = "notEmptyRule";
                 ruleStatements.Add($$"""
@@ -162,6 +176,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
             {
                 Match lengthMatch = Regex.Match(rules, @"Length\((\d+),\s*(\d+)\)");
                 Match singleLengthMatch = Regex.Match(rules, @"Length\((\d+)\)");
+
                 if (lengthMatch.Success)
                 {
                     string ruleName = "stringLengthRule";
@@ -174,8 +189,9 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must have a minimum of ${{min}} and a maximum of ${{max}} characters");
+                    translocoVariables.AddRange(["min", "max"]);
                     translationTags.Add("Length");
-                } 
+                }
                 else if (singleLengthMatch.Success)
                 {
                     string ruleName = "stringSingleLengthRule";
@@ -186,6 +202,7 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must be ${{length}} character long");
+                    translocoVariables.AddRange(["length"]);
                     translationTags.Add("SingleLength");
                 }
             }
@@ -200,10 +217,11 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
                     string max = rangeMatch.Groups[1].Value;
                     ruleStatements.Add($$"""
         const max = {{max}};
-        const {{ruleName}} = value <= max;
+        const {{ruleName}} = (value <= max) || (typeof value === 'undefined' || value === null || value === '');
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must be less or equal to ${{max}}");
+                    translocoVariables.AddRange(["max"]);
                     translationTags.Add("NumberRangeMax");
                 }
             }
@@ -218,10 +236,11 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
                     string min = rangeMatch.Groups[1].Value;
                     ruleStatements.Add($$"""
         const min = {{min}};
-        const {{ruleName}} = value >= min;
+        const {{ruleName}} = (value >= min) || (typeof value === 'undefined' || value === null || value === '');
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must be greater or equal to ${{min}}");
+                    translocoVariables.AddRange(["min"]);
                     translationTags.Add("NumberRangeMin");
                 }
             }
@@ -262,10 +281,11 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
         const precision = {{precision}};
         const scale = {{scale}};
         const ignoreTrailingZeros = {{ignoreTrailingZeros}};
-        const {{ruleName}} = validatePrecisionScale(value, precision, scale, ignoreTrailingZeros);
+        const {{ruleName}} = validatePrecisionScale(value, precision, scale, ignoreTrailingZeros) || (typeof value === 'undefined' || value === null || value === '');
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must have a total number of ${{precision}} digits, and the number of digits after the decimal point must not exceed ${{scale}}");
+                    translocoVariables.AddRange(["precision", "scale"]);
                     translationTags.Add("PrecisionScale");
                 }
             }
@@ -281,16 +301,34 @@ export function {parameterFirstLower}{classNameForValidation}Validator(control: 
 
             foreach (string validationRulePropName in validationRulePropNames)
             {
+                string validationRulePropNameFirstLower = AdjustManyToOnePropertyNameForValidation(validationRulePropName);
+
                 validationCases.AppendLine($$"""
-        case '{{validationRulePropName.FirstCharToLower()}}{{validationClassName}}':
-            return {{validationRulePropName.FirstCharToLower()}}{{validationClassName}}Validator(formControl);
+        case '{{validationRulePropNameFirstLower}}{{validationClassName}}':
+            return this.{{validationRulePropNameFirstLower}}{{validationClassName}}Validator(formControl);
 """);
             }
 
             return validationCases.ToString();
         }
 
-        private static string GetValidationClassConstructorBody(List<SoftProperty> DTOProperties, List<SoftAttribute> DTOAttributes, ClassDeclarationSyntax entityClass, List<ClassDeclarationSyntax> entityClasses)
+        private static string AdjustManyToOnePropertyNameForValidation(string validationRulePropName)
+        {
+            string validationRulePropNameFirstLower = validationRulePropName.FirstCharToLower();
+
+            //if (validationRulePropNameFirstLower.EndsWith("Id") && validationRulePropNameFirstLower.Length > 2)
+            //{
+            //    validationRulePropNameFirstLower = validationRulePropNameFirstLower.Substring(0, validationRulePropNameFirstLower.Length - 2);
+            //}
+            //else if (validationRulePropNameFirstLower.EndsWith("DisplayName"))
+            //{
+            //    validationRulePropNameFirstLower = validationRulePropNameFirstLower.Replace("DisplayName", "");
+            //}
+
+            return validationRulePropNameFirstLower;
+        }
+
+        private static string GetValidationClassConstructorBody(List<SoftProperty> DTOProperties, List<SoftAttribute> DTOAttributes, SoftClass entityClass, List<SoftClass> entityClasses)
         {
             return $"{string.Join("\n\t\t\t", FluentValidationGenerator.GetValidationRules(DTOProperties, DTOAttributes, entityClass, entityClasses))}";
         }

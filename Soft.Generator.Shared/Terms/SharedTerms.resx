@@ -32,7 +32,7 @@
 		Each data row contains a name, and value. The row also contains a 
 		type or mimetype. Type corresponds to a .NET class that support 
 		text/value conversion through the TypeConverter architecture. 
-		Classes that don't support this are serialized and stored with the 
+		Classes that don't support this are serialized and businessSystemd with the 
 		mimetype set.
 
 		The mimetype is used for serialized objects, and tells the 
@@ -99,17 +99,82 @@
   </resheader>
   <data name="EntityDoesNotExistInDatabase" xml:space="preserve">
     <value>The record you're looking for doesn't exist in database.</value>
+    <comment>Entitet koji tražite ne postoji u bazi podataka.</comment>
   </data>
   <data name="ConcurrencyException" xml:space="preserve">
     <value>This record has been modified or deleted by another user.</value>
+    <comment>Entitet je izmenjen ili izbrisan u međuvremenu od strane drugog korisnika, pokušajte ponovo.</comment>
   </data>
   <data name="EntityDoesNotExistInDatabaseForDeleteRequest" xml:space="preserve">
     <value>Your deletion request couldn't be completed as the entity doesn't exist in our database. Maybe it's already deleted.</value>
+    <comment>Vaš zahtev za brisanje nije uspeo, jer entitet ne postoji u našoj bazi podataka. Možda je obrisan u međuvremenu.</comment>
   </data>
   <data name="GlobalError" xml:space="preserve">
     <value>An error occurred in the system, our team has been informed and will fix it as soon as possible. Thank you for your patience. Error code:</value>
+    <comment>Dogodila se greška u sistemu, naš tim je obavešten i otkloniće je u najkraćem mogućem roku. Hvala Vam na strpljenju. Kod greške:</comment>
   </data>
   <data name="Password" xml:space="preserve">
-    <value>sifra</value>
+    <value>Password</value>
+    <comment>Šifra</comment>
+  </data>
+  <data name="UserExcel" xml:space="preserve">
+    <value>Users</value>
+    <comment>Korisnici</comment>
+  </data>
+  <data name="RoleExcel" xml:space="preserve">
+    <value>Roles</value>
+    <comment>Uloge</comment>
+  </data>
+  <data name="NotificationExcel" xml:space="preserve">
+    <value>Notifications</value>
+    <comment>Notifikacije</comment>
+  </data>
+  <data name="UnauthorizedAccessExceptionMessage" xml:space="preserve">
+    <value>You don't have the necessary rights to perform the operation.</value>
+    <comment>Nemate potrebnu dozvolu da biste izvršili operaciju.</comment>
+  </data>
+  <data name="ExpiredVerificationCodeException" xml:space="preserve">
+    <value>Your verification code has expired. Please request a new code to continue.</value>
+    <comment>Vaš verifikacioni kod je istekao. Zatražite novi kod da biste nastavili.</comment>
+  </data>
+  <data name="LatestVerificationCodeException" xml:space="preserve">
+    <value>Please use the most recent verification code, as multiple codes were sent.</value>
+    <comment>Poslato je više verifikacionih kodova, molimo Vas da unesete poslednji.</comment>
+  </data>
+  <data name="ExpiredRefreshTokenException" xml:space="preserve">
+    <value>Your session has expired, please login again.</value>
+    <comment>Vaša sesija je istekla, molimo Vas da se prijavite ponovo.</comment>
+  </data>
+  <data name="TwoDifferentIpAddressesRefreshException" xml:space="preserve">
+    <value>You can't use the application with two different IP addresses at the same time, please login again.</value>
+    <comment>Ne možete da koristite aplikaciju sa dve različite IP adrese u isto vreme, molimo vas da se prijavite ponovo.</comment>
+  </data>
+  <data name="OnlyThirdPartyAccountButTriedToRegisterOrLoginException" xml:space="preserve">
+    <value>Your account already exists with third-party (eg. Google) authentication. If you want to set up a password as well, please use the 'Forgot password?' option to reset it or log in to your profile and add a password.</value>
+    <comment>Vaš nalog je već registrovan putem treće strane (npr. Google). Ako želite da dodate i lozinku, koristite opciju „Zaboravili ste lozinku?”, ili se prijavite na profil i postavite lozinku.</comment>
+  </data>
+  <data name="SameEmailAlreadyExistsException" xml:space="preserve">
+    <value>An account with this email address already exists.</value>
+    <comment>Nalog sa ovom email adresom već postoji.</comment>
+  </data>
+  <data name="DisabledAccountException" xml:space="preserve">
+    <value>Your account is disabled, please contact the administrator.</value>
+    <comment>Vaš nalog je trenutno blokiran. Obratite se administratoru za pomoć.</comment>
+  </data>
+  <data name="AuthenticationEmailDoesNotExistException" xml:space="preserve">
+    <value>An account with the entered email address does not exist. Please check the email address or create a new account.</value>
+    <comment>Nalog sa unetom email adresom ne postoji. Molimo vas da proverite unesenu adresu ili kreirate novi nalog.</comment>
+  </data>
+  <data name="AuthenticationIncorectPasswordException" xml:space="preserve">
+    <value>Incorrect password. Please try again or reset your password if you've forgotten it.</value>
+    <comment>Pogrešna lozinka. Molimo vas da pokušate ponovo ili resetujete lozinku ako ste je zaboravili.</comment>
+  </data>
+  <data name="ResetPasswordEmailDoesNotExistException" xml:space="preserve">
+    <value>An account with the entered email address does not exist. Please check the email address or create a new account.</value>
+    <comment>Nalog sa unetom email adresom ne postoji. Molimo vas da proverite unesenu adresu ili kreirate novi nalog.</comment>
+  </data>
+  <data name="EmailAccountVerificationTitle" xml:space="preserve">
+    <value>Account verification</value>
+    <comment>Verifikacija naloga</comment>
   </data>
 </root>
