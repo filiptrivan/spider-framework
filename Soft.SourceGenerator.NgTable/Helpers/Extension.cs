@@ -98,11 +98,11 @@ namespace Soft.SourceGenerators.Helpers
         /// string -> false
         /// List<User> -> false
         /// </summary>
-        public static bool PropTypeIsManyToOne(this string propType)
+        public static bool IsManyToOneType(this string type)
         {
-            if (propType.IsEnumerable())
+            if (type.IsEnumerable())
                 return false;
-            if (propType.IsBaseType())
+            if (type.IsBaseType())
                 return false;
 
             return true;

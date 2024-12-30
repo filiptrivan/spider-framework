@@ -865,7 +865,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 string propName = prop.IdentifierText;
                 // FT: Not adding attributes because they are not the same
 
-                if (propType.PropTypeIsManyToOne())
+                if (propType.IsManyToOneType())
                 {
                     props.Add(new SoftProperty { IdentifierText = $"{propName}DisplayName", Type = "string" });
                     SoftClass manyToOneClass = entityClasses.Where(x => x.Name == propType).SingleOrDefault();
@@ -1388,7 +1388,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         {
             return softEntityClasses
                 .SelectMany(x => x.Properties)
-                .Where(prop => prop.Type.PropTypeIsManyToOne() &&
+                .Where(prop => prop.Type.IsManyToOneType() &&
                                prop.Attributes.Any(x => x.Name == "ManyToOneRequired") &&
                                prop.Type == nameOfTheEntityClass)
                 .ToList();

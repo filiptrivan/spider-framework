@@ -380,7 +380,7 @@ namespace {{basePartOfTheNamespace}}.Services
             List<string> result = new List<string>();
 
             List<SoftProperty> properties = entityClass.Properties
-                .Where(prop => prop.Type.PropTypeIsManyToOne())
+                .Where(prop => prop.Type.IsManyToOneType())
                 .ToList();
 
             foreach (SoftProperty prop in properties)
@@ -716,7 +716,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 List<SoftProperty> classFromTheListProperties = classFromTheList.Properties;
 
                 SoftProperty manyToManyPropFromTheListProperties = classFromTheListProperties.Where(x => x.Type.IsEnumerable() && GetClassNameFromTheListType(x.Type) == nameOfTheEntityClass).SingleOrDefault(); // List<User> Users
-                SoftProperty manyToOneProp = classFromTheListProperties.Where(x => x.Type.PropTypeIsManyToOne() && prop.Type == nameOfTheEntityClass).SingleOrDefault(); // User / Userando
+                SoftProperty manyToOneProp = classFromTheListProperties.Where(x => x.Type.IsManyToOneType() && prop.Type == nameOfTheEntityClass).SingleOrDefault(); // User / Userando
 
                 if (manyToOneProp != null)
                 {

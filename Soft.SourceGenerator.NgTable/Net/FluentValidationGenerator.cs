@@ -216,7 +216,7 @@ namespace {{basePartOfNamespace}}.ValidationRules
         {
             string propName = prop.IdentifierText;
 
-            if (prop.Type.PropTypeIsManyToOne())  // FT: if it is not base type and not enumerable than it's many to one for sure, and the validation can only be for id to be required
+            if (prop.Type.IsManyToOneType())  // FT: if it is not base type and not enumerable than it's many to one for sure, and the validation can only be for id to be required
             {
                 propName = $"{prop.IdentifierText}Id";
 

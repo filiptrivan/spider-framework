@@ -110,7 +110,7 @@ namespace {{basePartOfNamespace}}.DTO
                 string propType = prop.Type;
                 string propName = prop.IdentifierText;
 
-                if (propType.PropTypeIsManyToOne())
+                if (propType.IsManyToOneType())
                 {
                     DTOproperties.Add($$"""
         public string {{propName}}DisplayName { get; set; }

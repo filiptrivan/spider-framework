@@ -180,7 +180,7 @@ namespace {{basePartOfNamespace}}.DataMappers
                 string entityPropType = entityProp.Type;
                 string entityPropName = entityProp.IdentifierText;
 
-                if (entityPropType.PropTypeIsManyToOne())
+                if (entityPropType.IsManyToOneType())
                 {
                     ClassDeclarationSyntax manyToOneEntityClass = entityClasses
                         .Where(x => x.Identifier.Text == entityPropType)
