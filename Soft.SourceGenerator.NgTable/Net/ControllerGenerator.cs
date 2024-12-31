@@ -80,26 +80,44 @@ namespace {{basePartOfTheNamespace}}
         {
             List<string> result = new List<string>();
 
-            foreach (SoftClass referencedProjectEntityClass in referencedProjectEntityClasses)
+            foreach (IGrouping<string, SoftClass> referencedProjectEntityGroupedClasses in referencedProjectEntityClasses.GroupBy(x => x.ControllerName))
             {
-                string servicesNamespace = referencedProjectEntityClass.Namespace.Replace(".Entities", ".Services");
+                string servicesNamespace = referencedProjectEntityGroupedClasses.FirstOrDefault().Namespace.Replace(".Entities", ".Services");
 
-                result.Add($$"""
+                string resultItem = $$"""
     [ApiController]
     [Route("/api/[controller]/[action]")]
-    public class {{referencedProjectEntityClass.Name}}BaseController : SoftControllerBase
+    public class {{referencedProjectEntityGroupedClasses.Key}}BaseController : SoftControllerBase
     {
         private readonly IApplicationDbContext _context;
         private readonly {{servicesNamespace}}.BusinessService _businessService;
         private readonly BlobContainerClient _blobContainerClient;
 
-        public PartnerController(IApplicationDbContext context, {{servicesNamespace}}BusinessService businessService, BlobContainerClient blobContainerClient)
+        public {{referencedProjectEntityGroupedClasses.Key}}BaseController(IApplicationDbContext context, {{servicesNamespace}}BusinessService businessService, BlobContainerClient blobContainerClient)
         {
             _context = context;
             _businessService = businessService;
             _blobContainerClient = blobContainerClient;
         }
 
+{{string.Join("\n\n", GetControllerMethods(referencedProjectEntityGroupedClasses.ToList(), referencedProjectEntityClasses))}}
+
+    }
+""";
+            }
+
+            return result;
+        }
+
+        private static List<string> GetControllerMethods(List<SoftClass> referencedProjectEntityGroupedClasses, List<SoftClass> referencedProjectEntityClasses)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftClass referencedProjectEntityClass in referencedProjectEntityGroupedClasses)
+            {
+                string servicesNamespace = referencedProjectEntityClass.Namespace.Replace(".Entities", ".Services");
+
+                result.Add($$"""
         [HttpPost]
         [AuthGuard]
         public async Task<TableResponseDTO<{{referencedProjectEntityClass.Name}}DTO>> Load{{referencedProjectEntityClass.Name}}TableData(TableFilterDTO tableFilterDTO)
@@ -144,8 +162,6 @@ namespace {{basePartOfTheNamespace}}
         }
 
 {{string.Join("\n", GetOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses))}}
-
-    }
 """);
             }
 
@@ -163,7 +179,7 @@ namespace {{basePartOfTheNamespace}}
 
                 //if (manyToOneProperty.IsAutocomplete())
                 //{
-                    result.Add($$"""
+                result.Add($$"""
         [HttpGet]
         [AuthGuard]
         public async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Load{{manyToOneProperty.IdentifierText}}ListForAutocomplete(int limit, string query)
@@ -175,7 +191,7 @@ namespace {{basePartOfTheNamespace}}
 
                 //if (manyToOneProperty.IsDropdown())
                 //{
-                    result.Add($$"""
+                result.Add($$"""
         [HttpGet]
         [AuthGuard]
         public async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Load{{manyToOneProperty.IdentifierText}}ListForDropdown()

@@ -18,12 +18,15 @@ namespace Soft.SourceGenerators.Models
 
         public bool IsAbstract { get; set; }
 
-        public List<SoftProperty> Properties { get; set; } = new List<SoftProperty>();
+        public string ControllerName { get; set; }
 
         /// <summary>
         /// For the DTO classes
         /// </summary>
         public bool IsGenerated { get; set; }
+
+        public List<SoftProperty> Properties { get; set; } = new List<SoftProperty>();
+
 
         public List<SoftAttribute> Attributes { get; set; }
 
