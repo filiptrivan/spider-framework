@@ -540,14 +540,17 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             {
                 if (type.TypeKind == TypeKind.Class)
                 {
+                    List<SoftAttribute> attributes = GetAttributesFromReferencedAssemblies(type);
+
                     SoftClass softClass = new SoftClass
                     {
                         Name = type.Name,
                         Namespace = GetFullNamespace(type),
                         BaseType = type.BaseType?.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat) == "object" ? null : type.BaseType?.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat),
                         IsAbstract = type.IsAbstract,
+                        ControllerName = attributes.Where(x => x.Name == "Controller").Select(x => x.Value).SingleOrDefault() ?? type.Name,
                         Properties = GetPropertiesFromReferencedAssemblies(type),
-                        Attributes = GetAttributesFromReferencedAssemblies(type),
+                        Attributes = attributes,
                         Methods = GetMethodsOfCurrentClassFromReferencedAssemblies(type),
                     };
 
@@ -1256,7 +1259,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 {
                     Name = method.Identifier.Text,
                     ReturnType = method.ReturnType.ToString(),
-                    Body = method.Body.ToString(),
+                    Body = method.Body?.ToString(), // FT: CreateHostBuilder method inside Program.cs has no body
                     DescendantNodes = method.DescendantNodes(),
                     Attributes = method.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
                     {

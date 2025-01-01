@@ -6,6 +6,7 @@ using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -13,7 +14,7 @@ using System.Text;
 namespace Soft.SourceGenerators.Net
 {
     [Generator]
-    public class ControllerGenerator
+    public class ControllerGenerator : IIncrementalGenerator
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
@@ -29,6 +30,7 @@ namespace Soft.SourceGenerators.Net
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEveryClass(ctx))
                 .Where(static c => c is not null);
 
+            // TODO FT: Change this to take custom business service classes also, so later you can use that name in generator
             IncrementalValueProvider<List<SoftClass>> referencedProjectEntityClasses = Helper.GetEntityClassesFromReferencedAssemblies(context);
 
             var allClasses = classDeclarations.Collect()
@@ -62,14 +64,20 @@ namespace Soft.SourceGenerators.Net
             string result = $$"""
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Soft.Generator.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using Azure.Storage.Blobs;
 using System.Data;
+using Soft.Generator.Infrastructure;
+using Soft.Generator.Shared.Helpers;
+using Soft.Generator.Shared.DTO;
+using Soft.Generator.Shared.Attributes;
+using Soft.Generator.Shared.Interfaces;
 {{string.Join("\n", Helper.GetEntityClassesUsings(referencedProjectEntityClasses))}}
 {{string.Join("\n", Helper.GetDTOClassesUsings(referencedProjectEntityClasses))}}
 
-namespace {{basePartOfTheNamespace}}
+namespace {{basePartOfTheNamespace}}.Controllers
 {
-    {{string.Join("\n\n", GetControllerClasses(referencedProjectEntityClasses))}}
+{{string.Join("\n\n", GetControllerClasses(referencedProjectEntityClasses))}}
 }
 """;
 
@@ -83,8 +91,9 @@ namespace {{basePartOfTheNamespace}}
             foreach (IGrouping<string, SoftClass> referencedProjectEntityGroupedClasses in referencedProjectEntityClasses.GroupBy(x => x.ControllerName))
             {
                 string servicesNamespace = referencedProjectEntityGroupedClasses.FirstOrDefault().Namespace.Replace(".Entities", ".Services");
+                //string nameOfTheBusinessService = ...
 
-                string resultItem = $$"""
+                result.Add($$"""
     [ApiController]
     [Route("/api/[controller]/[action]")]
     public class {{referencedProjectEntityGroupedClasses.Key}}BaseController : SoftControllerBase
@@ -103,7 +112,7 @@ namespace {{basePartOfTheNamespace}}
 {{string.Join("\n\n", GetControllerMethods(referencedProjectEntityGroupedClasses.ToList(), referencedProjectEntityClasses))}}
 
     }
-""";
+""");
             }
 
             return result;
