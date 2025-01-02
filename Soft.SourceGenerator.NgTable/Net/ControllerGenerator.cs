@@ -30,16 +30,15 @@ namespace Soft.SourceGenerators.Net
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEveryClass(ctx))
                 .Where(static c => c is not null);
 
-            // TODO FT: Change this to take custom business service classes also, so later you can use that name in generator
-            IncrementalValueProvider<List<SoftClass>> referencedProjectEntityClasses = Helper.GetEntityClassesFromReferencedAssemblies(context);
+            IncrementalValueProvider<List<SoftClass>> referencedProjectEntityClassesAndServices = Helper.GetEntityClassesAndServicesFromReferencedAssemblies(context);
 
             var allClasses = classDeclarations.Collect()
-                .Combine(referencedProjectEntityClasses);
+                .Combine(referencedProjectEntityClassesAndServices);
 
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectEntityClasses, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectEntityClassesAndServices, SourceProductionContext context)
         {
             if (classes.Count < 1)
                 return;
@@ -53,7 +52,11 @@ namespace Soft.SourceGenerators.Net
 
             List<SoftClass> customControllers = projectClasses.Where(x => x.Namespace.EndsWith(".Controllers")).ToList();
 
-            List<SoftClass> allEntityClasses = projectClasses.Concat(referencedProjectEntityClasses).ToList();
+            List<SoftClass> referencedProjectEntityClasses = referencedProjectEntityClassesAndServices.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+
+            List<SoftClass> referencedProjectServices = referencedProjectEntityClassesAndServices.Where(x => x.Namespace.EndsWith(".Services")).ToList();
+
+            List <SoftClass> allEntityClasses = projectClasses.Concat(referencedProjectEntityClasses).ToList();
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(projectClasses[0].Namespace);
 
@@ -77,21 +80,24 @@ using Soft.Generator.Shared.Interfaces;
 
 namespace {{basePartOfTheNamespace}}.Controllers
 {
-{{string.Join("\n\n", GetControllerClasses(referencedProjectEntityClasses))}}
+{{string.Join("\n\n", GetControllerClasses(referencedProjectEntityClasses, referencedProjectServices))}}
 }
 """;
 
             context.AddSource($"{projectName}BaseControllers.generated", SourceText.From(result, Encoding.UTF8));
         }
 
-        public static List<string> GetControllerClasses(List<SoftClass> referencedProjectEntityClasses)
+        public static List<string> GetControllerClasses(List<SoftClass> referencedProjectEntityClasses, List<SoftClass> referencedProjectServices)
         {
             List<string> result = new List<string>();
 
             foreach (IGrouping<string, SoftClass> referencedProjectEntityGroupedClasses in referencedProjectEntityClasses.GroupBy(x => x.ControllerName))
             {
                 string servicesNamespace = referencedProjectEntityGroupedClasses.FirstOrDefault().Namespace.Replace(".Entities", ".Services");
-                //string nameOfTheBusinessService = ...
+                SoftClass businessServiceClass = referencedProjectServices
+                    .Where(x => x.Namespace == servicesNamespace && x.BaseType.EndsWith("BusinessServiceGenerated"))
+                    .SingleOrDefault();
+                string businessServiceName = businessServiceClass.Name;
 
                 result.Add($$"""
     [ApiController]
@@ -99,17 +105,17 @@ namespace {{basePartOfTheNamespace}}.Controllers
     public class {{referencedProjectEntityGroupedClasses.Key}}BaseController : SoftControllerBase
     {
         private readonly IApplicationDbContext _context;
-        private readonly {{servicesNamespace}}.BusinessService _businessService;
+        private readonly {{servicesNamespace}}.{{businessServiceClass.Name}} _{{businessServiceClass.Name.FirstCharToLower()}};
         private readonly BlobContainerClient _blobContainerClient;
 
-        public {{referencedProjectEntityGroupedClasses.Key}}BaseController(IApplicationDbContext context, {{servicesNamespace}}BusinessService businessService, BlobContainerClient blobContainerClient)
+        public {{referencedProjectEntityGroupedClasses.Key}}BaseController(IApplicationDbContext context, {{servicesNamespace}}.{{businessServiceClass.Name}} {{businessServiceClass.Name.FirstCharToLower()}}, BlobContainerClient blobContainerClient)
         {
             _context = context;
-            _businessService = businessService;
+            _{{businessServiceClass.Name.FirstCharToLower()}} = {{businessServiceClass.Name.FirstCharToLower()}};
             _blobContainerClient = blobContainerClient;
         }
 
-{{string.Join("\n\n", GetControllerMethods(referencedProjectEntityGroupedClasses.ToList(), referencedProjectEntityClasses))}}
+{{string.Join("\n\n", GetControllerMethods(referencedProjectEntityGroupedClasses.ToList(), referencedProjectEntityClasses, servicesNamespace, businessServiceName))}}
 
     }
 """);
@@ -118,27 +124,25 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return result;
         }
 
-        private static List<string> GetControllerMethods(List<SoftClass> referencedProjectEntityGroupedClasses, List<SoftClass> referencedProjectEntityClasses)
+        private static List<string> GetControllerMethods(List<SoftClass> referencedProjectEntityGroupedClasses, List<SoftClass> referencedProjectEntityClasses, string servicesNamespace, string businessServiceName)
         {
             List<string> result = new List<string>();
 
             foreach (SoftClass referencedProjectEntityClass in referencedProjectEntityGroupedClasses)
             {
-                string servicesNamespace = referencedProjectEntityClass.Namespace.Replace(".Entities", ".Services");
-
                 result.Add($$"""
         [HttpPost]
         [AuthGuard]
         public async Task<TableResponseDTO<{{referencedProjectEntityClass.Name}}DTO>> Load{{referencedProjectEntityClass.Name}}TableData(TableFilterDTO tableFilterDTO)
         {
-            return await _businessService.Load{{referencedProjectEntityClass.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+            return await _{{businessServiceName}}.Load{{referencedProjectEntityClass.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
         }
 
         [HttpPost]
         [AuthGuard]
         public async Task<IActionResult> Export{{referencedProjectEntityClass.Name}}TableDataToExcel(TableFilterDTO tableFilterDTO)
         {
-            byte[] fileContent = await _businessService.Export{{referencedProjectEntityClass.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+            byte[] fileContent = await _{{businessServiceName}}.Export{{referencedProjectEntityClass.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"{Terms.{{referencedProjectEntityClass.Name}}ExcelExportName}.xlsx"));
         }
 
@@ -146,38 +150,38 @@ namespace {{basePartOfTheNamespace}}.Controllers
         [AuthGuard]
         public async Task Delete{{referencedProjectEntityClass.Name}}(int id)
         {
-            await _businessService.Delete{{referencedProjectEntityClass.Name}}Async(id, false);
+            await _{{businessServiceName}}.Delete{{referencedProjectEntityClass.Name}}Async(id, false);
         }
 
         [HttpGet]
         [AuthGuard]
         public async Task<{{referencedProjectEntityClass.Name}}DTO> Get{{referencedProjectEntityClass.Name}}(int id)
         {
-            return await _businessService.Get{{referencedProjectEntityClass.Name}}DTOAsync(id, false);
+            return await _{{businessServiceName}}.Get{{referencedProjectEntityClass.Name}}DTOAsync(id, false);
         }
 
         [HttpPut]
         [AuthGuard]
         public async Task<{{referencedProjectEntityClass.Name}}DTO> Save{{referencedProjectEntityClass.Name}}({{referencedProjectEntityClass.Name}}DTO {{referencedProjectEntityClass.Name.FirstCharToLower()}}DTO)
         {
-            return await _businessService.Save{{referencedProjectEntityClass.Name}}AndReturnDTOAsync({{referencedProjectEntityClass.Name.FirstCharToLower()}}DTO, false, false);
+            return await _{{businessServiceName}}.Save{{referencedProjectEntityClass.Name}}AndReturnDTOAsync({{referencedProjectEntityClass.Name.FirstCharToLower()}}DTO, false, false);
         }
 
         [HttpGet]
         [AuthGuard]
         public async Task<List<{{referencedProjectEntityClass.Name}}DTO>> Get{{referencedProjectEntityClass.Name}}List()
         {
-            return await _businessService.Load{{referencedProjectEntityClass.Name}}DTOList(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+            return await _{{businessServiceName}}.Load{{referencedProjectEntityClass.Name}}DTOList(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
         }
 
-{{string.Join("\n", GetOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses))}}
+{{string.Join("\n", GetOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
 """);
             }
 
             return result;
         }
 
-        private static List<string> GetOneToManyControllerMethods(SoftClass referencedProjectEntityClass, List<SoftClass> referencedProjectEntityClasses)
+        private static List<string> GetOneToManyControllerMethods(SoftClass referencedProjectEntityClass, List<SoftClass> referencedProjectEntityClasses, string businessServiceName)
         {
             List<string> result = new List<string>();
 
@@ -193,7 +197,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
         [AuthGuard]
         public async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Load{{manyToOneProperty.IdentifierText}}ListForAutocomplete(int limit, string query)
         {
-            return await _businessService.Load{{manyToOneProperty.Type}}ListForAutocomplete(limit, query, _context.DbSet<{{manyToOneProperty.Type}}>());
+            return await _{{businessServiceName}}.Load{{manyToOneProperty.Type}}ListForAutocomplete(limit, query, _context.DbSet<{{manyToOneProperty.Type}}>());
         }
 """);
                 //}
@@ -205,7 +209,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
         [AuthGuard]
         public async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Load{{manyToOneProperty.IdentifierText}}ListForDropdown()
         {
-            return await _businessService.Load{{manyToOneProperty.Type}}ListForDropdown(_context.DbSet<{{manyToOneProperty.Type}}>(), false);
+            return await _{{businessServiceName}}.Load{{manyToOneProperty.Type}}ListForDropdown(_context.DbSet<{{manyToOneProperty.Type}}>(), false);
         }
 """);
                 //}

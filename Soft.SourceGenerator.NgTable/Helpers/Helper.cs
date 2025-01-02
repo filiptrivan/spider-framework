@@ -499,11 +499,41 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                              .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
                     {
                         classes.AddRange(GetEntityAndDTOClassesFromReferencedAssemblies(referencedAssembly.GlobalNamespace));
+
                     }
 
                     return classes;
                 });
         }
+
+        public static IncrementalValueProvider<List<SoftClass>> GetEntityClassesAndServicesFromReferencedAssemblies(IncrementalGeneratorInitializationContext context)
+        {
+            return context.CompilationProvider
+                .Select(static (compilation, _) =>
+                {
+                    List<SoftClass> classes = new List<SoftClass>();
+
+                    foreach (IAssemblySymbol referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
+                             .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
+                    {
+                        classes.AddRange(GetEntityClassesAndServicesFromReferencedAssemblies(referencedAssembly.GlobalNamespace));
+
+                    }
+
+                    return classes;
+                });
+        }
+
+        //private static IEnumerable<IAssemblySymbol> GetAssemblySymbolsFromReferencedAssemblies(IncrementalGeneratorInitializationContext context)
+        //{
+        //    return context.CompilationProvider
+        //        .Select(static (compilation, _) =>
+        //        {
+        //            return compilation.SourceModule.ReferencedAssemblySymbols
+        //                .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty"))
+        //                .AsEnumerable();
+        //        })
+        //}
 
         private static List<SoftClass> GetEntityClassesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol)
         {
@@ -527,6 +557,17 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             List<SoftClass> DTOClasses = classes.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
             List<SoftClass> entityClasses = classes.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+
+            return DTOClasses.Concat(entityClasses).ToList();
+        }
+
+        private static List<SoftClass> GetEntityClassesAndServicesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol)
+        {
+            List<SoftClass> classes = new List<SoftClass>();
+            FillClassesFromReferencedAssemblies(namespaceSymbol, classes);
+
+            List<SoftClass> entityClasses = classes.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SoftClass> DTOClasses = classes.Where(x => x.Namespace.EndsWith(".Services")).ToList();
 
             return DTOClasses.Concat(entityClasses).ToList();
         }
@@ -1032,11 +1073,11 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             string[] parts = cSharpType.Split('<'); // List, long>
 
-            parts[parts.Length-1] = parts[parts.Length-1].Replace(">", ""); // long
+            parts[parts.Length - 1] = parts[parts.Length - 1].Replace(">", ""); // long
 
             if (cSharpType.Contains("TableResponseDTO"))
             {
-                result = $"TableResponse<{parts[parts.Length-1].Replace("DTO", "")}>";
+                result = $"TableResponse<{parts[parts.Length - 1].Replace("DTO", "")}>";
             }
             else if (cSharpType.Contains("LazyLoadSelectedIdsResultDTO"))
             {
@@ -1050,13 +1091,13 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             {
                 result = "Codebook";
             }
-            else if (parts[parts.Length-1].IsBaseType())
+            else if (parts[parts.Length - 1].IsBaseType())
             {
-                result = GetAngularType(parts[parts.Length-1]); // List<long>
+                result = GetAngularType(parts[parts.Length - 1]); // List<long>
             }
             else
             {
-                result = parts[parts.Length-1]; // List<UserDTO>
+                result = parts[parts.Length - 1]; // List<UserDTO>
             }
 
             return result.Replace(DTONamespaceEnding, "").Replace("[]", "");
