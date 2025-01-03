@@ -200,7 +200,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
             foreach (SoftProperty manyToOneProperty in referencedProjectEntityClass.Properties.Where(x => x.Type.IsManyToOneType()))
             {
                 SoftClass manyToOnePropertyClass = referencedProjectEntityClasses.Where(x => x.Name == manyToOneProperty.Type).SingleOrDefault();
-                string manyToOnePropertyIdType = Helper.GetGenericIdType(manyToOnePropertyClass, referencedProjectEntityClasses);
+                string manyToOnePropertyIdType = Helper.GetIdType(manyToOnePropertyClass, referencedProjectEntityClasses);
 
                 //if (manyToOneProperty.IsAutocomplete())
                 //{

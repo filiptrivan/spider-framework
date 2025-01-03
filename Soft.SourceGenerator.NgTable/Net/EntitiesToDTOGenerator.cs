@@ -117,7 +117,7 @@ namespace {{basePartOfNamespace}}.DTO
 """);
                     SoftClass manyToOneClass = allClasses.Where(x => x.Name == propType).Single();
                     DTOproperties.Add($$"""
-        public {{Helper.GetGenericIdType(manyToOneClass, allClasses)}}? {{propName}}Id { get; set; }
+        public {{Helper.GetIdType(manyToOneClass, allClasses)}}? {{propName}}Id { get; set; }
 """);
                     continue;
                 }

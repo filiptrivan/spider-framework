@@ -180,7 +180,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                              //return "Every entity class needs to have the base class";
         }
 
-        public static string GetGenericIdType(SoftClass c, List<SoftClass> classes)
+        public static string GetIdType(SoftClass c, List<SoftClass> classes)
         {
             if (c == null)
                 return "TheClassDoesNotExist";
@@ -1298,7 +1298,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 {
                     props.Add(new SoftProperty { IdentifierText = $"{propName}DisplayName", Type = "string" });
                     SoftClass manyToOneClass = entityClasses.Where(x => x.Name == propType).SingleOrDefault();
-                    props.Add(new SoftProperty { IdentifierText = $"{propName}Id", Type = $"{GetGenericIdType(manyToOneClass, entityClasses)}?" });
+                    props.Add(new SoftProperty { IdentifierText = $"{propName}Id", Type = $"{GetIdType(manyToOneClass, entityClasses)}?" });
                     continue;
                 }
                 else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
@@ -1745,6 +1745,12 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 return new List<SoftProperty>() { };
             }
         }
+
+        #endregion
+
+        #region Controller and business methods sync
+
+        public static string 
 
         #endregion
 

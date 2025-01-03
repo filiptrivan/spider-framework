@@ -109,7 +109,7 @@ namespace {{basePartOfNamespace}}.TableFiltering
                             if (entityDotNotation.EndsWith("CommaSeparated") && pairDTOClass.IsGenerated == true)
                             {
                                 string entityPropName = entityDotNotation.Replace("CommaSeparated", ""); // "SegmentationItems"
-                                string idType = Helper.GetGenericIdType(entityClass, entityClasses); // FT: Id type of SegmentationItem class
+                                string idType = Helper.GetIdType(entityClass, entityClasses); // FT: Id type of SegmentationItem class
 
                                 sb.AppendLine(GetCaseForEnumerable(DTOprop.IdentifierText, entityPropName, idType));
 
