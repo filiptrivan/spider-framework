@@ -10,6 +10,8 @@ namespace Soft.SourceGenerators.Helpers
 {
     public static class Extension
     {
+        #region Case
+
         /// <summary>
         /// There is more performant way but this is NET2
         /// </summary>
@@ -93,6 +95,33 @@ namespace Soft.SourceGenerators.Helpers
             return "aeiou".IndexOf(char.ToLower(c)) >= 0;
         }
 
+        public static string ToCommaSeparatedString<T>(this List<T> input)
+        {
+            List<string> stringList = input.Select(item => item?.ToString() ?? string.Empty).ToList();
+
+            if (stringList.Count > 1)
+                return $"{string.Join(", ", stringList.Take(stringList.Count - 1))} and {stringList.Last()}";
+            else
+                return stringList.FirstOrDefault();
+        }
+
+        public static string FromPascalToKebabCase(this string pascalCaseString)
+        {
+            if (string.IsNullOrEmpty(pascalCaseString))
+            {
+                return string.Empty;
+            }
+
+            string kebabCaseString = Regex.Replace(pascalCaseString, "([a-z])([A-Z])", "$1-$2");
+            kebabCaseString = kebabCaseString.ToLower();
+
+            return kebabCaseString;
+        }
+
+        #endregion
+
+        #region IsType
+
         /// <summary>
         /// User -> true
         /// string -> false
@@ -106,6 +135,14 @@ namespace Soft.SourceGenerators.Helpers
                 return false;
 
             return true;
+        }
+
+        public static bool IsManyToMany(this SoftClass c)
+        {
+            if (c.BaseType == null)
+                return true;
+
+            return false;
         }
 
         public static bool IsAbstract(this ClassDeclarationSyntax c)
@@ -175,6 +212,33 @@ namespace Soft.SourceGenerators.Helpers
                 propType == "Guid?";
         }
 
+        public static bool IsTypeNullable(this string dataType)
+        {
+            if (dataType.Contains("?"))
+                return true;
+            else
+                return false;
+        }
+
+        /// <summary>
+        /// Should use this method for the referenced project types
+        /// </summary>
+        public static string TypeToDisplayString(this object type)
+        {
+            string bigType = type.ToString();
+
+            string splitType = bigType.Split('.').Last().Replace(">", "");
+
+            if (bigType.IsEnumerable())
+            {
+                string enumerableType = bigType.Split('<').First().Split('.').Last();
+
+                return $"{enumerableType}<{splitType}>";
+            }
+
+            return splitType;
+        }
+
         public static bool HasBlobProperty(this SoftClass c)
         {
             return c.Properties.SelectMany(x => x.Attributes).Any(x => x.Name == "BlobName");
@@ -185,43 +249,16 @@ namespace Soft.SourceGenerators.Helpers
             return properties.SelectMany(x => x.Attributes).Any(x => x.Name == "BlobName");
         }
 
+        #endregion
+
+        #region Source Generator
+
         /// <summary>
-        /// The same method is in the .NET8 linq, but source generator is .NET2
+        /// The same method is built in .NET8 linq, but source generator is .NET2
         /// </summary>
         public static IEnumerable<T> DistinctBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> property)
         {
             return items.GroupBy(property).Select(x => x.First());
-        }
-
-        public static string ToCommaSeparatedString<T>(this List<T> input)
-        {
-            List<string> stringList = input.Select(item => item?.ToString() ?? string.Empty).ToList();
-
-            if (stringList.Count > 1)
-                return $"{string.Join(", ", stringList.Take(stringList.Count - 1))} and {stringList.Last()}";
-            else
-                return stringList.FirstOrDefault();
-        }
-
-        public static string FromPascalToKebabCase(this string pascalCaseString)
-        {
-            if (string.IsNullOrEmpty(pascalCaseString))
-            {
-                return string.Empty;
-            }
-
-            string kebabCaseString = Regex.Replace(pascalCaseString, "([a-z])([A-Z])", "$1-$2");
-            kebabCaseString = kebabCaseString.ToLower();
-
-            return kebabCaseString;
-        }
-
-        public static bool IsTypeNullable(this string dataType)
-        {
-            if (dataType.Contains("?"))
-                return true;
-            else
-                return false;
         }
 
         public static string GetDTOBaseType(this SoftClass c)
@@ -259,13 +296,6 @@ namespace Soft.SourceGenerators.Helpers
             return null; // FT: many to many doesn't have base class
         }
 
-        public static SoftClass ToSoftClass(this ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
-        {
-            return new SoftClass
-            {
-                Name = c.Identifier.Text,
-                Properties = Helper.GetAllPropertiesOfTheClass(c, classes)
-            };
-        }
+        #endregion
     }
 }

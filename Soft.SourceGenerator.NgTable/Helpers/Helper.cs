@@ -51,6 +51,391 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             "LazyLoadSelectedIdsResult",
         };
 
+        #region Source Generator
+
+        /// <summary>
+        /// Getting all properties of the single class <paramref name="c"/>, including inherited ones.
+        /// The inherited properties doesn't have any attributes
+        /// </summary>
+        public static List<SoftProperty> GetAllPropertiesOfTheClass(ClassDeclarationSyntax c, IEnumerable<ClassDeclarationSyntax> allClasses, bool getEnumerableProperties = false)
+        {
+            TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
+            ClassDeclarationSyntax baseClass = GetClass(baseType, allClasses);
+
+            string s = c.Identifier.Text;
+
+            List<SoftProperty> properties = GetPropsOfCurrentClass(c);
+
+            TypeSyntax typeGeneric = null;
+
+            while (baseType != null)
+            {
+                if (baseType is GenericNameSyntax genericNameSyntax && baseClass == null)
+                {
+                    typeGeneric = genericNameSyntax.TypeArgumentList.Arguments.FirstOrDefault(); // long
+                    properties.AddRange(GetPropertiesForBaseClasses(baseType.ToString(), typeGeneric.ToString()));
+                    break;
+                }
+                else if (baseClass == null)
+                {
+                    if (baseType.ToString() == "Role")
+                        properties.AddRange(GetRoleProperties());
+
+                    if (baseType.ToString() == "RoleDTO")
+                        properties.AddRange(GetRoleDTOProperties());
+
+                    break;
+                }
+                else
+                {
+                    foreach (PropertyDeclarationSyntax prop in baseClass.Members.OfType<PropertyDeclarationSyntax>())
+                    {
+                        properties.Add(GetPropWithModifiedT(prop, typeGeneric));
+                    }
+                }
+
+                baseType = baseClass.BaseList?.Types.FirstOrDefault()?.Type;
+                baseClass = GetClass(baseType, allClasses);
+            }
+
+            if (getEnumerableProperties == false)
+            {
+                properties = properties
+                    .Where(prop => prop.Type.IsEnumerable() == false)
+                    .ToList();
+            }
+
+            return properties;
+        }
+
+        public static List<SoftAttribute> GetAllAttributesOfTheClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
+        {
+            if (c == null) return null;
+
+            ClassDeclarationSyntax cHelper = SyntaxFactory.ClassDeclaration(c.Identifier).WithBaseList(c.BaseList).WithAttributeLists(c.AttributeLists); // FT: Doing this because of reference type, we don't want to change c
+            List<SoftAttribute> softAttributes = new List<SoftAttribute>();
+
+            TypeSyntax baseType = cHelper.BaseList?.Types.FirstOrDefault()?.Type; // BaseClass
+            // FT: Getting the attributes for all base classes also
+            do
+            {
+                softAttributes.AddRange(cHelper.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
+                {
+                    return GetSoftAttribute(x);
+                })
+                .ToList());
+                cHelper = classes.Where(x => x.Identifier.Text == baseType?.ToString()).FirstOrDefault();
+                baseType = cHelper?.BaseList?.Types.FirstOrDefault()?.Type;
+            }
+            while (baseType != null);
+
+            return softAttributes;
+        }
+
+        /// <summary>
+        /// Using this method only when getting all properties of the class, for other situations, we should search SoftClass.
+        /// </summary>
+        private static ClassDeclarationSyntax GetClass(TypeSyntax type, IEnumerable<ClassDeclarationSyntax> classes)
+        {
+            string typeName = "";
+
+            if (type is GenericNameSyntax genericNameSyntax)
+            {
+                typeName = genericNameSyntax.Identifier.Text; // BaseClass<T>
+            }
+            else if (type is NameSyntax nameSyntax)
+            {
+                typeName = nameSyntax.ToString();
+            }
+
+            return classes.Where(x => x.Identifier.Text == typeName).SingleOrDefault();
+        }
+
+        public static ClassDeclarationSyntax GetClass(string type, IEnumerable<ClassDeclarationSyntax> classes)
+        {
+            return classes.Where(x => x.Identifier.Text == type).SingleOrDefault();
+        }
+
+        public static string GetGenericIdType(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
+        {
+            TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
+
+            while (baseType is not GenericNameSyntax && baseType != null)
+            {
+                if (baseType.ToString() == "Role")
+                    return "int";
+
+                ClassDeclarationSyntax baseClass = classes.Where(x => x.Identifier.Text == baseType.ToString()).SingleOrDefault();
+
+                if (baseClass == null)
+                    return null;
+
+                baseType = baseClass.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
+            }
+
+            if (baseType != null && baseType is GenericNameSyntax genericNameSyntax)
+                return genericNameSyntax.TypeArgumentList.Arguments.FirstOrDefault().ToString(); // long
+            else
+                return null; // FT: It doesn't, many to many doesn't
+                             //return "Every entity class needs to have the base class";
+        }
+
+        public static string GetGenericIdType(SoftClass c, List<SoftClass> classes)
+        {
+            if (c == null)
+                return "TheClassDoesNotExist";
+
+            string baseType = c.BaseType; //BaseClass<long>
+
+            while (baseType != null && baseType.Contains("<") == false)
+            {
+                if (baseType.ToString() == "Role")
+                    return "int";
+
+                SoftClass baseClass = classes.Where(x => x.Name == baseType).SingleOrDefault();
+
+                if (baseClass == null)
+                    return null;
+
+                baseType = baseClass.BaseType; //BaseClass<long>
+            }
+
+            if (baseType != null && baseType.Contains("<"))
+                return baseType.Split('<')[1].Replace(">", ""); // long
+            else
+                return null; // FT: It doesn't, many to many doesn't
+                             //return "Every entity class needs to have the base class";
+        }
+
+        public static string GetGenericBaseType(ClassDeclarationSyntax c)
+        {
+            TypeSyntax baseType = c.BaseList?.Types.Where(x => x.Type is GenericNameSyntax).FirstOrDefault()?.Type; //BaseClass<long>
+            if (baseType != null)
+                return baseType.ToString();
+            else
+                return null; // FT: It doesn't, many to many doesn't
+                             //return "Every entity class needs to have the base class";
+        }
+
+        /// <summary>
+        /// FT: Without inherited
+        /// </summary>
+        public static List<SoftProperty> GetPropsOfCurrentClass(ClassDeclarationSyntax c)
+        {
+            List<SoftProperty> properties = c.Members.OfType<PropertyDeclarationSyntax>()
+                .Select(prop => new SoftProperty()
+                {
+                    Type = prop.Type.ToString(),
+                    IdentifierText = prop.Identifier.Text,
+                    ClassIdentifierText = c.Identifier.Text,
+                    Attributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
+                    {
+                        return GetSoftAttribute(x);
+                    })
+                    .ToList()
+                })
+                .ToList();
+
+            return properties;
+        }
+
+        public static List<SoftMethod> GetMethodsOfCurrentClass(ClassDeclarationSyntax c)
+        {
+            List<SoftMethod> methods = c.Members.OfType<MethodDeclarationSyntax>()
+                .Select(method => new SoftMethod()
+                {
+                    Name = method.Identifier.Text,
+                    ReturnType = method.ReturnType.ToString(),
+                    Body = method.Body?.ToString(), // FT: CreateHostBuilder method inside Program.cs has no body
+                    DescendantNodes = method.DescendantNodes(),
+                    Attributes = method.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
+                    {
+                        return GetSoftAttribute(x);
+                    })
+                    .ToList()
+                })
+                .ToList();
+
+            return methods;
+        }
+
+        /// <summary>
+        /// eg. if we have List2:List1, List1:List0 we will return List2
+        /// </summary>
+        public static List<ClassDeclarationSyntax> GetUninheritedClasses(IList<ClassDeclarationSyntax> classes)
+        {
+            List<string> baseTypeNames = classes.SelectMany(x => GetBaseTypeNames(x)).ToList();
+            List<ClassDeclarationSyntax> helper = new List<ClassDeclarationSyntax>();
+            foreach (ClassDeclarationSyntax entityClass in classes)
+            {
+                if (baseTypeNames.Contains(entityClass.Identifier.Text) == false) // FT: Ako se neki entity ne nalazi nigde kao base type onda ga koristimo
+                    helper.Add(entityClass);
+            }
+            return helper;
+        }
+
+        public static List<string> GetBaseTypeNames(ClassDeclarationSyntax c)
+        {
+            List<string> baseTypeNames = c.BaseList?.Types.Select(x => x.Type.ToString()).ToList();
+
+            if (baseTypeNames == null)
+                return new List<string>();
+            else
+                return baseTypeNames;
+        }
+
+        public static string GetDisplayNamePropForClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
+        {
+            List<SoftProperty> props = GetAllPropertiesOfTheClass(c, classes);
+            SoftProperty displayNamePropForClass = props.Where(x => x.Attributes.Any(x => x.Name == DisplayNameAttribute)).SingleOrDefault();
+
+            if (displayNamePropForClass == null)
+                return $"Id.ToString()";
+
+            if (displayNamePropForClass.Type != "string")
+                return $"{displayNamePropForClass.IdentifierText}.ToString()";
+
+            return displayNamePropForClass.IdentifierText;
+        }
+
+        public static string GetDisplayNamePropForClass(SoftClass c)
+        {
+            List<SoftProperty> props = c.Properties;
+            SoftProperty displayNamePropForClass = props.Where(x => x.Attributes.Any(x => x.Name == DisplayNameAttribute)).SingleOrDefault();
+
+            if (displayNamePropForClass == null)
+                return $"Id.ToString()";
+
+            if (displayNamePropForClass.Type != "string")
+                return $"{displayNamePropForClass.IdentifierText}.ToString()";
+
+            return displayNamePropForClass.IdentifierText;
+        }
+
+        public static string[] GetNamespacePartsWithoutLastElement(BaseTypeDeclarationSyntax b)
+        {
+            string domainModelNamespace = b
+                .Ancestors()
+                .OfType<NamespaceDeclarationSyntax>()
+                .Select(ns => ns.Name.ToString())
+                .FirstOrDefault();
+
+            string[] namespaceParts = domainModelNamespace.Split('.');
+            string[] namespacePartsWithoutLastElement = namespaceParts.Take(namespaceParts.Length - 1).ToArray();
+
+            return namespacePartsWithoutLastElement; // eg. Soft, Generator, Security
+        }
+
+        public static string[] GetNamespacePartsWithoutLastElement(string namespaceValue)
+        {
+            string[] namespaceParts = namespaceValue.Split('.');
+            string[] namespacePartsWithoutLastElement = namespaceParts.Take(namespaceParts.Length - 1).ToArray();
+
+            return namespacePartsWithoutLastElement; // eg. Soft, Generator, Security
+        }
+
+        public static List<SoftProperty> GetPropsToExcludeFromExcelExport(string className, IList<SoftClass> DTOClasses, ClassDeclarationSyntax mapperClass)
+        {
+            List<SoftProperty> DTOClassProperties = new List<SoftProperty>();
+
+            // FT: I dont know why did i add here this, if im overriding it down.
+            //List<SoftClass> pairDTOClasses = DTOClasses.Where(x => x.Name == className).ToList(); // There will be 2, partial generated and partial manual
+            //foreach (SoftClass classDTO in pairDTOClasses) // It's only two here
+            //    DTOClassProperties.AddRange(classDTO.Properties);
+
+            MethodDeclarationSyntax excelMethod = mapperClass?.Members.OfType<MethodDeclarationSyntax>()
+               .Where(x => x.ReturnType.ToString() == className && x.Identifier.ToString() == $"{MethodNameForExcelExportMapping}")
+               .SingleOrDefault();
+
+            IList<SoftAttribute> excludePropAttributes = new List<SoftAttribute>();
+
+            DTOClassProperties = DTOClassProperties // excluding enumerables from the excel
+                .Where(prop => prop.Type.IsEnumerable())
+                .ToList();
+
+            // ubacivanje atributa gde vidimo koje propertije treba da preskocimo u Excelu
+            if (excelMethod != null)
+            {
+                foreach (AttributeListSyntax item in excelMethod.AttributeLists)
+                {
+                    foreach (AttributeSyntax attribute in item.Attributes)
+                    {
+                        string attributeName = attribute.Name.ToString();
+                        if (attributeName != null && attributeName == $"{MapperlyIgnoreAttribute}")
+                        {
+                            string propNameInsideBrackets = attribute.ArgumentList.Arguments.FirstOrDefault().ToString().Split('.').Last().Replace(")", "").Replace("\"", "");
+                            //excludePropAttributes.Add(new SoftAttribute() { Name = attribute.Name.ToString(), PropNameInsideBrackets = propNameInsideBrackets }); // FT: i don't need this if i don't know which prop type it is
+                            DTOClassProperties.Add(new SoftProperty { IdentifierText = propNameInsideBrackets });
+                        }
+                    }
+                }
+            }
+
+            return DTOClassProperties;
+        }
+
+        public static List<SoftProperty> GetManyToOneRequiredProperties(string nameOfTheEntityClass, List<SoftClass> softEntityClasses)
+        {
+            return softEntityClasses
+                .SelectMany(x => x.Properties)
+                .Where(prop => prop.Type.IsManyToOneType() &&
+                               prop.Attributes.Any(x => x.Name == "ManyToOneRequired") &&
+                               prop.Type == nameOfTheEntityClass)
+                .ToList();
+        }
+
+        /// <summary>
+        /// List<long> -> long
+        /// </summary>
+        public static string ExtractTypeFromGenericType(string input)
+        {
+            string[] parts = input.Split('<'); // List, long>
+            string result = parts[1].Replace(">", "");
+
+            return result;
+        }
+
+        private static SoftAttribute GetSoftAttribute(AttributeSyntax a)
+        {
+            string argumentValue = a?.ArgumentList?.Arguments != null && a.ArgumentList.Arguments.Any()
+                    ? string.Join(", ", a.ArgumentList.Arguments.Select(arg => arg?.ToString()))
+                    : null; ; // FT: Doing this because of Range(0, 5) (long tail because of null pointer exception)
+
+            argumentValue = GetFormatedAttributeValue(argumentValue);
+
+            return new SoftAttribute
+            {
+                Name = a.Name.ToString(),
+                Value = argumentValue,
+            };
+        }
+
+        private static string GetFormatedAttributeValue(string value)
+        {
+            value = value?.Replace("\"", "").Replace("@", "");
+
+            string pattern = @"nameof\((?:[^.]*\.)?([^.)]*)\)"; // nameof(abc.def.ghi) => ghi
+            value = value != null ? Regex.Replace(value, pattern, "$1") : null;
+
+            return value;
+        }
+
+        private static SoftProperty GetPropWithModifiedT(PropertyDeclarationSyntax prop, TypeSyntax typeGeneric)
+        {
+            List<SoftAttribute> attributes = GetAllAttributesOfTheMember(prop);
+            SoftProperty newProp = new SoftProperty() { Type = prop.Type.ToString(), IdentifierText = prop.Identifier.Text, Attributes = attributes };
+
+            if (prop.Type.ToString() == "T") // If some property has type of T, we change it to long for example
+            {
+                newProp.Type = typeGeneric.ToString();
+                return newProp;
+            }
+
+            return newProp;
+        }
+
+        #endregion
+
         #region Syntax and Semantic targets
 
         public static bool IsSyntaxTargetForGenerationSettings(SyntaxNode node)
@@ -587,7 +972,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     {
                         Name = type.Name,
                         Namespace = GetFullNamespace(type),
-                        BaseType = type.BaseType?.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat) == "object" ? null : type.BaseType?.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat),
+                        BaseType = type.BaseType?.TypeToDisplayString() == "object" ? null : type.BaseType?.TypeToDisplayString(),
                         IsAbstract = type.IsAbstract,
                         ControllerName = attributes.Where(x => x.Name == "Controller").Select(x => x.Value).SingleOrDefault() ?? type.Name,
                         Properties = GetPropertiesFromReferencedAssemblies(type),
@@ -634,7 +1019,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         {
                             IdentifierText = member.Name,
                             ClassIdentifierText = type.Name,
-                            Type = property.Type.ToString(),
+                            Type = property.Type.TypeToDisplayString(),
                             Attributes = GetAttributesFromReferencedAssemblies(member)
                         };
 
@@ -1107,380 +1492,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
         #endregion
 
-        /// <summary>
-        /// Getting all properties of the single class <paramref name="c"/>, including inherited ones.
-        /// The inherited properties doesn't have any attributes
-        /// </summary>
-        public static List<SoftProperty> GetAllPropertiesOfTheClass(ClassDeclarationSyntax c, IEnumerable<ClassDeclarationSyntax> allClasses, bool getEnumerableProperties = false)
-        {
-            TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
-            ClassDeclarationSyntax baseClass = GetClass(baseType, allClasses);
-
-            string s = c.Identifier.Text;
-
-            List<SoftProperty> properties = GetPropsOfCurrentClass(c);
-
-            TypeSyntax typeGeneric = null;
-
-            while (baseType != null)
-            {
-                if (baseType is GenericNameSyntax genericNameSyntax && baseClass == null)
-                {
-                    typeGeneric = genericNameSyntax.TypeArgumentList.Arguments.FirstOrDefault(); // long
-                    properties.AddRange(GetPropertiesForBaseClasses(baseType.ToString(), typeGeneric.ToString()));
-                    break;
-                }
-                else if (baseClass == null)
-                {
-                    if (baseType.ToString() == "Role")
-                        properties.AddRange(GetRoleProperties());
-
-                    if (baseType.ToString() == "RoleDTO")
-                        properties.AddRange(GetRoleDTOProperties());
-
-                    break;
-                }
-                else
-                {
-                    foreach (PropertyDeclarationSyntax prop in baseClass.Members.OfType<PropertyDeclarationSyntax>())
-                    {
-                        properties.Add(GetPropWithModifiedT(prop, typeGeneric));
-                    }
-                }
-
-                baseType = baseClass.BaseList?.Types.FirstOrDefault()?.Type;
-                baseClass = GetClass(baseType, allClasses);
-            }
-
-            if (getEnumerableProperties == false)
-            {
-                properties = properties
-                    .Where(prop => prop.Type.IsEnumerable() == false)
-                    .ToList();
-            }
-
-            return properties;
-        }
-
-        public static List<SoftAttribute> GetAllAttributesOfTheClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
-        {
-            if (c == null) return null;
-
-            ClassDeclarationSyntax cHelper = SyntaxFactory.ClassDeclaration(c.Identifier).WithBaseList(c.BaseList).WithAttributeLists(c.AttributeLists); // FT: Doing this because of reference type, we don't want to change c
-            List<SoftAttribute> softAttributes = new List<SoftAttribute>();
-
-            TypeSyntax baseType = cHelper.BaseList?.Types.FirstOrDefault()?.Type; // BaseClass
-            // FT: Getting the attributes for all base classes also
-            do
-            {
-                softAttributes.AddRange(cHelper.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
-                {
-                    return GetSoftAttribute(x);
-                })
-                .ToList());
-                cHelper = classes.Where(x => x.Identifier.Text == baseType?.ToString()).FirstOrDefault();
-                baseType = cHelper?.BaseList?.Types.FirstOrDefault()?.Type;
-            }
-            while (baseType != null);
-
-            return softAttributes;
-        }
-
-        /// <summary>
-        /// Using this method only when getting all properties of the class, for other situations, we should search SoftClass.
-        /// </summary>
-        private static ClassDeclarationSyntax GetClass(TypeSyntax type, IEnumerable<ClassDeclarationSyntax> classes)
-        {
-            string typeName = "";
-
-            if (type is GenericNameSyntax genericNameSyntax)
-            {
-                typeName = genericNameSyntax.Identifier.Text; // BaseClass<T>
-            }
-            else if (type is NameSyntax nameSyntax)
-            {
-                typeName = nameSyntax.ToString();
-            }
-
-            return classes.Where(x => x.Identifier.Text == typeName).SingleOrDefault();
-        }
-
-        public static ClassDeclarationSyntax GetClass(string type, IEnumerable<ClassDeclarationSyntax> classes)
-        {
-            return classes.Where(x => x.Identifier.Text == type).SingleOrDefault();
-        }
-
-        public static string GetGenericIdType(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
-        {
-            TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
-
-            while (baseType is not GenericNameSyntax && baseType != null)
-            {
-                if (baseType.ToString() == "Role")
-                    return "int";
-
-                ClassDeclarationSyntax baseClass = classes.Where(x => x.Identifier.Text == baseType.ToString()).SingleOrDefault();
-
-                if (baseClass == null)
-                    return null;
-
-                baseType = baseClass.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
-            }
-
-            if (baseType != null && baseType is GenericNameSyntax genericNameSyntax)
-                return genericNameSyntax.TypeArgumentList.Arguments.FirstOrDefault().ToString(); // long
-            else
-                return null; // FT: It doesn't, many to many doesn't
-                             //return "Every entity class needs to have the base class";
-        }
-
-        public static string GetGenericIdType(SoftClass c, List<SoftClass> classes)
-        {
-            if (c == null)
-                return "TheClassDoesNotExist";
-
-            string baseType = c.BaseType; //BaseClass<long>
-
-            while (baseType != null && baseType.Contains("<") == false)
-            {
-                if (baseType.ToString() == "Role")
-                    return "int";
-
-                SoftClass baseClass = classes.Where(x => x.Name == baseType).SingleOrDefault();
-
-                if (baseClass == null)
-                    return null;
-
-                baseType = baseClass.BaseType; //BaseClass<long>
-            }
-
-            if (baseType != null && baseType.Contains("<"))
-                return baseType.Split('<')[1].Replace(">", ""); // long
-            else
-                return null; // FT: It doesn't, many to many doesn't
-                             //return "Every entity class needs to have the base class";
-        }
-
-        public static string GetGenericBaseType(ClassDeclarationSyntax c)
-        {
-            TypeSyntax baseType = c.BaseList?.Types.Where(x => x.Type is GenericNameSyntax).FirstOrDefault()?.Type; //BaseClass<long>
-            if (baseType != null)
-                return baseType.ToString();
-            else
-                return null; // FT: It doesn't, many to many doesn't
-                             //return "Every entity class needs to have the base class";
-        }
-
-        /// <summary>
-        /// FT: Without inherited
-        /// </summary>
-        public static List<SoftProperty> GetPropsOfCurrentClass(ClassDeclarationSyntax c)
-        {
-            List<SoftProperty> properties = c.Members.OfType<PropertyDeclarationSyntax>()
-                .Select(prop => new SoftProperty()
-                {
-                    Type = prop.Type.ToString(),
-                    IdentifierText = prop.Identifier.Text,
-                    ClassIdentifierText = c.Identifier.Text,
-                    Attributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
-                    {
-                        return GetSoftAttribute(x);
-                    })
-                    .ToList()
-                })
-                .ToList();
-
-            return properties;
-        }
-
-        public static List<SoftMethod> GetMethodsOfCurrentClass(ClassDeclarationSyntax c)
-        {
-            List<SoftMethod> methods = c.Members.OfType<MethodDeclarationSyntax>()
-                .Select(method => new SoftMethod()
-                {
-                    Name = method.Identifier.Text,
-                    ReturnType = method.ReturnType.ToString(),
-                    Body = method.Body?.ToString(), // FT: CreateHostBuilder method inside Program.cs has no body
-                    DescendantNodes = method.DescendantNodes(),
-                    Attributes = method.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
-                    {
-                        return GetSoftAttribute(x);
-                    })
-                    .ToList()
-                })
-                .ToList();
-
-            return methods;
-        }
-
-        /// <summary>
-        /// eg. if we have List2:List1, List1:List0 we will return List2
-        /// </summary>
-        public static List<ClassDeclarationSyntax> GetUninheritedClasses(IList<ClassDeclarationSyntax> classes)
-        {
-            List<string> baseTypeNames = classes.SelectMany(x => GetBaseTypeNames(x)).ToList();
-            List<ClassDeclarationSyntax> helper = new List<ClassDeclarationSyntax>();
-            foreach (ClassDeclarationSyntax entityClass in classes)
-            {
-                if (baseTypeNames.Contains(entityClass.Identifier.Text) == false) // FT: Ako se neki entity ne nalazi nigde kao base type onda ga koristimo
-                    helper.Add(entityClass);
-            }
-            return helper;
-        }
-
-        public static List<string> GetBaseTypeNames(ClassDeclarationSyntax c)
-        {
-            List<string> baseTypeNames = c.BaseList?.Types.Select(x => x.Type.ToString()).ToList();
-
-            if (baseTypeNames == null)
-                return new List<string>();
-            else
-                return baseTypeNames;
-        }
-
-        public static string GetDisplayNamePropForClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
-        {
-            List<SoftProperty> props = GetAllPropertiesOfTheClass(c, classes);
-            SoftProperty displayNamePropForClass = props.Where(x => x.Attributes.Any(x => x.Name == DisplayNameAttribute)).SingleOrDefault();
-
-            if (displayNamePropForClass == null)
-                return $"Id.ToString()";
-
-            if (displayNamePropForClass.Type != "string")
-                return $"{displayNamePropForClass.IdentifierText}.ToString()";
-
-            return displayNamePropForClass.IdentifierText;
-        }
-
-        public static string GetDisplayNamePropForClass(SoftClass c)
-        {
-            List<SoftProperty> props = c.Properties;
-            SoftProperty displayNamePropForClass = props.Where(x => x.Attributes.Any(x => x.Name == DisplayNameAttribute)).SingleOrDefault();
-
-            if (displayNamePropForClass == null)
-                return $"Id.ToString()";
-
-            if (displayNamePropForClass.Type != "string")
-                return $"{displayNamePropForClass.IdentifierText}.ToString()";
-
-            return displayNamePropForClass.IdentifierText;
-        }
-
-        public static string[] GetNamespacePartsWithoutLastElement(BaseTypeDeclarationSyntax b)
-        {
-            string domainModelNamespace = b
-                .Ancestors()
-                .OfType<NamespaceDeclarationSyntax>()
-                .Select(ns => ns.Name.ToString())
-                .FirstOrDefault();
-
-            string[] namespaceParts = domainModelNamespace.Split('.');
-            string[] namespacePartsWithoutLastElement = namespaceParts.Take(namespaceParts.Length - 1).ToArray();
-
-            return namespacePartsWithoutLastElement; // eg. Soft, Generator, Security
-        }
-
-        public static string[] GetNamespacePartsWithoutLastElement(string namespaceValue)
-        {
-            string[] namespaceParts = namespaceValue.Split('.');
-            string[] namespacePartsWithoutLastElement = namespaceParts.Take(namespaceParts.Length - 1).ToArray();
-
-            return namespacePartsWithoutLastElement; // eg. Soft, Generator, Security
-        }
-
-        public static List<SoftProperty> GetPropsToExcludeFromExcelExport(string className, IList<SoftClass> DTOClasses, ClassDeclarationSyntax mapperClass)
-        {
-            List<SoftProperty> DTOClassProperties = new List<SoftProperty>();
-
-            // FT: I dont know why did i add here this, if im overriding it down.
-            //List<SoftClass> pairDTOClasses = DTOClasses.Where(x => x.Name == className).ToList(); // There will be 2, partial generated and partial manual
-            //foreach (SoftClass classDTO in pairDTOClasses) // It's only two here
-            //    DTOClassProperties.AddRange(classDTO.Properties);
-
-            MethodDeclarationSyntax excelMethod = mapperClass?.Members.OfType<MethodDeclarationSyntax>()
-               .Where(x => x.ReturnType.ToString() == className && x.Identifier.ToString() == $"{MethodNameForExcelExportMapping}")
-               .SingleOrDefault();
-
-            IList<SoftAttribute> excludePropAttributes = new List<SoftAttribute>();
-
-            DTOClassProperties = DTOClassProperties // excluding enumerables from the excel
-                .Where(prop => prop.Type.IsEnumerable())
-                .ToList();
-
-            // ubacivanje atributa gde vidimo koje propertije treba da preskocimo u Excelu
-            if (excelMethod != null)
-            {
-                foreach (AttributeListSyntax item in excelMethod.AttributeLists)
-                {
-                    foreach (AttributeSyntax attribute in item.Attributes)
-                    {
-                        string attributeName = attribute.Name.ToString();
-                        if (attributeName != null && attributeName == $"{MapperlyIgnoreAttribute}")
-                        {
-                            string propNameInsideBrackets = attribute.ArgumentList.Arguments.FirstOrDefault().ToString().Split('.').Last().Replace(")", "").Replace("\"", "");
-                            //excludePropAttributes.Add(new SoftAttribute() { Name = attribute.Name.ToString(), PropNameInsideBrackets = propNameInsideBrackets }); // FT: i don't need this if i don't know which prop type it is
-                            DTOClassProperties.Add(new SoftProperty { IdentifierText = propNameInsideBrackets });
-                        }
-                    }
-                }
-            }
-
-            return DTOClassProperties;
-        }
-
-        public static List<SoftProperty> GetManyToOneRequiredProperties(string nameOfTheEntityClass, List<SoftClass> softEntityClasses)
-        {
-            return softEntityClasses
-                .SelectMany(x => x.Properties)
-                .Where(prop => prop.Type.IsManyToOneType() &&
-                               prop.Attributes.Any(x => x.Name == "ManyToOneRequired") &&
-                               prop.Type == nameOfTheEntityClass)
-                .ToList();
-        }
-
-        /// <summary>
-        /// List<long> -> long
-        /// </summary>
-        public static string ExtractTypeFromGenericType(string input)
-        {
-            string[] parts = input.Split('<'); // List, long>
-            string result = parts[1].Replace(">", "");
-
-            return result;
-        }
-
-        /// <summary>
-        /// DeSerializes an object from JSON
-        /// </summary>
-        public static T DeserializeJson<T>(string json) where T : class
-        {
-            using (var stream = new MemoryStream(Encoding.Default.GetBytes(json)))
-            {
-                var serializer = new DataContractJsonSerializer(typeof(T));
-                return serializer.ReadObject(stream) as T;
-            }
-        }
-
-        public static void WriteToTheFile(string data, string path)
-        {
-            if (data != null)
-            {
-                StreamWriter sw = new StreamWriter(path, false);
-                sw.WriteLine(data);
-                sw.Close();
-            }
-        }
-
-        public static void WriteToTheFile(StringBuilder data, string path)
-        {
-            if (data != null)
-            {
-                StreamWriter sw = new StreamWriter(path, false);
-                sw.WriteLine(data);
-                sw.Close();
-            }
-        }
-
         #region Permissions
 
         public static List<SoftEnum> GetEnumMembers(EnumDeclarationSyntax enume)
@@ -1582,49 +1593,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static List<SoftProperty> GetBlobProperties(List<SoftProperty> properties)
         {
             return properties.Where(x => x.Attributes.Any(x => x.Name == "BlobName")).ToList();
-        }
-
-        #endregion
-
-        #region Helpers
-
-        private static SoftAttribute GetSoftAttribute(AttributeSyntax a)
-        {
-            string argumentValue = a?.ArgumentList?.Arguments != null && a.ArgumentList.Arguments.Any()
-                    ? string.Join(", ", a.ArgumentList.Arguments.Select(arg => arg?.ToString()))
-                    : null; ; // FT: Doing this because of Range(0, 5) (long tail because of null pointer exception)
-
-            argumentValue = GetFormatedAttributeValue(argumentValue);
-
-            return new SoftAttribute
-            {
-                Name = a.Name.ToString(),
-                Value = argumentValue,
-            };
-        }
-
-        private static string GetFormatedAttributeValue(string value)
-        {
-            value = value?.Replace("\"", "").Replace("@", "");
-
-            string pattern = @"nameof\((?:[^.]*\.)?([^.)]*)\)"; // nameof(abc.def.ghi) => ghi
-            value = value != null ? Regex.Replace(value, pattern, "$1") : null;
-
-            return value;
-        }
-
-        private static SoftProperty GetPropWithModifiedT(PropertyDeclarationSyntax prop, TypeSyntax typeGeneric)
-        {
-            List<SoftAttribute> attributes = GetAllAttributesOfTheMember(prop);
-            SoftProperty newProp = new SoftProperty() { Type = prop.Type.ToString(), IdentifierText = prop.Identifier.Text, Attributes = attributes };
-
-            if (prop.Type.ToString() == "T") // If some property has type of T, we change it to long for example
-            {
-                newProp.Type = typeGeneric.ToString();
-                return newProp;
-            }
-
-            return newProp;
         }
 
         #endregion
@@ -1775,6 +1743,42 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             else
             {
                 return new List<SoftProperty>() { };
+            }
+        }
+
+        #endregion
+
+        #region Helpers
+
+        /// <summary>
+        /// DeSerializes an object from JSON
+        /// </summary>
+        public static T DeserializeJson<T>(string json) where T : class
+        {
+            using (var stream = new MemoryStream(Encoding.Default.GetBytes(json)))
+            {
+                var serializer = new DataContractJsonSerializer(typeof(T));
+                return serializer.ReadObject(stream) as T;
+            }
+        }
+
+        public static void WriteToTheFile(string data, string path)
+        {
+            if (data != null)
+            {
+                StreamWriter sw = new StreamWriter(path, false);
+                sw.WriteLine(data);
+                sw.Close();
+            }
+        }
+
+        public static void WriteToTheFile(StringBuilder data, string path)
+        {
+            if (data != null)
+            {
+                StreamWriter sw = new StreamWriter(path, false);
+                sw.WriteLine(data);
+                sw.Close();
             }
         }
 

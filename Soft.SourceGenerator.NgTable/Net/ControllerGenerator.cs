@@ -18,12 +18,12 @@ namespace Soft.SourceGenerators.Net
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEveryClass(s),
@@ -56,13 +56,13 @@ namespace Soft.SourceGenerators.Net
 
             List<SoftClass> referencedProjectServices = referencedProjectEntityClassesAndServices.Where(x => x.Namespace.EndsWith(".Services")).ToList();
 
-            List <SoftClass> allEntityClasses = projectClasses.Concat(referencedProjectEntityClasses).ToList();
+            List<SoftClass> allEntityClasses = projectClasses.Concat(referencedProjectEntityClasses).ToList();
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(projectClasses[0].Namespace);
 
-            string basePartOfTheNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Playerty.Loyals.Infrastructure
+            string basePartOfTheNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. PlayertyLoyals.Infrastructure
             //string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Infrastructure
-            string projectName = namespacePartsWithoutLastElement[0]; // eg. Playerty
+            string projectName = namespacePartsWithoutLastElement[0]; // eg. PlayertyLoyals
 
             string result = $$"""
 using Microsoft.EntityFrameworkCore;
@@ -75,6 +75,7 @@ using Soft.Generator.Shared.Helpers;
 using Soft.Generator.Shared.DTO;
 using Soft.Generator.Shared.Attributes;
 using Soft.Generator.Shared.Interfaces;
+using {{projectName}}.Shared.Terms;
 {{string.Join("\n", Helper.GetEntityClassesUsings(referencedProjectEntityClasses))}}
 {{string.Join("\n", Helper.GetDTOClassesUsings(referencedProjectEntityClasses))}}
 
@@ -95,8 +96,16 @@ namespace {{basePartOfTheNamespace}}.Controllers
             {
                 string servicesNamespace = referencedProjectEntityGroupedClasses.FirstOrDefault().Namespace.Replace(".Entities", ".Services");
                 SoftClass businessServiceClass = referencedProjectServices
-                    .Where(x => x.Namespace == servicesNamespace && x.BaseType.EndsWith("BusinessServiceGenerated"))
+                    .Where(x => x.BaseType != null && 
+                                x.Namespace != null && 
+                                x.Namespace == servicesNamespace && 
+                                x.BaseType.Contains("BusinessServiceGenerated") && 
+                                x.BaseType.Contains("AuthorizationBusinessServiceGenerated") == false)
                     .SingleOrDefault();
+
+                if (businessServiceClass == null) // FT: Didn't make custom business service in the project.
+                    continue;
+
                 string businessServiceName = businessServiceClass.Name;
 
                 result.Add($$"""
@@ -105,13 +114,13 @@ namespace {{basePartOfTheNamespace}}.Controllers
     public class {{referencedProjectEntityGroupedClasses.Key}}BaseController : SoftControllerBase
     {
         private readonly IApplicationDbContext _context;
-        private readonly {{servicesNamespace}}.{{businessServiceClass.Name}} _{{businessServiceClass.Name.FirstCharToLower()}};
+        private readonly {{servicesNamespace}}.{{GetBusinessServiceClassName(businessServiceName)}} _{{businessServiceName.FirstCharToLower()}};
         private readonly BlobContainerClient _blobContainerClient;
 
-        public {{referencedProjectEntityGroupedClasses.Key}}BaseController(IApplicationDbContext context, {{servicesNamespace}}.{{businessServiceClass.Name}} {{businessServiceClass.Name.FirstCharToLower()}}, BlobContainerClient blobContainerClient)
+        public {{referencedProjectEntityGroupedClasses.Key}}BaseController(IApplicationDbContext context, {{servicesNamespace}}.{{GetBusinessServiceClassName(businessServiceName)}} {{businessServiceName.FirstCharToLower()}}, BlobContainerClient blobContainerClient)
         {
             _context = context;
-            _{{businessServiceClass.Name.FirstCharToLower()}} = {{businessServiceClass.Name.FirstCharToLower()}};
+            _{{businessServiceName.FirstCharToLower()}} = {{businessServiceName.FirstCharToLower()}};
             _blobContainerClient = blobContainerClient;
         }
 
@@ -130,19 +139,22 @@ namespace {{basePartOfTheNamespace}}.Controllers
 
             foreach (SoftClass referencedProjectEntityClass in referencedProjectEntityGroupedClasses)
             {
+                if (referencedProjectEntityClass.IsManyToMany()) // TODO FT: Do something with M2M entities
+                    continue;
+
                 result.Add($$"""
         [HttpPost]
         [AuthGuard]
         public async Task<TableResponseDTO<{{referencedProjectEntityClass.Name}}DTO>> Load{{referencedProjectEntityClass.Name}}TableData(TableFilterDTO tableFilterDTO)
         {
-            return await _{{businessServiceName}}.Load{{referencedProjectEntityClass.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Load{{referencedProjectEntityClass.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
         }
 
         [HttpPost]
         [AuthGuard]
         public async Task<IActionResult> Export{{referencedProjectEntityClass.Name}}TableDataToExcel(TableFilterDTO tableFilterDTO)
         {
-            byte[] fileContent = await _{{businessServiceName}}.Export{{referencedProjectEntityClass.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+            byte[] fileContent = await _{{businessServiceName.FirstCharToLower()}}.Export{{referencedProjectEntityClass.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"{Terms.{{referencedProjectEntityClass.Name}}ExcelExportName}.xlsx"));
         }
 
@@ -150,28 +162,28 @@ namespace {{basePartOfTheNamespace}}.Controllers
         [AuthGuard]
         public async Task Delete{{referencedProjectEntityClass.Name}}(int id)
         {
-            await _{{businessServiceName}}.Delete{{referencedProjectEntityClass.Name}}Async(id, false);
+            await _{{businessServiceName.FirstCharToLower()}}.Delete{{referencedProjectEntityClass.Name}}Async(id, false);
         }
 
         [HttpGet]
         [AuthGuard]
         public async Task<{{referencedProjectEntityClass.Name}}DTO> Get{{referencedProjectEntityClass.Name}}(int id)
         {
-            return await _{{businessServiceName}}.Get{{referencedProjectEntityClass.Name}}DTOAsync(id, false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}DTOAsync(id, false);
         }
 
         [HttpPut]
         [AuthGuard]
         public async Task<{{referencedProjectEntityClass.Name}}DTO> Save{{referencedProjectEntityClass.Name}}({{referencedProjectEntityClass.Name}}DTO {{referencedProjectEntityClass.Name.FirstCharToLower()}}DTO)
         {
-            return await _{{businessServiceName}}.Save{{referencedProjectEntityClass.Name}}AndReturnDTOAsync({{referencedProjectEntityClass.Name.FirstCharToLower()}}DTO, false, false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Save{{referencedProjectEntityClass.Name}}AndReturnDTOAsync({{referencedProjectEntityClass.Name.FirstCharToLower()}}DTO, false, false);
         }
 
         [HttpGet]
         [AuthGuard]
         public async Task<List<{{referencedProjectEntityClass.Name}}DTO>> Get{{referencedProjectEntityClass.Name}}List()
         {
-            return await _{{businessServiceName}}.Load{{referencedProjectEntityClass.Name}}DTOList(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Load{{referencedProjectEntityClass.Name}}DTOList(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
         }
 
 {{string.Join("\n", GetOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
@@ -197,7 +209,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
         [AuthGuard]
         public async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Load{{manyToOneProperty.IdentifierText}}ListForAutocomplete(int limit, string query)
         {
-            return await _{{businessServiceName}}.Load{{manyToOneProperty.Type}}ListForAutocomplete(limit, query, _context.DbSet<{{manyToOneProperty.Type}}>());
+            return await _{{businessServiceName.FirstCharToLower()}}.Load{{manyToOneProperty.Type}}ListForAutocomplete(limit, query, _context.DbSet<{{manyToOneProperty.Type}}>());
         }
 """);
                 //}
@@ -209,13 +221,25 @@ namespace {{basePartOfTheNamespace}}.Controllers
         [AuthGuard]
         public async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Load{{manyToOneProperty.IdentifierText}}ListForDropdown()
         {
-            return await _{{businessServiceName}}.Load{{manyToOneProperty.Type}}ListForDropdown(_context.DbSet<{{manyToOneProperty.Type}}>(), false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Load{{manyToOneProperty.Type}}ListForDropdown(_context.DbSet<{{manyToOneProperty.Type}}>(), false);
         }
 """);
                 //}
             }
 
             return result;
+        }
+
+        private static string GetBusinessServiceClassName(string businessServiceName)
+        {
+            if (businessServiceName.Contains("Security"))
+            {
+                return $"{businessServiceName}<UserExtended>";
+            }
+            else
+            {
+                return businessServiceName;
+            }
         }
 
     }
