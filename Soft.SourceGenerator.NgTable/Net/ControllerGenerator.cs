@@ -143,6 +143,10 @@ namespace {{basePartOfTheNamespace}}.Controllers
                     continue;
 
                 result.Add($$"""
+        #region {{referencedProjectEntityClass.Name}}
+
+        #region Read
+
         [HttpPost]
         [AuthGuard]
         public async Task<TableResponseDTO<{{referencedProjectEntityClass.Name}}DTO>> Load{{referencedProjectEntityClass.Name}}TableData(TableFilterDTO tableFilterDTO)
@@ -158,11 +162,11 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"{Terms.{{referencedProjectEntityClass.Name}}ExcelExportName}.xlsx"));
         }
 
-        [HttpDelete]
+        [HttpGet]
         [AuthGuard]
-        public async Task Delete{{referencedProjectEntityClass.Name}}(int id)
+        public async Task<List<{{referencedProjectEntityClass.Name}}DTO>> Get{{referencedProjectEntityClass.Name}}List()
         {
-            await _{{businessServiceName.FirstCharToLower()}}.Delete{{referencedProjectEntityClass.Name}}Async(id, false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Load{{referencedProjectEntityClass.Name}}DTOList(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
         }
 
         [HttpGet]
@@ -172,21 +176,23 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}DTOAsync(id, false);
         }
 
-        [HttpPut]
-        [AuthGuard]
-        public async Task<{{referencedProjectEntityClass.Name}}DTO> Save{{referencedProjectEntityClass.Name}}({{referencedProjectEntityClass.Name}}DTO {{referencedProjectEntityClass.Name.FirstCharToLower()}}DTO)
-        {
-            return await _{{businessServiceName.FirstCharToLower()}}.Save{{referencedProjectEntityClass.Name}}AndReturnDTOAsync({{referencedProjectEntityClass.Name.FirstCharToLower()}}DTO, false, false);
-        }
+{{string.Join("\n\n", GetOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
 
-        [HttpGet]
-        [AuthGuard]
-        public async Task<List<{{referencedProjectEntityClass.Name}}DTO>> Get{{referencedProjectEntityClass.Name}}List()
-        {
-            return await _{{businessServiceName.FirstCharToLower()}}.Load{{referencedProjectEntityClass.Name}}DTOList(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
-        }
+        #endregion
 
-{{string.Join("\n", GetOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
+        #region Save
+
+{{GetSaveControllerMethods(referencedProjectEntityClass, businessServiceName)}}
+
+        #endregion
+
+        #region Delete
+
+{{GetDeleteControllerMethods(referencedProjectEntityClass, businessServiceName)}}
+
+        #endregion
+
+        #endregion
 """);
             }
 
@@ -230,17 +236,42 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return result;
         }
 
+        private static string GetDeleteControllerMethods(SoftClass entity, string businessServiceName)
+        {
+            if (entity.IsReadonlyObject())
+                return null;
+
+            return $$"""
+        [HttpDelete]
+        [AuthGuard]
+        public async Task Delete{{entity.Name}}(int id)
+        {
+            await _{{businessServiceName.FirstCharToLower()}}.Delete{{entity.Name}}Async(id, false);
+        }
+""";
+        }
+
+        private static string GetSaveControllerMethods(SoftClass entity, string businessServiceName)
+        {
+            if (entity.IsReadonlyObject())
+                return null;
+
+            return $$"""
+        [HttpPut]
+        [AuthGuard]
+        public async Task<{{entity.Name}}DTO> Save{{entity.Name}}({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO)
+        {
+            return await _{{businessServiceName.FirstCharToLower()}}.Save{{entity.Name}}AndReturnDTOAsync({{entity.Name.FirstCharToLower()}}DTO, false, false);
+        }
+""";
+        }
+
         private static string GetBusinessServiceClassName(string businessServiceName)
         {
             if (businessServiceName.Contains("Security"))
-            {
                 return $"{businessServiceName}<UserExtended>";
-            }
             else
-            {
                 return businessServiceName;
-            }
         }
-
     }
 }

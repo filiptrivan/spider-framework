@@ -5,11 +5,13 @@ using Soft.SourceGenerator.NgTable.Angular;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Resources.NetStandard;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -1748,12 +1750,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
         #endregion
 
-        #region Controller and business methods sync
-
-        public static string 
-
-        #endregion
-
         #region Helpers
 
         /// <summary>
@@ -1786,6 +1782,45 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 sw.WriteLine(data);
                 sw.Close();
             }
+        }
+
+        public static void UpdateResourceFile(Dictionary<string, string> data, string path)
+        {
+            Dictionary<string, string> resourceEntries = new Dictionary<string, string>();
+            if (File.Exists(path))
+            {
+                //Get existing resources
+                ResXResourceReader reader = new ResXResourceReader(path);
+                resourceEntries = reader.Cast<DictionaryEntry>().ToDictionary(d => d.Key.ToString(), d => d.Value?.ToString() ?? "");
+                reader.Close();
+            }
+
+            //Modify resources here...
+            foreach (KeyValuePair<string, string> entry in data)
+            {
+                if (!resourceEntries.ContainsKey(entry.Key))
+                {
+                    if (!resourceEntries.ContainsValue(entry.Value))
+                    {
+                        resourceEntries.Add(entry.Key, entry.Value);
+                    }
+                }
+            }
+
+            string directoryPath = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
+            //Write the combined resource file
+            ResXResourceWriter resourceWriter = new ResXResourceWriter(path);
+            foreach (KeyValuePair<string, string> entry in resourceEntries)
+            {
+                resourceWriter.AddResource(entry.Key, resourceEntries[entry.Key]);
+            }
+            resourceWriter.Generate();
+            resourceWriter.Close();
         }
 
         #endregion

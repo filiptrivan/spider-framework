@@ -76,7 +76,7 @@ namespace {{basePartOfTheNamespace}}.Services
             _blobContainerClient = blobContainerClient;
         }
 
-{{string.Join("\n\n", GetBusinessServiceRegions(entityClasses, allEntityClasses))}}
+{{string.Join("\n\n", GetBusinessServiceMethods(entityClasses, allEntityClasses))}}
 
     }
 }
@@ -85,7 +85,7 @@ namespace {{basePartOfTheNamespace}}.Services
             context.AddSource($"BusinessService.generated", SourceText.From(result, Encoding.UTF8));
         }
 
-        private static List<string> GetBusinessServiceRegions(List<SoftClass> entityClasses, List<SoftClass> allEntityClasses)
+        private static List<string> GetBusinessServiceMethods(List<SoftClass> entityClasses, List<SoftClass> allEntityClasses)
         {
             List<string> result = new List<string>();
 
@@ -96,15 +96,13 @@ namespace {{basePartOfTheNamespace}}.Services
                     result.Add($$"""
         #region {{entity.Name}} - M2M
 
-{{HandleManyToManyData(entity, allEntityClasses)}}
+{{GetManyToManyData(entity, allEntityClasses)}}
 
         #endregion
-
 """);
-
-                    continue;
                 }
-
+                else
+                {
                 result.Add($$"""
         #region {{entity.Name}}
 
@@ -135,8 +133,8 @@ namespace {{basePartOfTheNamespace}}.Services
         #endregion
 
         #endregion
-
 """);
+                }
             }
 
             return result;
@@ -150,7 +148,7 @@ namespace {{basePartOfTheNamespace}}.Services
             string entityDisplayNameProperty = Helper.GetDisplayNamePropForClass(entity);
 
             return $$"""
-public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTOAsync({{entityIdType}} id, bool authorize = true)
+        public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTOAsync({{entityIdType}} id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -355,7 +353,7 @@ public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTOAsync({{entityIdType}
 
         static string GetSavingData(SoftClass entity, List<SoftClass> allEntityClasses)
         {
-            if (entity.IsAbstract || entity.IsEntityReadonlyObject())
+            if (entity.IsAbstract || entity.IsReadonlyObject())
                 return null;
 
             string entityIdType = Helper.GetIdType(entity, allEntityClasses);
@@ -436,7 +434,7 @@ public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTOAsync({{entityIdType}
                 if (classOfManyToOneProperty == null)
                     continue;
 
-                if (classOfManyToOneProperty.IsEntityBusinessObject() || classOfManyToOneProperty.IsEntityReadonlyObject() == false)
+                if (classOfManyToOneProperty.IsBusinessObject() || classOfManyToOneProperty.IsReadonlyObject() == false)
                 {
                     result.Add($$"""
             if (dto.{{prop.IdentifierText}}Id > 0)
@@ -538,6 +536,9 @@ public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTOAsync({{entityIdType}
 
         private static string GetDeletingData(SoftClass entity, List<SoftClass> allEntityClasses)
         {
+            if (entity.IsAbstract || entity.IsReadonlyObject())
+                return null;
+
             string entityIdType = Helper.GetIdType(entity, allEntityClasses);
 
             return $$"""
@@ -802,7 +803,7 @@ public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTOAsync({{entityIdType}
             {
                 // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
 
-                {{((entityClass.IsEntityBusinessObject() || entityClass.IsEntityReadonlyObject() == false)
+                {{((entityClass.IsBusinessObject() || entityClass.IsReadonlyObject() == false)
                 ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
                 : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
                 )}}
@@ -870,7 +871,7 @@ public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTOAsync({{entityIdType}
                 }
                 else if (lazyTableSelectionDTO.IsAllSelected == null)
                 {
-                    {{((entityClass.IsEntityBusinessObject() || entityClass.IsEntityReadonlyObject() == false)
+                    {{((entityClass.IsBusinessObject() || entityClass.IsReadonlyObject() == false)
                     ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
                     : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
                     )}}
@@ -908,15 +909,12 @@ public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTOAsync({{entityIdType}
 
         #region M2M
 
-        private static string HandleManyToManyData(SoftClass entityClass, List<SoftClass> allEntityClasses)
+        private static string GetManyToManyData(SoftClass entity, List<SoftClass> allEntityClasses)
         {
-            if (entityClass.Properties.Count == Settings.NumberOfPropertiesWithoutAdditionalManyToManyProperties)
+            if (entity.Properties.Count == Settings.NumberOfPropertiesWithoutAdditionalManyToManyProperties)
                 return null;
 
-            string nameOfTheEntityClass = entityClass.Name;
-            string nameOfTheEntityClassFirstLower = entityClass.Name.FirstCharToLower();
-
-            List<SoftProperty> manyToManyProperties = entityClass.Properties;
+            List<SoftProperty> manyToManyProperties = entity.Properties;
 
             SoftProperty mainEntityProperty = manyToManyProperties
                 .Where(x => x.Attributes.Any(x => x.Name == "M2MMaintanceEntity"))
@@ -951,44 +949,44 @@ public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTOAsync({{entityIdType}
         /// <summary>
         /// Call this method when you have additional fields in M2M association
         /// </summary>
-        public async Task Update{{extendEntityClassName}}ListFor{{mainEntityClassName}}({{mainEntityIdType}} {{mainEntityPropertyName.FirstCharToLower()}}Id, List<{{nameOfTheEntityClass}}DTO> selected{{nameOfTheEntityClass}}DTOList)
+        public async Task Update{{extendEntityClassName}}ListFor{{mainEntityClassName}}({{mainEntityIdType}} {{mainEntityPropertyName.FirstCharToLower()}}Id, List<{{entity.Name}}DTO> selected{{entity.Name}}DTOList)
         {
-            if (selected{{nameOfTheEntityClass}}DTOList == null)
+            if (selected{{entity.Name}}DTOList == null)
                 return;
 
-            List<{{nameOfTheEntityClass}}DTO> selectedDTOListHelper = selected{{nameOfTheEntityClass}}DTOList.ToList();
+            List<{{entity.Name}}DTO> selectedDTOListHelper = selected{{entity.Name}}DTOList.ToList();
 
             await _context.WithTransactionAsync(async () =>
             {
                 // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
 
-                DbSet<{{nameOfTheEntityClass}}> dbSet = _context.DbSet<{{nameOfTheEntityClass}}>();
-                List<{{nameOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}List = await dbSet.Where(x => x.{{mainEntityPropertyName}}.Id == {{mainEntityPropertyName.FirstCharToLower()}}Id).ToListAsync();
+                DbSet<{{entity.Name}}> dbSet = _context.DbSet<{{entity.Name}}>();
+                List<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}List = await dbSet.Where(x => x.{{mainEntityPropertyName}}.Id == {{mainEntityPropertyName.FirstCharToLower()}}Id).ToListAsync();
 
-                foreach ({{nameOfTheEntityClass}}DTO selected{{nameOfTheEntityClass}}DTO in selectedDTOListHelper)
+                foreach ({{entity.Name}}DTO selected{{entity.Name}}DTO in selectedDTOListHelper)
                 {
-                    {{nameOfTheEntityClass}}DTOValidationRules validationRules = new {{nameOfTheEntityClass}}DTOValidationRules();
-                    DefaultValidatorExtensions.ValidateAndThrow(validationRules, selected{{nameOfTheEntityClass}}DTO);
+                    {{entity.Name}}DTOValidationRules validationRules = new {{entity.Name}}DTOValidationRules();
+                    DefaultValidatorExtensions.ValidateAndThrow(validationRules, selected{{entity.Name}}DTO);
 
-                    {{nameOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}} = {{nameOfTheEntityClassFirstLower}}List.Where(x => x.{{extendEntityPropertyName}}.Id == selected{{nameOfTheEntityClass}}DTO.{{extendEntityPropertyName}}Id).SingleOrDefault();
+                    {{entity.Name}} {{entity.Name.FirstCharToLower()}} = {{entity.Name.FirstCharToLower()}}List.Where(x => x.{{extendEntityPropertyName}}.Id == selected{{entity.Name}}DTO.{{extendEntityPropertyName}}Id).SingleOrDefault();
 
-                    if ({{nameOfTheEntityClassFirstLower}} == null)
+                    if ({{entity.Name.FirstCharToLower()}} == null)
                     {
-                        {{nameOfTheEntityClassFirstLower}} = TypeAdapter.Adapt<{{nameOfTheEntityClass}}>(selected{{nameOfTheEntityClass}}DTO, Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
-                        {{nameOfTheEntityClassFirstLower}}.{{mainEntityPropertyName}} = await LoadInstanceAsync<{{mainEntityClassName}}, {{mainEntityIdType}}>({{mainEntityPropertyName.FirstCharToLower()}}Id, null);
-                        {{nameOfTheEntityClassFirstLower}}.{{extendEntityPropertyName}} = await LoadInstanceAsync<{{extendEntityClassName}}, {{extendEntityIdType}}>(selected{{nameOfTheEntityClass}}DTO.{{extendEntityPropertyName}}Id.Value, null);
-                        dbSet.Add({{nameOfTheEntityClassFirstLower}});
+                        {{entity.Name.FirstCharToLower()}} = TypeAdapter.Adapt<{{entity.Name}}>(selected{{entity.Name}}DTO, Mapper.{{entity.Name}}DTOToEntityConfig());
+                        {{entity.Name.FirstCharToLower()}}.{{mainEntityPropertyName}} = await LoadInstanceAsync<{{mainEntityClassName}}, {{mainEntityIdType}}>({{mainEntityPropertyName.FirstCharToLower()}}Id, null);
+                        {{entity.Name.FirstCharToLower()}}.{{extendEntityPropertyName}} = await LoadInstanceAsync<{{extendEntityClassName}}, {{extendEntityIdType}}>(selected{{entity.Name}}DTO.{{extendEntityPropertyName}}Id.Value, null);
+                        dbSet.Add({{entity.Name.FirstCharToLower()}});
                     }
                     else
                     {
-                        selected{{nameOfTheEntityClass}}DTO.Adapt({{nameOfTheEntityClassFirstLower}}, Mapper.{{nameOfTheEntityClass}}DTOToEntityConfig());
-                        dbSet.Update({{nameOfTheEntityClassFirstLower}});
+                        selected{{entity.Name}}DTO.Adapt({{entity.Name.FirstCharToLower()}}, Mapper.{{entity.Name}}DTOToEntityConfig());
+                        dbSet.Update({{entity.Name.FirstCharToLower()}});
 
-                        {{nameOfTheEntityClassFirstLower}}List.Remove({{nameOfTheEntityClassFirstLower}});
+                        {{entity.Name.FirstCharToLower()}}List.Remove({{entity.Name.FirstCharToLower()}});
                     }
                 }
 
-                dbSet.RemoveRange({{nameOfTheEntityClassFirstLower}}List);
+                dbSet.RemoveRange({{entity.Name.FirstCharToLower()}}List);
 
                 await _context.SaveChangesAsync();
             });

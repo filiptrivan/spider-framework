@@ -154,22 +154,12 @@ namespace Soft.SourceGenerators.Helpers
         /// User : BusinessObject<long> -> true
         /// User : ReadonlyObject<long> -> false
         /// </summary>
-        public static bool IsEntityBusinessObject(this ClassDeclarationSyntax c)
-        {
-            return c.BaseList?.Types.FirstOrDefault()?.Type?.ToString()?.Contains($"{Helper.BusinessObject}<") == true;
-        }
-
-        public static bool IsEntityBusinessObject(this SoftClass c)
+        public static bool IsBusinessObject(this SoftClass c)
         {
             return c.BaseType?.Contains($"{Helper.BusinessObject}<") == true;
         }
 
-        public static bool IsEntityReadonlyObject(this ClassDeclarationSyntax c)
-        {
-            return c.BaseList?.Types.FirstOrDefault()?.Type?.ToString()?.Contains($"{Helper.ReadonlyObject}<") == true;
-        }
-
-        public static bool IsEntityReadonlyObject(this SoftClass c)
+        public static bool IsReadonlyObject(this SoftClass c)
         {
             return c.BaseType?.Contains($"{Helper.ReadonlyObject}<") == true;
         }
