@@ -31,13 +31,17 @@ namespace Soft.SourceGenerator.NgTable.Angular
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationAllReferenced(ctx))
                 .Where(static c => c is not null);
 
-            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetEntityAndDTOClassesFromReferencedAssemblies(context);
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.DTO
+                });
 
             var allClasses = classDeclarations.Collect()
                 .Combine(referencedProjectClasses);
 
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
-
         }
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, SourceProductionContext context)

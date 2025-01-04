@@ -30,7 +30,7 @@ namespace Soft.Generator.Security.Services
             _context = context;
             _blobContainerClient = blobContainerClient;
         }
-
+        
         public long GetCurrentUserId()
         {
             return long.Parse(_httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.PrimarySid)?.Value);

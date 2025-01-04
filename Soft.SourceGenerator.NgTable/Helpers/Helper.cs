@@ -841,156 +841,59 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
         #region Referenced Assemblies
 
-        public static IncrementalValueProvider<List<SoftClass>> GetEntityClassesFromReferencedAssemblies(IncrementalGeneratorInitializationContext context)
+        public static IncrementalValueProvider<List<SoftClass>> GetIncrementalValueProviderClassesFromReferencedAssemblies(IncrementalGeneratorInitializationContext context, List<NamespaceExtensionCodes> namespaceExtensions)
         {
             return context.CompilationProvider
-                .Select(static (compilation, _) =>
+                .Select((compilation, _) =>
                 {
                     List<SoftClass> classes = new List<SoftClass>();
 
                     foreach (IAssemblySymbol referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
                              .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
                     {
-                        classes.AddRange(GetEntityClassesFromReferencedAssemblies(referencedAssembly.GlobalNamespace));
+                        classes.AddRange(GetClassesFromReferencedAssemblies(referencedAssembly.GlobalNamespace, namespaceExtensions));
                     }
 
                     return classes;
                 });
         }
 
-        public static IncrementalValueProvider<List<SoftClass>> GetDTOClassesFromReferencedAssemblies(IncrementalGeneratorInitializationContext context)
-        {
-            return context.CompilationProvider
-                .Select(static (compilation, _) =>
-                {
-                    List<SoftClass> classes = new List<SoftClass>();
-
-                    foreach (IAssemblySymbol referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
-                             .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
-                    {
-                        classes.AddRange(GetDTOClassesFromReferencedAssemblies(referencedAssembly.GlobalNamespace));
-                    }
-
-                    return classes;
-                });
-        }
-
-        public static IncrementalValueProvider<List<SoftClass>> GetEntityAndDTOClassesFromReferencedAssemblies(IncrementalGeneratorInitializationContext context)
-        {
-            return context.CompilationProvider
-                .Select(static (compilation, _) =>
-                {
-                    List<SoftClass> classes = new List<SoftClass>();
-
-                    foreach (IAssemblySymbol referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
-                             .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
-                    {
-                        classes.AddRange(GetEntityAndDTOClassesFromReferencedAssemblies(referencedAssembly.GlobalNamespace));
-
-                    }
-
-                    return classes;
-                });
-        }
-
-        public static IncrementalValueProvider<List<SoftClass>> GetEntityClassesAndServicesFromReferencedAssemblies(IncrementalGeneratorInitializationContext context)
-        {
-            return context.CompilationProvider
-                .Select(static (compilation, _) =>
-                {
-                    List<SoftClass> classes = new List<SoftClass>();
-
-                    foreach (IAssemblySymbol referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
-                             .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
-                    {
-                        classes.AddRange(GetEntityClassesAndServicesFromReferencedAssemblies(referencedAssembly.GlobalNamespace));
-
-                    }
-
-                    return classes;
-                });
-        }
-
-        //private static IEnumerable<IAssemblySymbol> GetAssemblySymbolsFromReferencedAssemblies(IncrementalGeneratorInitializationContext context)
-        //{
-        //    return context.CompilationProvider
-        //        .Select(static (compilation, _) =>
-        //        {
-        //            return compilation.SourceModule.ReferencedAssemblySymbols
-        //                .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty"))
-        //                .AsEnumerable();
-        //        })
-        //}
-
-        private static List<SoftClass> GetEntityClassesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol)
+        private static List<SoftClass> GetClassesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol, List<NamespaceExtensionCodes> namespaceExtensions)
         {
             List<SoftClass> classes = new List<SoftClass>();
-            FillClassesFromReferencedAssemblies(namespaceSymbol, classes);
-            return classes.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
-        }
 
-        private static List<SoftClass> GetDTOClassesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol)
-        {
-            List<SoftClass> classes = new List<SoftClass>();
-            FillClassesFromReferencedAssemblies(namespaceSymbol, classes);
-            //return GetDTOClasses(classes);
-            return classes.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
-        }
-
-        private static List<SoftClass> GetEntityAndDTOClassesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol)
-        {
-            List<SoftClass> classes = new List<SoftClass>();
-            FillClassesFromReferencedAssemblies(namespaceSymbol, classes);
-
-            List<SoftClass> DTOClasses = classes.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
-            List<SoftClass> entityClasses = classes.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
-
-            return DTOClasses.Concat(entityClasses).ToList();
-        }
-
-        private static List<SoftClass> GetEntityClassesAndServicesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol)
-        {
-            List<SoftClass> classes = new List<SoftClass>();
-            FillClassesFromReferencedAssemblies(namespaceSymbol, classes);
-
-            List<SoftClass> entityClasses = classes.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
-            List<SoftClass> DTOClasses = classes.Where(x => x.Namespace.EndsWith(".Services")).ToList();
-
-            return DTOClasses.Concat(entityClasses).ToList();
-        }
-
-        private static void FillClassesFromReferencedAssemblies(INamespaceSymbol namespaceSymbol, List<SoftClass> classes)
-        {
-            ImmutableArray<INamedTypeSymbol> types = namespaceSymbol.GetTypeMembers();
+            List<INamedTypeSymbol> types = namespaceSymbol.GetTypeMembers()
+                .Where(type => type.TypeKind == TypeKind.Class &&
+                       namespaceExtensions.Any(namespaceExtension => GetFullNamespace(type).EndsWith(namespaceExtension.ToString())))
+                .ToList();
 
             // Add all the type members (classes, structs, etc.) in this namespace
             foreach (INamedTypeSymbol type in types)
             {
-                if (type.TypeKind == TypeKind.Class)
+                List<SoftAttribute> attributes = GetAttributesFromReferencedAssemblies(type);
+
+                SoftClass softClass = new SoftClass
                 {
-                    List<SoftAttribute> attributes = GetAttributesFromReferencedAssemblies(type);
+                    Name = type.Name,
+                    Namespace = GetFullNamespace(type),
+                    BaseType = type.BaseType?.TypeToDisplayString() == "object" ? null : type.BaseType?.TypeToDisplayString(),
+                    IsAbstract = type.IsAbstract,
+                    ControllerName = attributes.Where(x => x.Name == "Controller").Select(x => x.Value).SingleOrDefault() ?? type.Name,
+                    Properties = GetPropertiesFromReferencedAssemblies(type),
+                    Attributes = attributes,
+                    Methods = GetMethodsOfCurrentClassFromReferencedAssemblies(type),
+                };
 
-                    SoftClass softClass = new SoftClass
-                    {
-                        Name = type.Name,
-                        Namespace = GetFullNamespace(type),
-                        BaseType = type.BaseType?.TypeToDisplayString() == "object" ? null : type.BaseType?.TypeToDisplayString(),
-                        IsAbstract = type.IsAbstract,
-                        ControllerName = attributes.Where(x => x.Name == "Controller").Select(x => x.Value).SingleOrDefault() ?? type.Name,
-                        Properties = GetPropertiesFromReferencedAssemblies(type),
-                        Attributes = attributes,
-                        Methods = GetMethodsOfCurrentClassFromReferencedAssemblies(type),
-                    };
-
-                    classes.Add(softClass);
-                }
+                classes.Add(softClass);
             }
 
             // Recursively gather classes from nested namespaces
             foreach (INamespaceSymbol nestedNamespace in namespaceSymbol.GetNamespaceMembers())
             {
-                FillClassesFromReferencedAssemblies(nestedNamespace, classes);
+                classes.AddRange(GetClassesFromReferencedAssemblies(nestedNamespace, namespaceExtensions));
             }
+
+            return classes;
         }
 
         private static string GetFullNamespace(INamedTypeSymbol symbol)
@@ -1787,6 +1690,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static void UpdateResourceFile(Dictionary<string, string> data, string path)
         {
             Dictionary<string, string> resourceEntries = new Dictionary<string, string>();
+
             if (File.Exists(path))
             {
                 //Get existing resources
@@ -1794,8 +1698,11 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 resourceEntries = reader.Cast<DictionaryEntry>().ToDictionary(d => d.Key.ToString(), d => d.Value?.ToString() ?? "");
                 reader.Close();
             }
+            else
+            {
+                return;
+            }
 
-            //Modify resources here...
             foreach (KeyValuePair<string, string> entry in data)
             {
                 if (!resourceEntries.ContainsKey(entry.Key))
@@ -1808,6 +1715,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             }
 
             string directoryPath = Path.GetDirectoryName(path);
+
             if (!string.IsNullOrEmpty(directoryPath))
             {
                 Directory.CreateDirectory(directoryPath);
@@ -1815,11 +1723,37 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             //Write the combined resource file
             ResXResourceWriter resourceWriter = new ResXResourceWriter(path);
+
             foreach (KeyValuePair<string, string> entry in resourceEntries)
             {
                 resourceWriter.AddResource(entry.Key, resourceEntries[entry.Key]);
             }
+
             resourceWriter.Generate();
+
+            resourceWriter.Close();
+        }
+
+        public static void WriteResourceFile(Dictionary<string, string> data, string path)
+        {
+            if (File.Exists(path) == false)
+                return;
+
+            Dictionary<string, string> resourceEntries = new Dictionary<string, string>();
+
+            foreach (KeyValuePair<string, string> entry in data)
+            {
+                if (resourceEntries.ContainsKey(entry.Key) == false)
+                    resourceEntries.Add(entry.Key, entry.Value);
+            }
+
+            ResXResourceWriter resourceWriter = new ResXResourceWriter(path);
+
+            foreach (KeyValuePair<string, string> entry in resourceEntries)
+                resourceWriter.AddResource(entry.Key, entry.Value ?? "");
+
+            resourceWriter.Generate();
+
             resourceWriter.Close();
         }
 

@@ -30,10 +30,15 @@ namespace Soft.SourceGenerators.Net
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEveryClass(ctx))
                 .Where(static c => c is not null);
 
-            IncrementalValueProvider<List<SoftClass>> referencedProjectEntityClassesAndServices = Helper.GetEntityClassesAndServicesFromReferencedAssemblies(context);
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.Services
+                });
 
             var allClasses = classDeclarations.Collect()
-                .Combine(referencedProjectEntityClassesAndServices);
+                .Combine(referencedProjectClasses);
 
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
@@ -43,9 +48,9 @@ namespace Soft.SourceGenerators.Net
             if (classes.Count < 1)
                 return;
 
-            bool shouldGenerateController = Helper.ShouldStartGenerator(nameof(ControllerGenerator), classes);
+            bool shouldGenerate = Helper.ShouldStartGenerator(nameof(ControllerGenerator), classes);
 
-            if (shouldGenerateController == false)
+            if (shouldGenerate == false)
                 return;
 
             List<SoftClass> projectClasses = Helper.GetSoftClasses(classes);
@@ -109,8 +114,6 @@ namespace {{basePartOfTheNamespace}}.Controllers
                 string businessServiceName = businessServiceClass.Name;
 
                 result.Add($$"""
-    [ApiController]
-    [Route("/api/[controller]/[action]")]
     public class {{referencedProjectEntityGroupedClasses.Key}}BaseController : SoftControllerBase
     {
         private readonly IApplicationDbContext _context;
@@ -149,29 +152,29 @@ namespace {{basePartOfTheNamespace}}.Controllers
 
         [HttpPost]
         [AuthGuard]
-        public async Task<TableResponseDTO<{{referencedProjectEntityClass.Name}}DTO>> Load{{referencedProjectEntityClass.Name}}TableData(TableFilterDTO tableFilterDTO)
+        public virtual async Task<TableResponseDTO<{{referencedProjectEntityClass.Name}}DTO>> Load{{referencedProjectEntityClass.Name}}TableData(TableFilterDTO tableFilterDTO)
         {
             return await _{{businessServiceName.FirstCharToLower()}}.Load{{referencedProjectEntityClass.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
         }
 
         [HttpPost]
         [AuthGuard]
-        public async Task<IActionResult> Export{{referencedProjectEntityClass.Name}}TableDataToExcel(TableFilterDTO tableFilterDTO)
+        public virtual async Task<IActionResult> Export{{referencedProjectEntityClass.Name}}TableDataToExcel(TableFilterDTO tableFilterDTO)
         {
             byte[] fileContent = await _{{businessServiceName.FirstCharToLower()}}.Export{{referencedProjectEntityClass.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
-            return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"{Terms.{{referencedProjectEntityClass.Name}}ExcelExportName}.xlsx"));
+            return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"{TermsGenerated.{{referencedProjectEntityClass.Name}}ExcelExportName}.xlsx"));
         }
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<{{referencedProjectEntityClass.Name}}DTO>> Get{{referencedProjectEntityClass.Name}}List()
+        public virtual async Task<List<{{referencedProjectEntityClass.Name}}DTO>> Get{{referencedProjectEntityClass.Name}}List()
         {
             return await _{{businessServiceName.FirstCharToLower()}}.Load{{referencedProjectEntityClass.Name}}DTOList(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
         }
 
         [HttpGet]
         [AuthGuard]
-        public async Task<{{referencedProjectEntityClass.Name}}DTO> Get{{referencedProjectEntityClass.Name}}(int id)
+        public virtual async Task<{{referencedProjectEntityClass.Name}}DTO> Get{{referencedProjectEntityClass.Name}}(int id)
         {
             return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}DTOAsync(id, false);
         }
@@ -183,6 +186,8 @@ namespace {{basePartOfTheNamespace}}.Controllers
         #region Save
 
 {{GetSaveControllerMethods(referencedProjectEntityClass, businessServiceName)}}
+
+{{string.Join("\n\n", GetUploadBlobControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
 
         #endregion
 
@@ -213,7 +218,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
                 result.Add($$"""
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Load{{manyToOneProperty.IdentifierText}}ListForAutocomplete(int limit, string query)
+        public virtual async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Load{{manyToOneProperty.IdentifierText}}ListForAutocomplete(int limit, string query)
         {
             return await _{{businessServiceName.FirstCharToLower()}}.Load{{manyToOneProperty.Type}}ListForAutocomplete(limit, query, _context.DbSet<{{manyToOneProperty.Type}}>());
         }
@@ -225,7 +230,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
                 result.Add($$"""
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Load{{manyToOneProperty.IdentifierText}}ListForDropdown()
+        public virtual async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Load{{manyToOneProperty.IdentifierText}}ListForDropdown()
         {
             return await _{{businessServiceName.FirstCharToLower()}}.Load{{manyToOneProperty.Type}}ListForDropdown(_context.DbSet<{{manyToOneProperty.Type}}>(), false);
         }
@@ -244,7 +249,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return $$"""
         [HttpDelete]
         [AuthGuard]
-        public async Task Delete{{entity.Name}}(int id)
+        public virtual async Task Delete{{entity.Name}}(int id)
         {
             await _{{businessServiceName.FirstCharToLower()}}.Delete{{entity.Name}}Async(id, false);
         }
@@ -259,11 +264,34 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return $$"""
         [HttpPut]
         [AuthGuard]
-        public async Task<{{entity.Name}}DTO> Save{{entity.Name}}({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO)
+        public virtual async Task<{{entity.Name}}DTO> Save{{entity.Name}}({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO)
         {
             return await _{{businessServiceName.FirstCharToLower()}}.Save{{entity.Name}}AndReturnDTOAsync({{entity.Name.FirstCharToLower()}}DTO, false, false);
         }
 """;
+        }
+
+        private static List<string> GetUploadBlobControllerMethods(SoftClass entity, List<SoftClass> entities, string businessServiceName)
+        {
+            List<string> result = new List<string>();
+
+            List<SoftProperty> blobProperies = Helper.GetBlobProperties(entity.Properties);
+
+            foreach (SoftProperty property in blobProperies)
+            {
+                result.Add($$"""
+        // FT: You can't upload and delete on every request because you can delete the old image for the user when he refreshes the page
+        [HttpPost]
+        [AuthGuard]
+        public async Task<string> Upload{{entity.Name}}{{property.IdentifierText}}([FromForm] IFormFile file) // FT: It doesn't work without interface
+        {
+            return await _{{businessServiceName.FirstCharToLower()}}.Upload{{entity.Name}}{{property.IdentifierText}}Async(file); // TODO: Make authorization in business service with override
+        }
+"""
+);
+            }
+
+            return result;
         }
 
         private static string GetBusinessServiceClassName(string businessServiceName)

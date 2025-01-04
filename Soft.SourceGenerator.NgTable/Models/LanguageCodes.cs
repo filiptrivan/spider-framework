@@ -1,0 +1,12 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Soft.SourceGenerators.Models
+{
+    public enum LanguageCodes
+    {
+        SrLatnRS = 1,
+        En = 0,
+    }
+}

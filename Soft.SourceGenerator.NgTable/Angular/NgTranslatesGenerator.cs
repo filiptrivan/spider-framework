@@ -33,7 +33,11 @@ namespace Soft.SourceGenerator.NgTable.Angular
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationAllReferenced(ctx))
                 .Where(static c => c is not null);
 
-            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetDTOClassesFromReferencedAssemblies(context);
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.DTO
+                });
 
             var allClasses = classDeclarations.Collect()
                 .Combine(referencedProjectClasses);

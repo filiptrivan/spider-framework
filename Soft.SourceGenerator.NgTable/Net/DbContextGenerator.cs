@@ -31,10 +31,14 @@ namespace Soft.SourceGenerators.Net
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEveryClass(ctx))
                 .Where(static c => c is not null);
 
-            IncrementalValueProvider<List<SoftClass>> referencedProjectEntityClasses = Helper.GetEntityClassesFromReferencedAssemblies(context);
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                });
 
             var allClasses = classDeclarations.Collect()
-                .Combine(referencedProjectEntityClasses);
+                .Combine(referencedProjectClasses);
 
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }

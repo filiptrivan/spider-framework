@@ -32,10 +32,14 @@ namespace Soft.SourceGenerator.NgTable.Net
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEntities(ctx))
                 .Where(static c => c is not null);
 
-            IncrementalValueProvider<List<SoftClass>> referencedProjectEntityClasses = Helper.GetEntityClassesFromReferencedAssemblies(context);
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                });
 
             var allClasses = classDeclarations.Collect()
-                .Combine(referencedProjectEntityClasses);
+                .Combine(referencedProjectClasses);
 
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
@@ -47,7 +51,7 @@ namespace Soft.SourceGenerator.NgTable.Net
 
             List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
             List<SoftClass> allEntityClasses = entityClasses.Concat(referencedProjectEntityClasses).ToList();
-
+            
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0].Namespace);
 
             string basePartOfTheNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
