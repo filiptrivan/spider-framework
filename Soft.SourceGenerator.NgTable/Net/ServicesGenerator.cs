@@ -172,7 +172,7 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-        public async Task<PaginationResult<{{entity.Name}}>> Load{{entity.Name}}ListForPagination(TableFilterDTO tableFilterPayload, IQueryable<{{entity.Name}}> query)
+        public async Task<PaginationResult<{{entity.Name}}>> Get{{entity.Name}}ListForPagination(TableFilterDTO tableFilterPayload, IQueryable<{{entity.Name}}> query)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -180,7 +180,7 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-        public async virtual Task<TableResponseDTO<{{entity.Name}}DTO>> Load{{entity.Name}}TableData(TableFilterDTO tableFilterPayload, IQueryable<{{entity.Name}}> query, bool authorize = true)
+        public async virtual Task<TableResponseDTO<{{entity.Name}}DTO>> Get{{entity.Name}}TableData(TableFilterDTO tableFilterPayload, IQueryable<{{entity.Name}}> query, bool authorize = true)
         {
             PaginationResult<{{entity.Name}}> paginationResult = new PaginationResult<{{entity.Name}}>();
             List<{{entity.Name}}DTO> data = null;
@@ -192,7 +192,7 @@ namespace {{basePartOfTheNamespace}}.Services
                     await _authorizationService.{{entity.Name}}ListReadAuthorize();
                 }
 
-                paginationResult = await Load{{entity.Name}}ListForPagination(tableFilterPayload, query);
+                paginationResult = await Get{{entity.Name}}ListForPagination(tableFilterPayload, query);
 
                 data = await paginationResult.Query
                     .Skip(tableFilterPayload.First)
@@ -216,7 +216,7 @@ namespace {{basePartOfTheNamespace}}.Services
                     await _authorizationService.{{entity.Name}}ListReadAuthorize();
                 }
 
-                paginationResult = await Load{{entity.Name}}ListForPagination(tableFilterPayload, query);
+                paginationResult = await Get{{entity.Name}}ListForPagination(tableFilterPayload, query);
 
                 data = await paginationResult.Query.ProjectToType<{{entity.Name}}DTO>(Mapper.{{entity.Name}}ExcelProjectToConfig()).ToListAsync();
             });
@@ -225,7 +225,7 @@ namespace {{basePartOfTheNamespace}}.Services
             return _excelService.FillReportTemplate<{{entity.Name}}DTO>(data, paginationResult.TotalRecords, excelPropertiesToExclude).ToArray();
         }
 
-        public async virtual Task<List<NamebookDTO<{{entityIdType}}>>> Load{{entity.Name}}ListForAutocomplete(int limit, string query, IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{entityIdType}}>>> Get{{entity.Name}}ListForAutocomplete(int limit, string query, IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -249,7 +249,7 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-        public async virtual Task<List<NamebookDTO<{{entityIdType}}>>> Load{{entity.Name}}ListForDropdown(IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{entityIdType}}>>> Get{{entity.Name}}ListForDropdown(IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -269,7 +269,7 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-        public async Task<List<{{entity.Name}}>> Load{{entity.Name}}List(IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
+        public async Task<List<{{entity.Name}}>> Get{{entity.Name}}List(IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -283,7 +283,7 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-        public async Task<List<{{entity.Name}}DTO>> Load{{entity.Name}}DTOList(IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
+        public async Task<List<{{entity.Name}}DTO>> Get{{entity.Name}}DTOList(IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -391,7 +391,7 @@ namespace {{basePartOfTheNamespace}}.Services
                         await _authorizationService.{{entity.Name}}SingleUpdateAuthorize(dto);
                     }
 
-                    poco = await LoadInstanceAsync<{{entity.Name}}, {{entityIdType}}>(dto.Id, dto.Version);
+                    poco = await GetInstanceAsync<{{entity.Name}}, {{entityIdType}}>(dto.Id, dto.Version);
                     await OnBefore{{entity.Name}}Update(poco, dto);
                     dto.Adapt(poco, Mapper.{{entity.Name}}DTOToEntityConfig());
                     dbSet.Update(poco);
@@ -442,7 +442,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 {
                     result.Add($$"""
             if (dto.{{prop.IdentifierText}}Id > 0)
-                poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{Helper.GetIdType(classOfManyToOneProperty, allEntityClasses)}}>(dto.{{prop.IdentifierText}}Id.Value, null);
+                poco.{{prop.IdentifierText}} = await GetInstanceAsync<{{prop.Type}}, {{Helper.GetIdType(classOfManyToOneProperty, allEntityClasses)}}>(dto.{{prop.IdentifierText}}Id.Value, null);
             else
                 poco.{{prop.IdentifierText}} = null;
 """);
@@ -451,7 +451,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 {
                     result.Add($$"""
             if (dto.{{prop.IdentifierText}}Id > 0)
-                poco.{{prop.IdentifierText}} = await LoadInstanceAsync<{{prop.Type}}, {{Helper.GetIdType(classOfManyToOneProperty, allEntityClasses)}}>(dto.{{prop.IdentifierText}}Id.Value);
+                poco.{{prop.IdentifierText}} = await GetInstanceAsync<{{prop.Type}}, {{Helper.GetIdType(classOfManyToOneProperty, allEntityClasses)}}>(dto.{{prop.IdentifierText}}Id.Value);
             else
                 poco.{{prop.IdentifierText}} = null;
 """);
@@ -720,7 +720,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 if (manyToOneProp != null)
                 {
                     result.Add($$"""
-        public async virtual Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Load{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Get{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -741,7 +741,7 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-        public async Task<List<{{classNameFromTheList}}>> Load{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
+        public async Task<List<{{classNameFromTheList}}>> Get{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -760,7 +760,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 else if (manyToManyPropFromTheListProperties != null)
                 {
                     result.Add($$"""
-        public async virtual Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Load{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Get{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -781,7 +781,7 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-        public async Task<List<{{classNameFromTheList}}>> Load{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
+        public async Task<List<{{classNameFromTheList}}>> Get{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -808,8 +808,8 @@ namespace {{basePartOfTheNamespace}}.Services
                 // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
 
                 {{((entityClass.IsBusinessObject() || entityClass.IsReadonlyObject() == false)
-                ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
-                : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
+                ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await GetInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
+                : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await GetInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
                 )}}
                 
                 foreach ({{classNameFromTheList}} {{classNameFromTheListFirstLower}} in {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.ToList())
@@ -842,7 +842,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
             await _context.WithTransactionAsync(async () =>
             {
-                PaginationResult<{{classNameFromTheList}}> paginationResult = await Load{{classNameFromTheList}}ListForPagination(tableFilterDTO, {{classNameFromTheListFirstLower}}Query);
+                PaginationResult<{{classNameFromTheList}}> paginationResult = await Get{{classNameFromTheList}}ListForPagination(tableFilterDTO, {{classNameFromTheListFirstLower}}Query);
 
                 lazyLoadSelectedIdsResultDTO.SelectedIds = await paginationResult.Query
                     .Select(x => x.Id)
@@ -876,8 +876,8 @@ namespace {{basePartOfTheNamespace}}.Services
                 else if (lazyTableSelectionDTO.IsAllSelected == null)
                 {
                     {{((entityClass.IsBusinessObject() || entityClass.IsReadonlyObject() == false)
-                    ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
-                    : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await LoadInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
+                    ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await GetInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
+                    : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await GetInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
                     )}}
 
                     List<{{idTypeOfTheClassFromTheList}}> alreadySelected = {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}} == null ? new List<{{idTypeOfTheClassFromTheList}}>() : {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.Select(x => x.Id).ToList();
@@ -977,8 +977,8 @@ namespace {{basePartOfTheNamespace}}.Services
                     if ({{entity.Name.FirstCharToLower()}} == null)
                     {
                         {{entity.Name.FirstCharToLower()}} = TypeAdapter.Adapt<{{entity.Name}}>(selected{{entity.Name}}DTO, Mapper.{{entity.Name}}DTOToEntityConfig());
-                        {{entity.Name.FirstCharToLower()}}.{{mainEntityPropertyName}} = await LoadInstanceAsync<{{mainEntityClassName}}, {{mainEntityIdType}}>({{mainEntityPropertyName.FirstCharToLower()}}Id, null);
-                        {{entity.Name.FirstCharToLower()}}.{{extendEntityPropertyName}} = await LoadInstanceAsync<{{extendEntityClassName}}, {{extendEntityIdType}}>(selected{{entity.Name}}DTO.{{extendEntityPropertyName}}Id.Value, null);
+                        {{entity.Name.FirstCharToLower()}}.{{mainEntityPropertyName}} = await GetInstanceAsync<{{mainEntityClassName}}, {{mainEntityIdType}}>({{mainEntityPropertyName.FirstCharToLower()}}Id, null);
+                        {{entity.Name.FirstCharToLower()}}.{{extendEntityPropertyName}} = await GetInstanceAsync<{{extendEntityClassName}}, {{extendEntityIdType}}>(selected{{entity.Name}}DTO.{{extendEntityPropertyName}}Id.Value, null);
                         dbSet.Add({{entity.Name.FirstCharToLower()}});
                     }
                     else

@@ -249,6 +249,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     Name = method.Identifier.Text,
                     ReturnType = method.ReturnType.ToString(),
                     Body = method.Body?.ToString(), // FT: CreateHostBuilder method inside Program.cs has no body
+                    Parameters = method.ParameterList.Parameters.Select(x => new SoftParameter { Name = x.Identifier.Text, Type = x.Type.ToString() }).ToList(),
                     DescendantNodes = method.DescendantNodes(),
                     Attributes = method.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
                     {
@@ -1242,26 +1243,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static bool SkipPropertyInDTO(this SoftProperty property)
         {
             return property.Attributes.Any(x => x.Name == "IgnorePropertyInDTO" || x.Name == "M2MMaintanceEntityKey" || x.Name == "M2MExtendEntityKey");
-        }
-
-        public static List<ClassDeclarationSyntax> GetValidationClasses(IList<ClassDeclarationSyntax> classes)
-        {
-            return classes
-                .Where(x => x.Ancestors()
-                    .OfType<NamespaceDeclarationSyntax>()
-                    .Select(ns => ns.Name.ToString())
-                    .Any(ns => ns.EndsWith($".{ValidationNamespaceEnding}")))
-                .ToList();
-        }
-
-        public static List<ClassDeclarationSyntax> GetControllerClasses(IList<ClassDeclarationSyntax> classes)
-        {
-            return classes
-                .Where(x => x.Ancestors()
-                    .OfType<NamespaceDeclarationSyntax>()
-                    .Select(ns => ns.Name.ToString())
-                    .Any(ns => ns.EndsWith($".Controllers")))
-                .ToList();
         }
 
         #endregion

@@ -40,7 +40,7 @@ namespace Soft.Generator.Security.Services
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                return await LoadInstanceAsync<TUser, long>(GetCurrentUserId(), null);
+                return await GetInstanceAsync<TUser, long>(GetCurrentUserId(), null);
             });
         }
 

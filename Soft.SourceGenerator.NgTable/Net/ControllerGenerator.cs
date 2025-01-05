@@ -152,9 +152,9 @@ namespace {{basePartOfTheNamespace}}.Controllers
 
         [HttpPost]
         [AuthGuard]
-        public virtual async Task<TableResponseDTO<{{referencedProjectEntityClass.Name}}DTO>> Load{{referencedProjectEntityClass.Name}}TableData(TableFilterDTO tableFilterDTO)
+        public virtual async Task<TableResponseDTO<{{referencedProjectEntityClass.Name}}DTO>> Get{{referencedProjectEntityClass.Name}}TableData(TableFilterDTO tableFilterDTO)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Load{{referencedProjectEntityClass.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
         }
 
         [HttpPost]
@@ -169,7 +169,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<List<{{referencedProjectEntityClass.Name}}DTO>> Get{{referencedProjectEntityClass.Name}}List()
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Load{{referencedProjectEntityClass.Name}}DTOList(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}DTOList(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
         }
 
         [HttpGet]
@@ -218,9 +218,9 @@ namespace {{basePartOfTheNamespace}}.Controllers
                 result.Add($$"""
         [HttpGet]
         [AuthGuard]
-        public virtual async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Load{{manyToOneProperty.IdentifierText}}ListForAutocomplete(int limit, string query)
+        public virtual async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Get{{manyToOneProperty.IdentifierText}}ListForAutocomplete(int limit, string query)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Load{{manyToOneProperty.Type}}ListForAutocomplete(limit, query, _context.DbSet<{{manyToOneProperty.Type}}>());
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{manyToOneProperty.Type}}ListForAutocomplete(limit, query, _context.DbSet<{{manyToOneProperty.Type}}>());
         }
 """);
                 //}
@@ -230,9 +230,9 @@ namespace {{basePartOfTheNamespace}}.Controllers
                 result.Add($$"""
         [HttpGet]
         [AuthGuard]
-        public virtual async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Load{{manyToOneProperty.IdentifierText}}ListForDropdown()
+        public virtual async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Get{{manyToOneProperty.IdentifierText}}ListForDropdown()
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Load{{manyToOneProperty.Type}}ListForDropdown(_context.DbSet<{{manyToOneProperty.Type}}>(), false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{manyToOneProperty.Type}}ListForDropdown(_context.DbSet<{{manyToOneProperty.Type}}>(), false);
         }
 """);
                 //}

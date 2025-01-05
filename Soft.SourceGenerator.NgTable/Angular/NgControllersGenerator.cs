@@ -21,22 +21,23 @@ namespace Soft.SourceGenerator.NgTable.Angular
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//#if DEBUG
-//            if (!Debugger.IsAttached)
-//            {
-//                Debugger.Launch();
-//            }
-//#endif
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationControllers(s),
                     transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationControllers(ctx))
                 .Where(static c => c is not null);
 
-            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context, 
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
                 new List<NamespaceExtensionCodes>
                 {
-                    NamespaceExtensionCodes.DTO
+                    NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.DTO,
                 });
 
             var allClasses = classDeclarations.Collect()
@@ -44,9 +45,9 @@ namespace Soft.SourceGenerator.NgTable.Angular
 
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
-        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedClassesDTO, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, SourceProductionContext context)
         {
-            if (classes.Count <= 1) 
+            if (classes.Count <= 1)
                 return; // FT: one because of config settings
 
             string outputPath = Helper.GetGeneratorOutputPath(nameof(NgControllersGenerator), classes);
@@ -54,43 +55,43 @@ namespace Soft.SourceGenerator.NgTable.Angular
             if (outputPath == null)
                 return;
 
-            List<ClassDeclarationSyntax> controllerClasses = Helper.GetControllerClasses(classes);
+            List<SoftClass> softClasses = Helper.GetSoftClasses(classes);
 
-            StringBuilder sb = new StringBuilder();
-            //List<SoftProperty> properties = new List<SoftProperty>();
-            List<string> angularHttpMethods = new List<string>();
-            foreach (ClassDeclarationSyntax controllerClass in controllerClasses) // FT: Big part of this method is not used because we changed the way of importing ng classes
-            {
-                string controllerName = controllerClass.Identifier.Text.Replace("Controller", "");
+            List<SoftClass> controllerClasses = softClasses
+                .Where(x => x.Namespace.EndsWith($".{NamespaceExtensionCodes.Controllers}"))
+                .ToList();
 
-                foreach (MethodDeclarationSyntax endpointMethod in controllerClass.Members.OfType<MethodDeclarationSyntax>().ToList())
-                {
-                    List<SoftProperty> parameterProperties = endpointMethod.ParameterList.Parameters
-                        .Select(x => new SoftProperty
-                        {
-                            Type = x.Type.ToString(),
-                        })
-                        .ToList();
-                    //properties.AddRange(parameterProperties);
-                    string returnType = endpointMethod.ReturnType.ToString();
-                    //properties.Add(new SoftProperty { Type = returnType });
-                    angularHttpMethods.Add(GetAngularHttpMethod(endpointMethod, returnType, controllerName));
-                }
-            }
-            List<string> importLines = new List<string>();
-            foreach (SoftClass softClass in referencedClassesDTO)
-            {
-                string[] projectNameHelper = softClass.Namespace.Split('.');
-                string projectName = projectNameHelper[projectNameHelper.Length - 2];
-                string ngType = softClass.Name.Replace("DTO", "");
+            List<SoftClass> referencedDTOClasses = referencedProjectClasses
+                .Where(x => x.Namespace.EndsWith($".{NamespaceExtensionCodes.DTO}"))
+                .ToList();
 
-                if (Helper.BaseClassNames.Contains(ngType))
-                    continue;
+            List<SoftClass> referencedEntityClasses = referencedProjectClasses
+                .Where(x => x.Namespace.EndsWith($".{NamespaceExtensionCodes.Entities}"))
+                .ToList();
 
-                importLines.Add($"import {{ {ngType} }} from '../../entities/{projectName.FromPascalToKebabCase()}-entities.generated';");
-            }
+            string result = $$"""
+{{string.Join("\n", GetImports(referencedDTOClasses))}}
 
-            sb.AppendLine($$"""
+@Injectable()
+export class ApiGeneratedService extends ApiSecurityService {
+
+    constructor(protected override http: HttpClient) {
+        super(http);
+    }
+
+{{string.Join("\n\n", GetAngularHttpMethods(controllerClasses))}}
+
+}
+""";
+
+            Helper.WriteToTheFile(result, outputPath);
+        }
+
+        private static List<string> GetImports(List<SoftClass> DTOClasses)
+        {
+            List<string> result = new List<string>();
+
+            result.Add($$"""
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -102,97 +103,129 @@ import { SimpleSaveResult } from 'src/app/core/entities/simple-save-result';
 import { TableFilter } from 'src/app/core/entities/table-filter';
 import { TableResponse } from 'src/app/core/entities/table-response';
 import { LazyLoadSelectedIdsResult } from 'src/app/core/entities/lazy-load-selected-ids-result';
-{{string.Join("\n", importLines)}}
-
-@Injectable()
-export class ApiGeneratedService extends ApiSecurityService {
-
-    constructor(protected override http: HttpClient) {
-        super(http);
-    }
-
-    {{string.Join("\n", angularHttpMethods)}}
-
-}
 """);
 
-            Helper.WriteToTheFile(sb.ToString(), outputPath);
+            foreach (SoftClass DTOClass in DTOClasses)
+            {
+                string[] projectNameHelper = DTOClass.Namespace.Split('.');
+                string projectName = projectNameHelper[projectNameHelper.Length - 2];
+                string ngType = DTOClass.Name.Replace("DTO", "");
+
+                if (Helper.BaseClassNames.Contains(ngType))
+                    continue;
+
+                result.Add($$"""
+import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()}}-entities.generated';
+""");
+            }
+
+            return result;
         }
 
-        private static string GetAngularHttpMethod(MethodDeclarationSyntax endpointMethod, string cSharpReturnType, string controllerName)
+        private static List<string> GetAngularHttpMethods(List<SoftClass> controllerClasses, List<SoftClass> entities)
         {
-            string angularReturnType = Helper.GetAngularType(cSharpReturnType);
+            List<string> result = new List<string>();
+            HashSet<string> alreadyAddedMethods = new HashSet<string>();
 
-            string methodName = endpointMethod.Identifier.Text;
-            string inputParameters = string.Join(", ", endpointMethod.ParameterList.Parameters.Select(p => $"{p.Identifier.Text}: {Helper.GetAngularType(p.Type.ToString())}").ToList());
+            bool generateBaseControllerClassMethods = false;
 
-            string result = null;
-
-            string getAndDeleteParameters = string.Join("&", endpointMethod.ParameterList.Parameters.Select(p => $"{p.Identifier.Text}=${{{p.Identifier.Text}}}").ToList());
-            string postAndPutParameters = string.Join(", ", endpointMethod.ParameterList.Parameters.Select(p => p.Identifier.Text).ToList());
-
-            if (string.IsNullOrEmpty(getAndDeleteParameters) == false)
-                getAndDeleteParameters = $"?{getAndDeleteParameters}";
-            if (string.IsNullOrEmpty(postAndPutParameters) == false)
-                postAndPutParameters = $", {postAndPutParameters}";
-
-            bool skipSpinner = endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "SkipSpinner"));
-
-            if (endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "HttpGet")))
+            foreach (SoftClass controllerClass in controllerClasses)
             {
-                if (cSharpReturnType.Contains("NamebookDTO") || methodName.Contains("Autocomplete") || methodName.Contains("Dropdown") || skipSpinner)
-                {
-                    result = @$"
-    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{
-        return this.http.get<{angularReturnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}{getAndDeleteParameters}`, environment.httpSkipSpinnerOptions);
-    }}";
-                }
-                else
-                {
-                    result = @$"
-    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{
-        return this.http.get<{angularReturnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}{getAndDeleteParameters}`);
-    }}";
-                }
+                string controllerName = controllerClass.Name.Replace("Controller", "");
 
+                if (controllerClass.BaseType != "SoftControllerBase")
+                    generateBaseControllerClassMethods = true;
+
+                foreach (SoftMethod controllerMethod in controllerClass.Methods)
+                {
+                    alreadyAddedMethods.Add(controllerMethod.Name);
+
+                    string angularReturnType = Helper.GetAngularType(controllerMethod.ReturnType);
+
+                    string inputParameters = string.Join(", ", controllerMethod.Parameters.Select(p => $"{p.Name}: {Helper.GetAngularType(p.Type)}").ToList());
+
+                    string getAndDeleteParameters = string.Join("&", controllerMethod.Parameters.Select(p => $"{p.Name}=${{{p.Name}}}").ToList());
+                    string postAndPutParameters = string.Join(", ", controllerMethod.Parameters.Select(p => p.Name).ToList());
+
+                    if (string.IsNullOrEmpty(getAndDeleteParameters) == false)
+                        getAndDeleteParameters = $"?{getAndDeleteParameters}";
+
+                    if (string.IsNullOrEmpty(postAndPutParameters) == false)
+                        postAndPutParameters = $", {postAndPutParameters}";
+
+                    bool skipSpinner = controllerMethod.Attributes.Any(attr => attr.Name == "SkipSpinner");
+
+                    if (controllerMethod.Attributes.Any(attr => attr.Name == "HttpGet"))
+                    {
+                        if (controllerMethod.ReturnType.Contains("NamebookDTO") || controllerMethod.Name.Contains("Autocomplete") || controllerMethod.Name.Contains("Dropdown") || skipSpinner)
+                        {
+                            result.Add($$"""
+    {{controllerMethod.Name.FirstCharToLower()}} = ({{inputParameters}}): Observable<{{angularReturnType}}> => {
+        return this.http.get<{{angularReturnType}}>(`${environment.apiUrl}/{{controllerName}}/{{controllerMethod.Name}}{{getAndDeleteParameters}}`, environment.httpSkipSpinnerOptions);
+    }
+""");
+                        }
+                        else
+                        {
+                            result.Add($$"""
+    {{controllerMethod.Name.FirstCharToLower()}} = ({{inputParameters}}): Observable<{{angularReturnType}}> => {
+        return this.http.get<{{angularReturnType}}>(`${environment.apiUrl}/{{controllerName}}/{{controllerMethod.Name}}{{getAndDeleteParameters}}`);
+    }
+""");
+                        }
+                    }
+                    if (controllerMethod.Attributes.Any(attr => attr.Name == "HttpPost"))
+                    {
+                        if (angularReturnType == "string")
+                        {
+                            result.Add($$"""
+    {{controllerMethod.Name.FirstCharToLower()}} = ({{inputParameters}}): Observable<{{angularReturnType}}> => { 
+        return this.http.post(`${environment.apiUrl}/{{controllerName}}/{{controllerMethod.Name}}`{{postAndPutParameters}}, {...environment.httpOptions, responseType: 'text'});
+    }
+""");
+                        }
+                        else if (controllerMethod.ReturnType.Contains("TableResponseDTO") || controllerMethod.ReturnType.Contains("LazyLoadSelectedIdsResultDTO") || skipSpinner)
+                        {
+                            result.Add($$"""
+    {{controllerMethod.Name.FirstCharToLower()}} = ({{inputParameters}}): Observable<{{angularReturnType}}> => { 
+        return this.http.post<{{angularReturnType}}>(`${environment.apiUrl}/{{controllerName}}/{{controllerMethod.Name}}`{{postAndPutParameters}}, environment.httpSkipSpinnerOptions);
+    }
+""");
+                        }
+                        else
+                        {
+                            result.Add($$"""
+    {{controllerMethod.Name.FirstCharToLower()}} = ({{inputParameters}}): Observable<{{angularReturnType}}> => { 
+        return this.http.post<{{angularReturnType}}>(`${environment.apiUrl}/{{controllerName}}/{{controllerMethod.Name}}`{{postAndPutParameters}}, environment.httpOptions);
+    }
+""");
+                        }
+                    }
+                    if (controllerMethod.Attributes.Any(attr => attr.Name == "HttpPut"))
+                    {
+                        result.Add($$"""
+    {{controllerMethod.Name.FirstCharToLower()}} = ({{inputParameters}}): Observable<{{angularReturnType}}> => { 
+        return this.http.put<{{angularReturnType}}>(`${environment.apiUrl}/{{controllerName}}/{{controllerMethod.Name}}`{{postAndPutParameters}}, environment.httpOptions);
+    }
+""");
+                    }
+                    if (controllerMethod.Attributes.Any(attr => attr.Name == "HttpDelete"))
+                    {
+                        result.Add($$"""
+    {{controllerMethod.Name.FirstCharToLower()}} = ({{inputParameters}}): Observable<{{angularReturnType}}> => { 
+        return this.http.delete<{{angularReturnType}}>(`${environment.apiUrl}/{{controllerName}}/{{controllerMethod.Name}}{{getAndDeleteParameters}}`);
+    }
+""");
+                    }
+                }
             }
-            if (endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "HttpPost")))
+
+            if (generateBaseControllerClassMethods == true)
             {
-                if (angularReturnType == "string")
+                foreach (SoftClass entity in entities)
                 {
-                    result = @$"
-    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{ 
-        return this.http.post(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, {{...environment.httpOptions, responseType: 'text'}});
-    }}";
+
                 }
-                else if (cSharpReturnType.Contains("TableResponseDTO") || cSharpReturnType.Contains("LazyLoadSelectedIdsResultDTO") || skipSpinner)
-                {
-                    result = @$"
-    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{ 
-        return this.http.post<{angularReturnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, environment.httpSkipSpinnerOptions);
-    }}";
-                }
-                else
-                {
-                    result = @$"
-    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{ 
-        return this.http.post<{angularReturnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, environment.httpOptions);
-    }}";
-                }
-            }
-            if (endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "HttpPut")))
-            {
-                result = @$"
-    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{ 
-        return this.http.put<{angularReturnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}`{postAndPutParameters}, environment.httpOptions);
-    }}";
-            }
-            if (endpointMethod.AttributeLists.Any(attr => attr.Attributes.Any(a => a.Name.ToString() == "HttpDelete")))
-            {
-                result = @$"
-    {methodName.FirstCharToLower()} = ({inputParameters}): Observable<{angularReturnType}> => {{ 
-        return this.http.delete<{angularReturnType}>(`${{environment.apiUrl}}/{controllerName}/{methodName}{getAndDeleteParameters}`);
-    }}";
             }
 
             return result;

@@ -48,7 +48,7 @@ namespace Soft.Generator.Security.Services
             long userId = _authenticationService.GetCurrentUserId();
             await _context.WithTransactionAsync(async () =>
             {
-                TUser user = await LoadInstanceAsync<TUser, long>(userId, null);
+                TUser user = await GetInstanceAsync<TUser, long>(userId, null);
 
                 if (permissionCode == null)
                     throw new ArgumentNullException("Permission code is not provided.");
@@ -65,7 +65,7 @@ namespace Soft.Generator.Security.Services
             long userId = _authenticationService.GetCurrentUserId();
             await _context.WithTransactionAsync(async () =>
             {
-                TUser user = await LoadInstanceAsync<TUser, long>(userId, null);
+                TUser user = await GetInstanceAsync<TUser, long>(userId, null);
 
                 if (permissionCode == null)
                     throw new ArgumentNullException("Permission code is not provided.");
@@ -85,7 +85,7 @@ namespace Soft.Generator.Security.Services
             long userId = _authenticationService.GetCurrentUserId();
             await _context.WithTransactionAsync(async () =>
             {
-                TUser user = await LoadInstanceAsync<TUser, long>(userId, null);
+                TUser user = await GetInstanceAsync<TUser, long>(userId, null);
 
                 if (permissionCode1 == null || permissionCode2 == null)
                     throw new ArgumentNullException("Permission code is not provided.");

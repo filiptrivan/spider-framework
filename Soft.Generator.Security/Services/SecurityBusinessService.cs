@@ -320,7 +320,7 @@ namespace Soft.Generator.Security.Services
         {
             await _context.WithTransactionAsync(async () =>
             {
-                TUser user = await LoadInstanceAsync<TUser, long>(userId, null);
+                TUser user = await GetInstanceAsync<TUser, long>(userId, null);
 
                 foreach (Role role in user.Roles.ToList())
                 {
