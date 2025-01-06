@@ -85,7 +85,7 @@ export class {{angularClassIdentifier}} extends BaseEntity
 
     constructor(
     {
-        {{string.Join(",\n\t\t", DTOProperties.Select(x => x.IdentifierText.FirstCharToLower()))}}
+        {{string.Join(",\n\t\t", DTOProperties.Select(x => x.Name.FirstCharToLower()))}}
     }:{
         {{string.Join("\n\t\t", angularPropertyDefinitions)}}     
     } = {}
@@ -109,7 +109,7 @@ export class {{angularClassIdentifier}} extends BaseEntity
             List<string> result = new List<string>();
             foreach (SoftProperty DTOProp in DTOProperties)
             {
-                string DTOPropLowerCase = DTOProp.IdentifierText.FirstCharToLower();
+                string DTOPropLowerCase = DTOProp.Name.FirstCharToLower();
 
                 string angularDataType = Helper.GetAngularType(DTOProp.Type);
                 result.Add($"{DTOPropLowerCase}?: {angularDataType};");
@@ -123,7 +123,7 @@ export class {{angularClassIdentifier}} extends BaseEntity
             List<string> result = new List<string>();
             foreach (SoftProperty DTOProp in DTOProperties)
             {
-                string DTOPropLowerCase = DTOProp.IdentifierText.FirstCharToLower();
+                string DTOPropLowerCase = DTOProp.Name.FirstCharToLower();
                 result.Add($"this.{DTOPropLowerCase} = {DTOPropLowerCase};");
             }
 
@@ -146,10 +146,10 @@ export class {{angularClassIdentifier}} extends BaseEntity
                     if (property.Type.IsEnum() == false)
                         continue;
 
-                    if (result.Contains(property.IdentifierText) == false)
+                    if (result.Contains(property.Name) == false)
                     {
                         result.Add($$"""
-import { {{property.IdentifierText}} } from "../../enums/generated/{{projectName.FromPascalToKebabCase()}}-enums.generated";
+import { {{property.Name}} } from "../../enums/generated/{{projectName.FromPascalToKebabCase()}}-enums.generated";
 """);
                     }
                 }

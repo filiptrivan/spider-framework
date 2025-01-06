@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Soft.SourceGenerator.NgTable.Angular;
+using Soft.SourceGenerators.Enums;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using System;
@@ -228,8 +229,8 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 .Select(prop => new SoftProperty()
                 {
                     Type = prop.Type.ToString(),
-                    IdentifierText = prop.Identifier.Text,
-                    ClassIdentifierText = c.Identifier.Text,
+                    Name = prop.Identifier.Text,
+                    ClassName = c.Identifier.Text,
                     Attributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
                     {
                         return GetSoftAttribute(x);
@@ -296,9 +297,9 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 return $"Id.ToString()";
 
             if (displayNamePropForClass.Type != "string")
-                return $"{displayNamePropForClass.IdentifierText}.ToString()";
+                return $"{displayNamePropForClass.Name}.ToString()";
 
-            return displayNamePropForClass.IdentifierText;
+            return displayNamePropForClass.Name;
         }
 
         public static string GetDisplayNamePropForClass(SoftClass c)
@@ -310,9 +311,9 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 return $"Id.ToString()";
 
             if (displayNamePropForClass.Type != "string")
-                return $"{displayNamePropForClass.IdentifierText}.ToString()";
+                return $"{displayNamePropForClass.Name}.ToString()";
 
-            return displayNamePropForClass.IdentifierText;
+            return displayNamePropForClass.Name;
         }
 
         public static string[] GetNamespacePartsWithoutLastElement(BaseTypeDeclarationSyntax b)
@@ -368,7 +369,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         {
                             string propNameInsideBrackets = attribute.ArgumentList.Arguments.FirstOrDefault().ToString().Split('.').Last().Replace(")", "").Replace("\"", "");
                             //excludePropAttributes.Add(new SoftAttribute() { Name = attribute.Name.ToString(), PropNameInsideBrackets = propNameInsideBrackets }); // FT: i don't need this if i don't know which prop type it is
-                            DTOClassProperties.Add(new SoftProperty { IdentifierText = propNameInsideBrackets });
+                            DTOClassProperties.Add(new SoftProperty { Name = propNameInsideBrackets });
                         }
                     }
                 }
@@ -426,7 +427,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         private static SoftProperty GetPropWithModifiedT(PropertyDeclarationSyntax prop, TypeSyntax typeGeneric)
         {
             List<SoftAttribute> attributes = GetAllAttributesOfTheMember(prop);
-            SoftProperty newProp = new SoftProperty() { Type = prop.Type.ToString(), IdentifierText = prop.Identifier.Text, Attributes = attributes };
+            SoftProperty newProp = new SoftProperty() { Type = prop.Type.ToString(), Name = prop.Identifier.Text, Attributes = attributes };
 
             if (prop.Type.ToString() == "T") // If some property has type of T, we change it to long for example
             {
@@ -923,8 +924,8 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     {
                         SoftProperty softProperty = new SoftProperty
                         {
-                            IdentifierText = member.Name,
-                            ClassIdentifierText = type.Name,
+                            Name = member.Name,
+                            ClassName = type.Name,
                             Type = property.Type.TypeToDisplayString(),
                             Attributes = GetAttributesFromReferencedAssemblies(member)
                         };
@@ -1069,7 +1070,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 return null;
 
             List<SoftProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes);
-            SoftProperty p = properties?.Where(x => x.IdentifierText == generatorName)?.SingleOrDefault();
+            SoftProperty p = properties?.Where(x => x.Name == generatorName)?.SingleOrDefault();
             string outputPath = p?.Attributes?.Where(x => x.Name == "Output")?.SingleOrDefault()?.Value;
             return outputPath;
         }
@@ -1082,7 +1083,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 return false;
 
             List<SoftProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes);
-            SoftProperty p = properties?.Where(x => x.IdentifierText == generatorName)?.SingleOrDefault();
+            SoftProperty p = properties?.Where(x => x.Name == generatorName)?.SingleOrDefault();
 
             bool.TryParse(p?.Attributes?.Where(x => x.Name == "Output")?.SingleOrDefault()?.Value, out bool shouldStart);
 
@@ -1150,7 +1151,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                             new SoftClass
                             {
                                 Name = $"{x.Name}SaveBodyDTO",
-                                Properties = new List<SoftProperty> { new SoftProperty { IdentifierText = $"{x.Name}DTO", Type = $"{x.Name}DTO" } },
+                                Properties = new List<SoftProperty> { new SoftProperty { Name = $"{x.Name}DTO", Type = $"{x.Name}DTO" } },
                                 Namespace = x.Namespace.Replace(".Entities", ".DTO"),
                                 IsGenerated = true
                             },
@@ -1183,7 +1184,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
         public static string GetTypeForTheClassAndPropName(SoftClass c, string propName)
         {
-            return c.Properties.Where(x => x.IdentifierText == propName).Select(x => x.Type).Single();
+            return c.Properties.Where(x => x.Name == propName).Select(x => x.Type).Single();
         }
 
         public static List<SoftProperty> GetDTOSoftProps(SoftClass entityClass, List<SoftClass> entityClasses)
@@ -1197,24 +1198,24 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     continue;
 
                 string propType = prop.Type;
-                string propName = prop.IdentifierText;
+                string propName = prop.Name;
                 // FT: Not adding attributes because they are not the same
 
                 if (propType.IsManyToOneType())
                 {
-                    props.Add(new SoftProperty { IdentifierText = $"{propName}DisplayName", Type = "string" });
+                    props.Add(new SoftProperty { Name = $"{propName}DisplayName", Type = "string" });
                     SoftClass manyToOneClass = entityClasses.Where(x => x.Name == propType).SingleOrDefault();
-                    props.Add(new SoftProperty { IdentifierText = $"{propName}Id", Type = $"{GetIdType(manyToOneClass, entityClasses)}?" });
+                    props.Add(new SoftProperty { Name = $"{propName}Id", Type = $"{GetIdType(manyToOneClass, entityClasses)}?" });
                     continue;
                 }
                 else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
                 {
-                    props.Add(new SoftProperty { IdentifierText = $"{propName}CommaSeparated", Type = "string" });
+                    props.Add(new SoftProperty { Name = $"{propName}CommaSeparated", Type = "string" });
                     continue;
                 }
                 else if (propType == "byte[]")
                 {
-                    props.Add(new SoftProperty { IdentifierText = propName, Type = "string" });
+                    props.Add(new SoftProperty { Name = propName, Type = "string" });
                     continue;
                 }
                 else if (propType.IsEnumerable())
@@ -1227,14 +1228,14 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 }
                 else if (prop.Attributes.Any(x => x.Name == "BlobName"))
                 {
-                    props.Add(new SoftProperty { IdentifierText = $"{propName}Data", Type = "string" });
+                    props.Add(new SoftProperty { Name = $"{propName}Data", Type = "string" });
                 }
                 else if (propType != "string")
                 {
                     propType = "UNSUPPORTED TYPE";
                 }
 
-                props.Add(new SoftProperty { IdentifierText = propName, Type = propType });
+                props.Add(new SoftProperty { Name = propName, Type = propType });
             }
 
             return props;
@@ -1492,7 +1493,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             {
                 new SoftProperty
                 {
-                    IdentifierText="Name", Type="string", Attributes=new List<SoftAttribute>
+                    Name="Name", Type="string", Attributes=new List<SoftAttribute>
                     {
                         new SoftAttribute { Name="SoftDisplayName" },
                         new SoftAttribute { Name="Required" },
@@ -1501,14 +1502,14 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 },
                 new SoftProperty
                 {
-                    IdentifierText="Description", Type="string", Attributes=new List<SoftAttribute>
+                    Name="Description", Type="string", Attributes=new List<SoftAttribute>
                     {
                         new SoftAttribute { Name="StringLength", Value="400, MinimumLength = 1" },
                     }
                 },
                 new SoftProperty
                 {
-                    IdentifierText="Permissions", Type="List<Permission>"
+                    Name="Permissions", Type="List<Permission>"
                 }
             };
 
@@ -1523,15 +1524,15 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             {
                 new SoftProperty
                 {
-                    IdentifierText="Name", Type="string",
+                    Name="Name", Type="string",
                 },
                 new SoftProperty
                 {
-                    IdentifierText="Description", Type="string"
+                    Name="Description", Type="string"
                 },
                 new SoftProperty
                 {
-                    IdentifierText="Permissions", Type="List<PermissionDTO>"
+                    Name="Permissions", Type="List<PermissionDTO>"
                 }
             };
 
@@ -1580,20 +1581,20 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 {
                     return new List<SoftProperty>()
                     {
-                        new SoftProperty{ Type = "int?", IdentifierText = "Version" },
-                        new SoftProperty{ Type = idType, IdentifierText = "Id" },
-                        new SoftProperty{ Type = "DateTime?", IdentifierText = "CreatedAt" },
-                        new SoftProperty{ Type = "DateTime?", IdentifierText = "ModifiedAt" },
+                        new SoftProperty{ Type = "int?", Name = "Version" },
+                        new SoftProperty{ Type = idType, Name = "Id" },
+                        new SoftProperty{ Type = "DateTime?", Name = "CreatedAt" },
+                        new SoftProperty{ Type = "DateTime?", Name = "ModifiedAt" },
                     };
                 }
                 else
                 {
                     return new List<SoftProperty>()
                     {
-                        new SoftProperty{ Type = "int", IdentifierText = "Version" },
-                        new SoftProperty{ Type = idType, IdentifierText = "Id" },
-                        new SoftProperty{ Type = "DateTime", IdentifierText = "CreatedAt" },
-                        new SoftProperty{ Type = "DateTime", IdentifierText = "ModifiedAt" },
+                        new SoftProperty{ Type = "int", Name = "Version" },
+                        new SoftProperty{ Type = idType, Name = "Id" },
+                        new SoftProperty{ Type = "DateTime", Name = "CreatedAt" },
+                        new SoftProperty{ Type = "DateTime", Name = "ModifiedAt" },
                     };
                 }
             }
@@ -1603,7 +1604,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 {
                     return new List<SoftProperty>()
                     {
-                        new SoftProperty { Type = idType, IdentifierText = "Id" },
+                        new SoftProperty { Type = idType, Name = "Id" },
                         //new SoftProperty { Type = "DateTime?", IdentifierText = "CreatedAt" },
                     };
                 }
@@ -1611,7 +1612,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 {
                     return new List<SoftProperty>()
                     {
-                        new SoftProperty { Type = idType, IdentifierText = "Id" },
+                        new SoftProperty { Type = idType, Name = "Id" },
                         //new SoftProperty { Type = "DateTime", IdentifierText = "CreatedAt" },
                     };
                 }
@@ -1620,10 +1621,10 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             {
                 return new List<SoftProperty>()
                 {
-                    new SoftProperty { Type = $"TableFilterDTO", IdentifierText = "TableFilter" },
-                    new SoftProperty { Type = $"List<{idType}>", IdentifierText = "SelectedIds" },
-                    new SoftProperty { Type = $"List<{idType}>", IdentifierText = "UnselectedIds" },
-                    new SoftProperty { Type = "bool?", IdentifierText = "IsAllSelected" },
+                    new SoftProperty { Type = $"TableFilterDTO", Name = "TableFilter" },
+                    new SoftProperty { Type = $"List<{idType}>", Name = "SelectedIds" },
+                    new SoftProperty { Type = $"List<{idType}>", Name = "UnselectedIds" },
+                    new SoftProperty { Type = "bool?", Name = "IsAllSelected" },
                 };
             }
             else

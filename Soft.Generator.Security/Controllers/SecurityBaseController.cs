@@ -20,14 +20,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Soft.Generator.Security.SecurityControllers // Needs to be other namespace because of source generator
 {
-    public class BaseSecurityController<TUser> : SoftControllerBase where TUser : class, IUser, new()
+    public class SecurityBaseController<TUser> : SoftBaseController where TUser : class, IUser, new()
     {
         private readonly SecurityBusinessService<TUser> _securityBusinessService;
         private readonly IJwtAuthManager _jwtAuthManagerService;
         private readonly IApplicationDbContext _context;
         private readonly AuthenticationService _authenticationService;
 
-        public BaseSecurityController(SecurityBusinessService<TUser> securityBusinessService, IJwtAuthManager jwtAuthManagerService, IApplicationDbContext context, AuthenticationService authenticationService)
+        public SecurityBaseController(SecurityBusinessService<TUser> securityBusinessService, IJwtAuthManager jwtAuthManagerService, IApplicationDbContext context, AuthenticationService authenticationService)
         {
             _securityBusinessService = securityBusinessService;
             _jwtAuthManagerService = jwtAuthManagerService;
@@ -75,9 +75,9 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> LoadRoleNamebookListForUserExtended(long userId)
+        public async Task<List<NamebookDTO<int>>> GetRoleNamebookListForUserExtended(long userId)
         {
-            return await _securityBusinessService.LoadRoleNamebookListForUserExtended(userId);
+            return await _securityBusinessService.GetRoleNamebookListForUserExtended(userId);
         }
 
         #endregion
@@ -87,9 +87,9 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         [HttpPost]
         [AuthGuard]
-        public async Task<TableResponseDTO<RoleDTO>> LoadRoleTableData(TableFilterDTO tableFilterDTO)
+        public async Task<TableResponseDTO<RoleDTO>> GetRoleTableData(TableFilterDTO tableFilterDTO)
         {
-            return await _securityBusinessService.LoadRoleTableData(tableFilterDTO, _context.DbSet<Role>());
+            return await _securityBusinessService.GetRoleTableData(tableFilterDTO, _context.DbSet<Role>());
         }
 
         [HttpPost]
@@ -123,23 +123,23 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<long>>> LoadUserListForRole(int roleId)
+        public async Task<List<NamebookDTO<long>>> GetUserListForRole(int roleId)
         {
-            return await _securityBusinessService.LoadUserExtendedNamebookListForRole(roleId);
+            return await _securityBusinessService.GetUserExtendedNamebookListForRole(roleId);
         }
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> LoadRoleListForAutocomplete(int limit, string query)
+        public async Task<List<NamebookDTO<int>>> GetRoleListForAutocomplete(int limit, string query)
         {
-            return await _securityBusinessService.LoadRoleListForAutocomplete(limit, query, _context.DbSet<Role>());
+            return await _securityBusinessService.GetRoleListForAutocomplete(limit, query, _context.DbSet<Role>());
         }
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> LoadRoleListForDropdown()
+        public async Task<List<NamebookDTO<int>>> GetRoleListForDropdown()
         {
-            return await _securityBusinessService.LoadRoleListForDropdown(_context.DbSet<Role>());
+            return await _securityBusinessService.GetRoleListForDropdown(_context.DbSet<Role>());
         }
 
         #endregion
@@ -149,16 +149,16 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> LoadPermissionListForDropdown()
+        public async Task<List<NamebookDTO<int>>> GetPermissionListForDropdown()
         {
-            return await _securityBusinessService.LoadPermissionListForDropdown(_context.DbSet<Permission>(), false); // FT: We don't have authorization of Permission, it will inherit from Role authorization
+            return await _securityBusinessService.GetPermissionListForDropdown(_context.DbSet<Permission>(), false); // FT: We don't have authorization of Permission, it will inherit from Role authorization
         }
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> LoadPermissionListForRole(int roleId)
+        public async Task<List<NamebookDTO<int>>> GetPermissionListForRole(int roleId)
         {
-            return await _securityBusinessService.LoadPermissionNamebookListForRole(roleId);
+            return await _securityBusinessService.GetPermissionNamebookListForRole(roleId);
         }
 
         #endregion

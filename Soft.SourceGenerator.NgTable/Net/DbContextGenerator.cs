@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Angular;
 using Soft.SourceGenerator.NgTable.Helpers;
+using Soft.SourceGenerators.Enums;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using System;

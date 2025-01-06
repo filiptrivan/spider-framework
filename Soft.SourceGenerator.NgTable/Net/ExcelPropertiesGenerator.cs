@@ -68,7 +68,7 @@ namespace {{basePartOfNamespace}}.ExcelProperties
 
                 foreach (SoftProperty prop in Helper.GetPropsToExcludeFromExcelExport(DTOClassGroup.Key, DTOClasses, mapperClass))
                 {
-                    propertyNames.Add($"\"{prop.IdentifierText}\"");
+                    propertyNames.Add($"\"{prop.Name}\"");
                 }
 
                 sb.AppendLine($$"""

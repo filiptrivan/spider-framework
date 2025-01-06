@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Soft.SourceGenerator.NgTable.Helpers;
+using Soft.SourceGenerators.Enums;
 using Soft.SourceGenerators.Models;
 using System;
 using System.Collections.Generic;

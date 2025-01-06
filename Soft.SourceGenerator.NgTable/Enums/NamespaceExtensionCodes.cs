@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Soft.SourceGenerators.Models
+namespace Soft.SourceGenerators.Enums
 {
     public enum NamespaceExtensionCodes
     {

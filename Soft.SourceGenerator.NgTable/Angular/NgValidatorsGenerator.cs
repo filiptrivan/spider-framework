@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using Soft.SourceGenerator.NgTable.Net;
+using Soft.SourceGenerators.Enums;
 
 namespace Soft.SourceGenerator.NgTable.Angular
 {
@@ -163,7 +164,7 @@ export class ValidatorServiceGenerated {
 
         public static void PopulateListOfStrings(string rules, List<SoftProperty> DTOProperties, string validationRulePropName, List<string> ruleStatements, List<string> validationMessages, List<string> translocoVariables, List<string> ruleNames, List<string> translationTags)
         {
-            SoftProperty property = DTOProperties.Where(x => x.IdentifierText == validationRulePropName).Single();
+            SoftProperty property = DTOProperties.Where(x => x.Name == validationRulePropName).Single();
 
             if (rules.Contains("NotEmpty") || property.Type == "int" || property.Type == "long" || property.Type == "byte")
             {

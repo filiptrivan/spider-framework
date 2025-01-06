@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Helpers;
 using Soft.SourceGenerators;
+using Soft.SourceGenerators.Enums;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using System;
@@ -341,9 +342,9 @@ namespace {{basePartOfTheNamespace}}.Services
             foreach (SoftProperty property in blobProperies)
             {
                 blobParts.Add($$"""
-                    if (!string.IsNullOrEmpty(dto.{{property.IdentifierText}}))
+                    if (!string.IsNullOrEmpty(dto.{{property.Name}}))
                     {
-                        dto.{{property.IdentifierText}}Data = await GetFileDataAsync(dto.{{property.IdentifierText}});
+                        dto.{{property.Name}}Data = await GetFileDataAsync(dto.{{property.Name}});
                     }
 """);
             }
@@ -363,11 +364,26 @@ namespace {{basePartOfTheNamespace}}.Services
             string entityIdType = Helper.GetIdType(entity, allEntityClasses);
 
             return $$"""
+        public async Task<{{entity.Name}}SaveBodyDTO> Save{{entity.Name}}AndReturnSaveBodyDTOAsync({{entity.Name}}SaveBodyDTO saveBodyDTO, bool authorizeUpdate = true, bool authorizeInsert = true)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                var saved{{entity.Name}}DTO = await Save{{entity.Name}}AndReturnDTOAsync(saveBodyDTO.{{entity.Name}}DTO, true, true);
+
+                var result = new {{entity.Name}}SaveBodyDTO
+                {
+                    {{entity.Name}}DTO = saved{{entity.Name}}DTO
+                };
+
+                return result;
+            });
+        }
+
         public async Task<{{entity.Name}}DTO> Save{{entity.Name}}AndReturnDTOAsync({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO, bool authorizeUpdate = true, bool authorizeInsert = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                {{entity.Name}} poco = await Save{{entity.Name}}AndReturnDomainAsync({{entity.Name.FirstCharToLower()}}DTO, authorizeUpdate, authorizeInsert);
+                var poco = await Save{{entity.Name}}AndReturnDomainAsync({{entity.Name.FirstCharToLower()}}DTO, authorizeUpdate, authorizeInsert);
 
                 return poco.Adapt<{{entity.Name}}DTO>(Mapper.{{entity.Name}}ToDTOConfig());
             });
@@ -441,19 +457,19 @@ namespace {{basePartOfTheNamespace}}.Services
                 if (classOfManyToOneProperty.IsBusinessObject() || classOfManyToOneProperty.IsReadonlyObject() == false)
                 {
                     result.Add($$"""
-            if (dto.{{prop.IdentifierText}}Id > 0)
-                poco.{{prop.IdentifierText}} = await GetInstanceAsync<{{prop.Type}}, {{Helper.GetIdType(classOfManyToOneProperty, allEntityClasses)}}>(dto.{{prop.IdentifierText}}Id.Value, null);
+            if (dto.{{prop.Name}}Id > 0)
+                poco.{{prop.Name}} = await GetInstanceAsync<{{prop.Type}}, {{Helper.GetIdType(classOfManyToOneProperty, allEntityClasses)}}>(dto.{{prop.Name}}Id.Value, null);
             else
-                poco.{{prop.IdentifierText}} = null;
+                poco.{{prop.Name}} = null;
 """);
                 }
                 else
                 {
                     result.Add($$"""
-            if (dto.{{prop.IdentifierText}}Id > 0)
-                poco.{{prop.IdentifierText}} = await GetInstanceAsync<{{prop.Type}}, {{Helper.GetIdType(classOfManyToOneProperty, allEntityClasses)}}>(dto.{{prop.IdentifierText}}Id.Value);
+            if (dto.{{prop.Name}}Id > 0)
+                poco.{{prop.Name}} = await GetInstanceAsync<{{prop.Type}}, {{Helper.GetIdType(classOfManyToOneProperty, allEntityClasses)}}>(dto.{{prop.Name}}Id.Value);
             else
-                poco.{{prop.IdentifierText}} = null;
+                poco.{{prop.Name}} = null;
 """);
                 }
             }
@@ -480,7 +496,7 @@ namespace {{basePartOfTheNamespace}}.Services
             foreach (SoftProperty property in blobProperies)
             {
                 result.Add($$"""
-                await DeleteNonActiveBlobs(dto.{{property.IdentifierText}}, nameof({{entity.Name}}), nameof({{entity.Name}}.{{property.IdentifierText}}), poco.Id.ToString());
+                await DeleteNonActiveBlobs(dto.{{property.Name}}, nameof({{entity.Name}}), nameof({{entity.Name}}.{{property.Name}}), poco.Id.ToString());
 """);
             }
 
@@ -498,7 +514,7 @@ namespace {{basePartOfTheNamespace}}.Services
             foreach (SoftProperty property in blobProperies)
             {
                 result.Add($$"""
-        public async Task<string> Upload{{entity.Name}}{{property.IdentifierText}}Async(IFormFile file, bool authorizeUpdate = true, bool authorizeInsert = true) // FT: It doesn't work without interface
+        public async Task<string> Upload{{property.Name}}For{{entity.Name}}Async(IFormFile file, bool authorizeUpdate = true, bool authorizeInsert = true) // FT: It doesn't work without interface
         {
             using Stream stream = file.OpenReadStream();
 
@@ -519,14 +535,14 @@ namespace {{basePartOfTheNamespace}}.Services
                 }
             }
 
-            OnBefore{{entity.Name}}{{property.IdentifierText}}BlobIsUploaded({{entity.Name.FirstCharToLower()}}Id); // FT: Authorize access for this id...
+            OnBefore{{property.Name}}BlobFor{{entity.Name}}IsUploaded({{entity.Name.FirstCharToLower()}}Id); // FT: Authorize access for this id...
 
-            string fileName = await UploadFileAsync(file.FileName, nameof({{entity.Name}}), nameof({{entity.Name}}.{{property.IdentifierText}}), {{entity.Name.FirstCharToLower()}}Id.ToString(), stream);
+            string fileName = await UploadFileAsync(file.FileName, nameof({{entity.Name}}), nameof({{entity.Name}}.{{property.Name}}), {{entity.Name.FirstCharToLower()}}Id.ToString(), stream);
 
             return fileName;
         }
 
-        public virtual async Task OnBefore{{entity.Name}}{{property.IdentifierText}}BlobIsUploaded ({{entityIdType}} {{entity.Name.FirstCharToLower()}}Id) { }
+        public virtual async Task OnBefore{{property.Name}}BlobFor{{entity.Name}}IsUploaded ({{entityIdType}} {{entity.Name.FirstCharToLower()}}Id) { }
 """
 );
             }
@@ -603,7 +619,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
             foreach (SoftProperty prop in manyToOneRequiredProperties)
             {
-                SoftClass nestedEntityClass = allEntityClasses.Where(x => x.Name == prop.ClassIdentifierText).SingleOrDefault();
+                SoftClass nestedEntityClass = allEntityClasses.Where(x => x.Name == prop.ClassName).SingleOrDefault();
                 string nestedEntityClassName = nestedEntityClass.Name;
                 string nestedEntityClassNameLowerCase = nestedEntityClassName.FirstCharToLower();
                 string nestedEntityClassIdType = Helper.GetIdType(nestedEntityClass, allEntityClasses);
@@ -611,13 +627,13 @@ namespace {{basePartOfTheNamespace}}.Services
                 if (recursiveIteration == 0)
                 {
                     result.Add($$"""
-                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => x.{{prop.IdentifierText}}.Id == {{nameOfTheEntityClassFirstLower}}Id).Select(x => x.Id).ToListAsync();
+                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => x.{{prop.Name}}.Id == {{nameOfTheEntityClassFirstLower}}Id).Select(x => x.Id).ToListAsync();
 """);
                 }
                 else
                 {
                     result.Add($$"""
-                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{parentNameOfTheEntityClass.FirstCharToLower()}}{{nameOfTheEntityClass}}ListToDelete.Contains(x.{{prop.IdentifierText}}.Id)).Select(x => x.Id).ToListAsync();
+                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{parentNameOfTheEntityClass.FirstCharToLower()}}{{nameOfTheEntityClass}}ListToDelete.Contains(x.{{prop.Name}}.Id)).Select(x => x.Id).ToListAsync();
 """);
                 }
 
@@ -648,7 +664,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
             foreach (SoftProperty prop in manyToOneRequiredProperties)
             {
-                SoftClass nestedEntityClass = allEntityClasses.Where(x => x.Name == prop.ClassIdentifierText).SingleOrDefault();
+                SoftClass nestedEntityClass = allEntityClasses.Where(x => x.Name == prop.ClassName).SingleOrDefault();
                 string nestedEntityClassName = nestedEntityClass.Name;
                 string nestedEntityClassNameLowerCase = nestedEntityClassName.FirstCharToLower();
                 string nestedEntityClassIdType = Helper.GetIdType(nestedEntityClass, allEntityClasses);
@@ -656,13 +672,13 @@ namespace {{basePartOfTheNamespace}}.Services
                 if (recursiveIteration == 0)
                 {
                     result.Add($$"""
-                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{nameOfTheEntityClassFirstLower}}ListToDelete.Contains(x.{{prop.IdentifierText}}.Id)).Select(x => x.Id).ToListAsync();
+                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{nameOfTheEntityClassFirstLower}}ListToDelete.Contains(x.{{prop.Name}}.Id)).Select(x => x.Id).ToListAsync();
 """);
                 }
                 else
                 {
                     result.Add($$"""
-                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{parentNameOfTheEntityClass.FirstCharToLower()}}{{nameOfTheEntityClass}}ListToDelete.Contains(x.{{prop.IdentifierText}}.Id)).Select(x => x.Id).ToListAsync();
+                List<{{nestedEntityClassIdType}}> {{nameOfTheEntityClassFirstLower}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{parentNameOfTheEntityClass.FirstCharToLower()}}{{nameOfTheEntityClass}}ListToDelete.Contains(x.{{prop.Name}}.Id)).Select(x => x.Id).ToListAsync();
 """);
                 }
 
@@ -711,7 +727,6 @@ namespace {{basePartOfTheNamespace}}.Services
                     continue;
 
                 string classNameFromTheListDisplayNameProp = Helper.GetDisplayNamePropForClass(classFromTheList); // Name
-                //classNameFromTheListDisplayNameProp = classNameFromTheListDisplayNameProp ?? classFromTheListFromTheReferencedProjects.Att.Where(x => ).FirstOrDefault() // TODO FT: Continue to do this...
                 List<SoftProperty> classFromTheListProperties = classFromTheList.Properties;
 
                 SoftProperty manyToManyPropFromTheListProperties = classFromTheListProperties.Where(x => x.Type.IsEnumerable() && GetClassNameFromTheEnumerableType(x.Type) == nameOfTheEntityClass).SingleOrDefault(); // List<User> Users
@@ -731,7 +746,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
                 return await _context.DbSet<{{classNameFromTheList}}>()
                     .AsNoTracking()
-                    .Where(x => x.{{manyToOneProp.IdentifierText}} == {{nameOfTheEntityClassFirstLower}}Id)
+                    .Where(x => x.{{manyToOneProp.Name}} == {{nameOfTheEntityClassFirstLower}}Id)
                     .Select(x => new NamebookDTO<{{idTypeOfTheClassFromTheList}}>
                     {
                         Id = x.Id,
@@ -751,7 +766,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 }
 
                 return await _context.DbSet<{{classNameFromTheList}}>()
-                    .Where(x => x.{{manyToOneProp.IdentifierText}} == {{nameOfTheEntityClassFirstLower}}Id)
+                    .Where(x => x.{{manyToOneProp.Name}} == {{nameOfTheEntityClassFirstLower}}Id)
                     .ToListAsync();
             });
         }
@@ -771,7 +786,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
                 return await _context.DbSet<{{classNameFromTheList}}>()
                     .AsNoTracking()
-                    .Where(x => x.{{manyToManyPropFromTheListProperties.IdentifierText}}.Any(x => x.Id == {{nameOfTheEntityClassFirstLower}}Id))
+                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}.Any(x => x.Id == {{nameOfTheEntityClassFirstLower}}Id))
                     .Select(x => new NamebookDTO<{{idTypeOfTheClassFromTheList}}>
                     {
                         Id = x.Id,
@@ -791,7 +806,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 }
 
                 return await _context.DbSet<{{classNameFromTheList}}>()
-                    .Where(x => x.{{manyToManyPropFromTheListProperties.IdentifierText}}.Any(x => x.Id == {{nameOfTheEntityClassFirstLower}}Id))
+                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}.Any(x => x.Id == {{nameOfTheEntityClassFirstLower}}Id))
                     .ToListAsync();
             });
         }
@@ -812,17 +827,17 @@ namespace {{basePartOfTheNamespace}}.Services
                 : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await GetInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
                 )}}
                 
-                foreach ({{classNameFromTheList}} {{classNameFromTheListFirstLower}} in {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.ToList())
+                foreach ({{classNameFromTheList}} {{classNameFromTheListFirstLower}} in {{nameOfTheEntityClassFirstLower}}.{{prop.Name}}.ToList())
                 {
                     if (selectedIdsHelper.Contains({{classNameFromTheListFirstLower}}.Id))
                         selectedIdsHelper.Remove({{classNameFromTheListFirstLower}}.Id);
                     else
-                        {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.Remove({{classNameFromTheListFirstLower}});
+                        {{nameOfTheEntityClassFirstLower}}.{{prop.Name}}.Remove({{classNameFromTheListFirstLower}});
                 }
 
                 List<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}ListToInsert = await _context.DbSet<{{classNameFromTheList}}>().Where(x => selectedIdsHelper.Contains(x.Id)).ToListAsync();
 
-                {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.AddRange({{classNameFromTheListFirstLower}}ListToInsert);
+                {{nameOfTheEntityClassFirstLower}}.{{prop.Name}}.AddRange({{classNameFromTheListFirstLower}}ListToInsert);
                 await _context.SaveChangesAsync();
             });
         }
@@ -837,7 +852,7 @@ namespace {{basePartOfTheNamespace}}.Services
             {{classNameFromTheListFirstLower}}Query = {{classNameFromTheListFirstLower}}Query
                 .Skip(tableFilterDTO.First)
                 .Take(tableFilterDTO.Rows)
-                .Where(x => x.{{manyToManyPropFromTheListProperties.IdentifierText}}
+                .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}
                     .Any(x => x.Id == tableFilterDTO.{{idTypeOfTheClassFromTheList.GetTableFilterAdditionalFilterPropertyName()}}));
 
             await _context.WithTransactionAsync(async () =>
@@ -849,7 +864,7 @@ namespace {{basePartOfTheNamespace}}.Services
                     .ToListAsync();
 
                 int count = await _context.DbSet<{{classNameFromTheList}}>()
-                    .Where(x => x.{{manyToManyPropFromTheListProperties.IdentifierText}}
+                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}
                         .Any(x => x.Id == tableFilterDTO.{{idTypeOfTheClassFromTheList.GetTableFilterAdditionalFilterPropertyName()}}))
                     .CountAsync();
 
@@ -859,7 +874,7 @@ namespace {{basePartOfTheNamespace}}.Services
             return lazyLoadSelectedIdsResultDTO;
         }
 
-        public async Task Update{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}WithLazyTableSelection(IQueryable<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}Query, {{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, LazyTableSelectionDTO<{{idTypeOfTheClassFromTheList}}> lazyTableSelectionDTO)
+        public async Task Update{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}WithLazyTableSelection(IQueryable<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}Query, {{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, ILazyTableSelectionDTO<{{idTypeOfTheClassFromTheList}}> lazyTableSelectionDTO)
         {
             await _context.WithTransactionAsync(async () =>
             {
@@ -880,7 +895,7 @@ namespace {{basePartOfTheNamespace}}.Services
                     : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await GetInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
                     )}}
 
-                    List<{{idTypeOfTheClassFromTheList}}> alreadySelected = {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}} == null ? new List<{{idTypeOfTheClassFromTheList}}>() : {{nameOfTheEntityClassFirstLower}}.{{prop.IdentifierText}}.Select(x => x.Id).ToList();
+                    List<{{idTypeOfTheClassFromTheList}}> alreadySelected = {{nameOfTheEntityClassFirstLower}}.{{prop.Name}} == null ? new List<{{idTypeOfTheClassFromTheList}}>() : {{nameOfTheEntityClassFirstLower}}.{{prop.Name}}.Select(x => x.Id).ToList();
 
                     {{classNameFromTheListFirstLower}}ListToInsert = alreadySelected
                         .Union(lazyTableSelectionDTO.SelectedIds)
@@ -939,12 +954,12 @@ namespace {{basePartOfTheNamespace}}.Services
             if (mainEntityAttribute?.Value != extendEntityAttribute?.Value) // FT HACK, FT TODO: For now, when we migrate UserNotification and PartnerUserPartnerNotification, we should change this.
                 return null;
 
-            string mainEntityPropertyName = mainEntityProperty.IdentifierText; // eg. "DiscountProductGroup"
+            string mainEntityPropertyName = mainEntityProperty.Name; // eg. "DiscountProductGroup"
             string mainEntityClassName = mainEntityProperty.Type; // eg. Category
             SoftClass mainEntityClass = allEntityClasses.Where(x => x.Name == mainEntityClassName).Single();
             string mainEntityIdType = Helper.GetIdType(mainEntityClass, allEntityClasses);
 
-            string extendEntityPropertyName = extendEntityProperty.IdentifierText;
+            string extendEntityPropertyName = extendEntityProperty.Name;
             string extendEntityClassName = extendEntityProperty.Type; 
             SoftClass extendEntityClass = allEntityClasses.Where(x => x.Name == extendEntityClassName).Single();
             string extendEntityIdType = Helper.GetIdType(extendEntityClass, allEntityClasses);

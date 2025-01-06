@@ -12,6 +12,7 @@ using Soft.SourceGenerators.Helpers;
 using System.Diagnostics;
 using Soft.SourceGenerator.NgTable.Angular;
 using Soft.SourceGenerators.Models;
+using Soft.SourceGenerators.Enums;
 
 namespace Soft.SourceGenerator.NgTable.Net
 {
@@ -104,7 +105,7 @@ namespace {{basePartOfNamespace}}.DTO
         {
             List<string> DTOproperties = new List<string>(); // public string Email { get; set; }
 
-            List<SoftProperty> propertiesOfTheCurrentClass = entityClass.Properties.Where(x => x.ClassIdentifierText == entityClass.Name).ToList();
+            List<SoftProperty> propertiesOfTheCurrentClass = entityClass.Properties.Where(x => x.ClassName == entityClass.Name).ToList();
 
             foreach (SoftProperty prop in propertiesOfTheCurrentClass)
             {
@@ -112,7 +113,7 @@ namespace {{basePartOfNamespace}}.DTO
                     continue;
 
                 string propType = prop.Type;
-                string propName = prop.IdentifierText;
+                string propName = prop.Name;
 
                 if (propType.IsManyToOneType())
                 {

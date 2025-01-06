@@ -13,6 +13,7 @@ using System.Diagnostics;
 using CodegenCS;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
+using Soft.SourceGenerators.Enums;
 
 namespace Soft.SourceGenerator.NgTable.Angular
 {
@@ -126,9 +127,9 @@ export class TranslateLabelsGeneratedService {
         {
             List<string> result = new List<string>();
             
-            foreach (SoftProperty DTOProperty in DTOProperties.DistinctBy(x => x.IdentifierText))
+            foreach (SoftProperty DTOProperty in DTOProperties.DistinctBy(x => x.Name))
             {
-                string propName = DTOProperty.IdentifierText;
+                string propName = DTOProperty.Name;
 
                 if (propName.EndsWith("Id") && propName != "Id")
                     propName = propName.Substring(0, propName.Length - 2);

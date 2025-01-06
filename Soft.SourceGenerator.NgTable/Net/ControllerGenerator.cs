@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Helpers;
+using Soft.SourceGenerators.Enums;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using System;
@@ -114,7 +115,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
                 string businessServiceName = businessServiceClass.Name;
 
                 result.Add($$"""
-    public class {{referencedProjectEntityGroupedClasses.Key}}BaseController : SoftControllerBase
+    public class {{referencedProjectEntityGroupedClasses.Key}}BaseController : SoftBaseController
     {
         private readonly IApplicationDbContext _context;
         private readonly {{servicesNamespace}}.{{GetBusinessServiceClassName(businessServiceName)}} _{{businessServiceName.FirstCharToLower()}};
@@ -144,6 +145,8 @@ namespace {{basePartOfTheNamespace}}.Controllers
             {
                 if (referencedProjectEntityClass.IsManyToMany()) // TODO FT: Do something with M2M entities
                     continue;
+
+                string referencedProjectEntityClassIdType = Helper.GetIdType(referencedProjectEntityClass, referencedProjectEntityClasses);
 
                 result.Add($$"""
         #region {{referencedProjectEntityClass.Name}}
@@ -179,6 +182,20 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}DTOAsync(id, false);
         }
 
+        [HttpGet]
+        [AuthGuard]
+        public virtual async Task<List<NamebookDTO<{{referencedProjectEntityClassIdType}}>>> Get{{referencedProjectEntityClass.Name}}ListForAutocomplete(int limit, string query)
+        {
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}ListForAutocomplete(limit, query, _context.DbSet<{{referencedProjectEntityClass.Name}}>());
+        }
+
+        [HttpGet]
+        [AuthGuard]
+        public virtual async Task<List<NamebookDTO<{{referencedProjectEntityClassIdType}}>>> Get{{referencedProjectEntityClass.Name}}ListForDropdown()
+        {
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}ListForDropdown(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+        }
+
 {{string.Join("\n\n", GetOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
 
         #endregion
@@ -204,37 +221,23 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return result;
         }
 
-        private static List<string> GetOneToManyControllerMethods(SoftClass referencedProjectEntityClass, List<SoftClass> referencedProjectEntityClasses, string businessServiceName)
+        private static List<string> GetOneToManyControllerMethods(SoftClass entity, List<SoftClass> entities, string businessServiceName)
         {
             List<string> result = new List<string>();
 
-            foreach (SoftProperty manyToOneProperty in referencedProjectEntityClass.Properties.Where(x => x.Type.IsManyToOneType()))
+            foreach (SoftProperty manyToOneProperty in entity.Properties.Where(x => x.Type.IsManyToOneType()))
             {
-                SoftClass manyToOnePropertyClass = referencedProjectEntityClasses.Where(x => x.Name == manyToOneProperty.Type).SingleOrDefault();
-                string manyToOnePropertyIdType = Helper.GetIdType(manyToOnePropertyClass, referencedProjectEntityClasses);
+                SoftClass manyToOnePropertyClass = entities.Where(x => x.Name == manyToOneProperty.Type).SingleOrDefault();
+                string manyToOnePropertyIdType = Helper.GetIdType(manyToOnePropertyClass, entities);
 
                 //if (manyToOneProperty.IsAutocomplete())
                 //{
-                result.Add($$"""
-        [HttpGet]
-        [AuthGuard]
-        public virtual async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Get{{manyToOneProperty.IdentifierText}}ListForAutocomplete(int limit, string query)
-        {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{manyToOneProperty.Type}}ListForAutocomplete(limit, query, _context.DbSet<{{manyToOneProperty.Type}}>());
-        }
-""");
+                
                 //}
 
                 //if (manyToOneProperty.IsDropdown())
                 //{
-                result.Add($$"""
-        [HttpGet]
-        [AuthGuard]
-        public virtual async Task<List<NamebookDTO<{{manyToOnePropertyIdType}}>>> Get{{manyToOneProperty.IdentifierText}}ListForDropdown()
-        {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{manyToOneProperty.Type}}ListForDropdown(_context.DbSet<{{manyToOneProperty.Type}}>(), false);
-        }
-""");
+
                 //}
             }
 
@@ -264,9 +267,9 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return $$"""
         [HttpPut]
         [AuthGuard]
-        public virtual async Task<{{entity.Name}}DTO> Save{{entity.Name}}({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO)
+        public virtual async Task<{{entity.Name}}SaveBodyDTO> Save{{entity.Name}}({{entity.Name}}SaveBodyDTO saveBodyDTO)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Save{{entity.Name}}AndReturnDTOAsync({{entity.Name.FirstCharToLower()}}DTO, false, false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Save{{entity.Name}}AndReturnSaveBodyDTOAsync(saveBodyDTO, false, false);
         }
 """;
         }
@@ -283,9 +286,9 @@ namespace {{basePartOfTheNamespace}}.Controllers
         // FT: You can't upload and delete on every request because you can delete the old image for the user when he refreshes the page
         [HttpPost]
         [AuthGuard]
-        public async Task<string> Upload{{entity.Name}}{{property.IdentifierText}}([FromForm] IFormFile file) // FT: It doesn't work without interface
+        public async Task<string> Upload{{property.Name}}For{{entity.Name}}([FromForm] IFormFile file) // FT: It doesn't work without interface
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Upload{{entity.Name}}{{property.IdentifierText}}Async(file); // TODO: Make authorization in business service with override
+            return await _{{businessServiceName.FirstCharToLower()}}.Upload{{property.Name}}For{{entity.Name}}Async(file); // TODO: Make authorization in business service with override
         }
 """
 );

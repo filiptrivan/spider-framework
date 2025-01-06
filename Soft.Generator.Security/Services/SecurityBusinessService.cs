@@ -296,7 +296,7 @@ namespace Soft.Generator.Security.Services
 
         #region User
 
-        public async Task<List<NamebookDTO<int>>> LoadRoleNamebookListForUserExtended(long userId)
+        public async Task<List<NamebookDTO<int>>> GetRoleNamebookListForUserExtended(long userId)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -374,7 +374,7 @@ namespace Soft.Generator.Security.Services
             });
         }
 
-        public async Task<List<NamebookDTO<long>>> LoadUserExtendedNamebookListForRole(long roleId)
+        public async Task<List<NamebookDTO<long>>> GetUserExtendedNamebookListForRole(long roleId)
         {
             return await _context.WithTransactionAsync(async () =>
             {

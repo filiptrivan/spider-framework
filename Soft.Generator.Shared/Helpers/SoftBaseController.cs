@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Soft.Generator.Shared.Helpers
 {
-    public class SoftControllerBase : ControllerBase
+    public class SoftBaseController : ControllerBase
     {
 
     }

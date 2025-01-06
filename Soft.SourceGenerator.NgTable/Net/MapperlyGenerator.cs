@@ -128,7 +128,7 @@ namespace {{basePartOfNamespace}}.DataMappers
             foreach (SoftProperty entityProp in entityProperties)
             {
                 string entityPropType = entityProp.Type;
-                string entityPropName = entityProp.IdentifierText;
+                string entityPropName = entityProp.Name;
 
                 if (entityPropType == "byte[]")
                     result.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName} == null ? null : Convert.FromBase64String(src.{entityPropName}))");
@@ -178,7 +178,7 @@ namespace {{basePartOfNamespace}}.DataMappers
             foreach (SoftProperty entityProp in entityProperties)
             {
                 string entityPropType = entityProp.Type;
-                string entityPropName = entityProp.IdentifierText;
+                string entityPropName = entityProp.Name;
 
                 if (entityPropType.IsManyToOneType())
                 {

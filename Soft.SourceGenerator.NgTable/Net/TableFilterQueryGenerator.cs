@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Helpers;
+using Soft.SourceGenerators.Enums;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using System;
@@ -105,17 +106,17 @@ namespace {{basePartOfNamespace}}.TableFiltering
                 {
                     foreach (SoftProperty DTOprop in pairDTOClass.Properties)
                     {
-                        string entityDotNotation = DTOprop.IdentifierText; // RoleDisplayName
+                        string entityDotNotation = DTOprop.Name; // RoleDisplayName
                         string DTOpropType = DTOprop.Type;
 
-                        if (efClassProps.Where(x => x.IdentifierText == DTOprop.IdentifierText).Any() == false) // FT: ako property u DTO ne postoji u ef klasi (RoleDisplayName ne postoji)
+                        if (efClassProps.Where(x => x.Name == DTOprop.Name).Any() == false) // FT: ako property u DTO ne postoji u ef klasi (RoleDisplayName ne postoji)
                         {
                             if (entityDotNotation.EndsWith("CommaSeparated") && pairDTOClass.IsGenerated == true)
                             {
                                 string entityPropName = entityDotNotation.Replace("CommaSeparated", ""); // "SegmentationItems"
                                 string idType = Helper.GetIdType(entityClass, entityClasses); // FT: Id type of SegmentationItem class
 
-                                sb.AppendLine(GetCaseForEnumerable(DTOprop.IdentifierText, entityPropName, idType));
+                                sb.AppendLine(GetCaseForEnumerable(DTOprop.Name, entityPropName, idType));
 
                                 continue;
                             }
@@ -133,15 +134,15 @@ namespace {{basePartOfNamespace}}.TableFiltering
                         switch (DTOpropType)
                         {
                             case "string":
-                                sb.AppendLine(GetCaseForString(DTOprop.IdentifierText, entityDotNotation));
+                                sb.AppendLine(GetCaseForString(DTOprop.Name, entityDotNotation));
                                 break;
                             case "bool":
                             case "bool?":
-                                sb.AppendLine(GetCaseForBool(DTOprop.IdentifierText, entityDotNotation));
+                                sb.AppendLine(GetCaseForBool(DTOprop.Name, entityDotNotation));
                                 break;
                             case "DateTime":
                             case "DateTime?":
-                                sb.AppendLine(GetCaseForDateTime(DTOprop.IdentifierText, entityDotNotation));
+                                sb.AppendLine(GetCaseForDateTime(DTOprop.Name, entityDotNotation));
                                 break;
                             case "long":
                             case "long?":
@@ -155,7 +156,7 @@ namespace {{basePartOfNamespace}}.TableFiltering
                             case "double?":
                             case "byte":
                             case "byte?":
-                                sb.AppendLine(GetCaseForNumber(DTOprop.IdentifierText, entityDotNotation, DTOpropType));
+                                sb.AppendLine(GetCaseForNumber(DTOprop.Name, entityDotNotation, DTOpropType));
                                 break;
                             default:
                                 //sb.AppendLine(GetCaseForManyToOneFromMapping(prop, c, classes)); // FT: it's already done in other cases
@@ -330,7 +331,7 @@ using {{item}};
             if (DTOClassProp.EndsWith("DisplayName") && DTOClass.IsGenerated == true) // FT: Doing this thing with the IsGenerated so we can make prop in non generated DTO with "DisplayName" or "Id" sufix 
             {
                 string baseClassInDotNotation = DTOClassProp.Replace("DisplayName", ""); // "Rolinho"
-                SoftProperty propertyInEntityClass = entitySoftClass.Properties.Where(x => x.IdentifierText == baseClassInDotNotation).Single();
+                SoftProperty propertyInEntityClass = entitySoftClass.Properties.Where(x => x.Name == baseClassInDotNotation).Single();
                 string typeOfThePropertyInEntityClass = propertyInEntityClass.Type; // "Role"
                 SoftClass entityClassWhichWeAreSearchingDisplayNameFor = allClasses.Where(x => x.Name == typeOfThePropertyInEntityClass).Single();
                 string displayName = Helper.GetDisplayNamePropForClass(entityClassWhichWeAreSearchingDisplayNameFor); // Name
@@ -383,7 +384,7 @@ using {{item}};
             // Rolinho.Permission.Id
             string propName = entityDotNotation.Split('.')[0]; // Rolinho
             List<SoftProperty> entityClassProperties = entityClass.Properties;
-            SoftProperty prop = entityClassProperties.Where(x => x.IdentifierText == propName).Single(); // Role
+            SoftProperty prop = entityClassProperties.Where(x => x.Name == propName).Single(); // Role
 
             int i = 1;
             while (prop.Type.IsBaseType() == false)
@@ -393,7 +394,7 @@ using {{item}};
                 List<SoftProperty> helperProps = helperClass.Properties;
 
                 propName = entityDotNotation.Split('.')[i]; // Id
-                prop = helperProps.Where(x => x.IdentifierText == propName).Single(); // Id
+                prop = helperProps.Where(x => x.Name == propName).Single(); // Id
                 i++;
             }
 

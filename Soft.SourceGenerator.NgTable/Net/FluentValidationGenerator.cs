@@ -214,11 +214,11 @@ namespace {{basePartOfNamespace}}.ValidationRules
 
         private static string GetPropNameForRule(SoftProperty prop, List<string> singleRulesOnProperty)
         {
-            string propName = prop.IdentifierText;
+            string propName = prop.Name;
 
             if (prop.Type.IsManyToOneType())  // FT: if it is not base type and not enumerable than it's many to one for sure, and the validation can only be for id to be required
             {
-                propName = $"{prop.IdentifierText}Id";
+                propName = $"{prop.Name}Id";
 
                 if (singleRulesOnProperty.Count > 1)
                     propName = "YOU CAN'T DEFINE ANYTHING THEN Required/ManyToOneRequired VALIDATION FOR MANY TO ONE PROPERTY";

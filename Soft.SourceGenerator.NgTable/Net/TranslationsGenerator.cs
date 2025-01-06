@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Helpers;
+using Soft.SourceGenerators.Enums;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using System;
@@ -94,7 +95,7 @@ namespace Soft.SourceGenerators.Net
             };
 
             foreach (SoftProperty property in entity.Properties)
-                dictionary.Add(property.IdentifierText, property.Translate(language));
+                dictionary.Add(property.Name, property.Translate(language));
 
             return dictionary;
         }
