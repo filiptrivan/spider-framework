@@ -29,8 +29,14 @@ namespace Soft.SourceGenerator.NgTable.Net
 //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
-                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntities(s),
-                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEntities(ctx))
+                    predicate: static (s, _) => Helper.IsClassSyntaxTargetForGeneration(s, new List<NamespaceExtensionCodes>
+                   {
+                       NamespaceExtensionCodes.Entities
+                   }),
+                   transform: static (ctx, _) => Helper.GetClassSemanticTargetForGeneration(ctx, new List<NamespaceExtensionCodes>
+                   {
+                       NamespaceExtensionCodes.Entities
+                   }))
                 .Where(static c => c is not null);
 
             IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,

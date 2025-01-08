@@ -442,344 +442,36 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
         #region Syntax and Semantic targets
 
-        public static bool IsSyntaxTargetForGenerationSettings(SyntaxNode node)
+        public static bool IsClassSyntaxTargetForGeneration(SyntaxNode node, List<NamespaceExtensionCodes> namespaceExtensions)
         {
             if (node is ClassDeclarationSyntax classDeclaration)
             {
-                string namespaceName = classDeclaration
-                   .Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault();
-
-                if (namespaceName != null && namespaceName.EndsWith($".GeneratorSettings"))
+                string namespaceName = classDeclaration.GetNamespace();
+                
+                if (namespaceName != null && (namespaceExtensions.Any(namespaceExtension => namespaceName.EndsWith($".{namespaceExtension}")) || namespaceName.EndsWith($".GeneratorSettings")))
                     return true;
             }
 
             return false;
         }
 
-        public static ClassDeclarationSyntax GetSemanticTargetForGenerationSettings(GeneratorSyntaxContext context)
+        public static ClassDeclarationSyntax GetClassSemanticTargetForGeneration(GeneratorSyntaxContext context, List<NamespaceExtensionCodes> namespaceExtensions)
         {
             ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
 
-            string namespaceName = classDeclaration
-               .Ancestors()
-               .OfType<NamespaceDeclarationSyntax>()
-               .Select(ns => ns.Name.ToString())
-               .FirstOrDefault();
+            string namespaceName = classDeclaration.GetNamespace();
 
-            if (namespaceName != null && namespaceName.EndsWith($".GeneratorSettings"))
-            {
-                return classDeclaration;
-            }
-
-            return null;
-        }
-
-        public static bool IsSyntaxTargetForGenerationEntities(SyntaxNode node)
-        {
-            if (node is ClassDeclarationSyntax classDeclaration)
-            {
-                string namespaceName = classDeclaration
-                   .Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault();
-
-                if (namespaceName != null && (namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith($".GeneratorSettings")))
-                    return true;
-            }
-
-            return false;
-        }
-
-        public static ClassDeclarationSyntax GetSemanticTargetForGenerationEntities(GeneratorSyntaxContext context)
-        {
-            ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
-
-            string namespaceName = classDeclaration
-               .Ancestors()
-               .OfType<NamespaceDeclarationSyntax>()
-               .Select(ns => ns.Name.ToString())
-               .FirstOrDefault();
-
-            if (namespaceName != null && (namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith($".GeneratorSettings")))
+            if (namespaceName != null && (namespaceExtensions.Any(namespaceExtension => namespaceName.EndsWith($".{namespaceExtension}")) || namespaceName.EndsWith($".GeneratorSettings")))
                 return classDeclaration;
 
             return null;
         }
 
-        public static bool IsSyntaxTargetForGenerationDTO(SyntaxNode node)
-        {
-            if (node is ClassDeclarationSyntax classDeclaration)
-            {
-                string namespaceName = classDeclaration
-                   .Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault();
-
-                if (namespaceName != null && (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".GeneratorSettings")))
-                    return true;
-            }
-
-            return false;
-        }
-
-        public static ClassDeclarationSyntax GetSemanticTargetForGenerationDTO(GeneratorSyntaxContext context)
-        {
-            ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
-
-            string namespaceName = classDeclaration
-               .Ancestors()
-               .OfType<NamespaceDeclarationSyntax>()
-               .Select(ns => ns.Name.ToString())
-               .FirstOrDefault();
-
-            if (namespaceName != null && (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".GeneratorSettings")))
-                return classDeclaration;
-
-            return null;
-        }
-
-        public static bool IsSyntaxTargetForGenerationAllReferenced(SyntaxNode node)
-        {
-            if (node is ClassDeclarationSyntax classDeclaration)
-            {
-                string namespaceName = classDeclaration
-                   .Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault();
-
-                if (namespaceName != null)
-                    return true;
-            }
-
-            return false;
-        }
-
-        public static ClassDeclarationSyntax GetSemanticTargetForGenerationAllReferenced(GeneratorSyntaxContext context)
-        {
-            ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
-
-            string namespaceName = classDeclaration
-               .Ancestors()
-               .OfType<NamespaceDeclarationSyntax>()
-               .Select(ns => ns.Name.ToString())
-               .FirstOrDefault();
-
-            if (namespaceName != null)
-                return classDeclaration;
-
-            return null;
-        }
-
-        public static bool IsSyntaxTargetForGenerationEntitiesAndDTO(SyntaxNode node)
-        {
-            if (node is ClassDeclarationSyntax classDeclaration)
-            {
-                string namespaceName = classDeclaration
-                   .Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault();
-
-                if (namespaceName != null && (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".GeneratorSettings")))
-                    return true;
-            }
-
-            return false;
-        }
-
-        public static ClassDeclarationSyntax GetSemanticTargetForGenerationEntitiesAndDTO(GeneratorSyntaxContext context)
-        {
-            ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
-
-            string namespaceName = classDeclaration
-               .Ancestors()
-               .OfType<NamespaceDeclarationSyntax>()
-               .Select(ns => ns.Name.ToString())
-               .FirstOrDefault();
-
-            if (namespaceName != null && (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".GeneratorSettings")))
-            {
-                return classDeclaration;
-            }
-
-            return null;
-        }
-
-        public static bool IsSyntaxTargetForGenerationDTOAndDataMappers(SyntaxNode node)
-        {
-            if (node is ClassDeclarationSyntax classDeclaration)
-            {
-                string namespaceName = classDeclaration
-                   .Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault();
-
-                if (namespaceName != null)
-                {
-                    if (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".DataMappers"))
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        public static ClassDeclarationSyntax GetSemanticTargetForGenerationDTOAndDataMappers(GeneratorSyntaxContext context)
-        {
-            ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
-
-            string namespaceName = classDeclaration
-               .Ancestors()
-               .OfType<NamespaceDeclarationSyntax>()
-               .Select(ns => ns.Name.ToString())
-               .FirstOrDefault();
-
-            if (namespaceName != null)
-            {
-                if (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".DataMappers"))
-                    return classDeclaration;
-            }
-
-            return null;
-        }
-
-        public static bool IsSyntaxTargetForGenerationEntitiesAndDataMappers(SyntaxNode node)
-        {
-            if (node is ClassDeclarationSyntax classDeclaration)
-            {
-                string namespaceName = classDeclaration
-                   .Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault();
-                if (namespaceName != null)
-                {
-                    if (namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".DataMappers") || namespaceName.EndsWith(".GeneratorSettings"))
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        public static ClassDeclarationSyntax GetSemanticTargetForGenerationEntitiesAndDataMapper(GeneratorSyntaxContext context)
-        {
-            ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
-
-            string namespaceName = classDeclaration
-               .Ancestors()
-               .OfType<NamespaceDeclarationSyntax>()
-               .Select(ns => ns.Name.ToString())
-               .FirstOrDefault();
-
-            if (namespaceName != null)
-            {
-                if (namespaceName.EndsWith($".{EntitiesNamespaceEnding}") || namespaceName.EndsWith(".DataMappers") || namespaceName.EndsWith(".GeneratorSettings"))
-                {
-                    return classDeclaration;
-                }
-            }
-
-            return null;
-        }
-
-        public static bool IsSyntaxTargetForGenerationDTODataMappersAndEntities(SyntaxNode node)
-        {
-            if (node is ClassDeclarationSyntax classDeclaration)
-            {
-                string namespaceName = classDeclaration
-                   .Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault();
-                if (namespaceName != null)
-                {
-                    if (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith(".DataMappers") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}"))
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        public static ClassDeclarationSyntax GetSemanticTargetForGenerationDTODataMappersAndEntities(GeneratorSyntaxContext context)
-        {
-            ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
-
-            string namespaceName = classDeclaration
-               .Ancestors()
-               .OfType<NamespaceDeclarationSyntax>()
-               .Select(ns => ns.Name.ToString())
-               .FirstOrDefault();
-
-            if (namespaceName != null)
-            {
-                if (namespaceName.EndsWith($".{DTONamespaceEnding}") || namespaceName.EndsWith(".DataMappers") || namespaceName.EndsWith($".{EntitiesNamespaceEnding}"))
-                {
-                    return classDeclaration;
-                }
-            }
-
-            return null;
-        }
-
-        public static bool IsSyntaxTargetForGenerationControllers(SyntaxNode node)
-        {
-            if (node is ClassDeclarationSyntax classDeclaration)
-            {
-                string namespaceName = classDeclaration
-                   .Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault();
-
-                if (namespaceName != null)
-                {
-                    if (namespaceName.EndsWith(".Controllers") || namespaceName.EndsWith(".GeneratorSettings"))
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        public static ClassDeclarationSyntax GetSemanticTargetForGenerationControllers(GeneratorSyntaxContext context)
-        {
-            ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
-
-            string namespaceName = classDeclaration
-               .Ancestors()
-               .OfType<NamespaceDeclarationSyntax>()
-               .Select(ns => ns.Name.ToString())
-               .FirstOrDefault();
-
-            if (namespaceName != null)
-            {
-                if (namespaceName.EndsWith(".Controllers") || namespaceName.EndsWith(".GeneratorSettings"))
-                {
-                    return classDeclaration;
-                }
-            }
-
-            return null;
-        }
-
-        public static bool IsSyntaxTargetForGenerationEnums(SyntaxNode node)
+        public static bool IsEnumSyntaxTargetForGeneration(SyntaxNode node)
         {
             if (node is EnumDeclarationSyntax enumDeclaration)
             {
-                string namespaceName = enumDeclaration
-                   .Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault();
+                string namespaceName = enumDeclaration.GetNamespace();
 
                 if (namespaceName != null && (namespaceName.EndsWith(".Enums") || namespaceName.EndsWith(".GeneratorSettings")))
                     return true;
@@ -788,7 +480,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return false;
         }
 
-        public static EnumDeclarationSyntax GetSemanticTargetForGenerationEnums(GeneratorSyntaxContext context)
+        public static EnumDeclarationSyntax GetEnumSemanticTargetForGeneration(GeneratorSyntaxContext context)
         {
             EnumDeclarationSyntax enumDeclaration = (EnumDeclarationSyntax)context.Node;
 
@@ -799,9 +491,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                .FirstOrDefault();
 
             if (namespaceName != null && (namespaceName.EndsWith(".Enums") || namespaceName.EndsWith(".GeneratorSettings")))
-            {
                 return enumDeclaration;
-            }
 
             return null;
         }
@@ -810,11 +500,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         {
             if (node is ClassDeclarationSyntax classDeclaration)
             {
-                string namespaceName = classDeclaration
-                   .Ancestors()
-                   .OfType<NamespaceDeclarationSyntax>()
-                   .Select(ns => ns.Name.ToString())
-                   .FirstOrDefault();
+                string namespaceName = classDeclaration.GetNamespace();
 
                 if (namespaceName != null)
                     return true;
@@ -827,11 +513,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         {
             ClassDeclarationSyntax classDeclaration = (ClassDeclarationSyntax)context.Node;
 
-            string namespaceName = classDeclaration
-               .Ancestors()
-               .OfType<NamespaceDeclarationSyntax>()
-               .Select(ns => ns.Name.ToString())
-               .FirstOrDefault();
+            string namespaceName = classDeclaration.GetNamespace();
 
             if (namespaceName != null)
                 return classDeclaration;
@@ -866,7 +548,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             List<INamedTypeSymbol> types = namespaceSymbol.GetTypeMembers()
                 .Where(type => type.TypeKind == TypeKind.Class &&
-                       namespaceExtensions.Any(namespaceExtension => GetFullNamespace(type).EndsWith(namespaceExtension.ToString())))
+                       namespaceExtensions.Any(namespaceExtension => GetFullNamespace(type).EndsWith($".{namespaceExtension}")))
                 .ToList();
 
             // Add all the type members (classes, structs, etc.) in this namespace

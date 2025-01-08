@@ -568,6 +568,15 @@ namespace Soft.SourceGenerators.Helpers
             return null; // FT: many to many doesn't have base class
         }
 
+        public static string GetNamespace(this BaseTypeDeclarationSyntax baseTypeDeclarationSyntax)
+        {
+            return baseTypeDeclarationSyntax
+                .Ancestors()
+                .OfType<NamespaceDeclarationSyntax>()
+                .Select(ns => ns.Name.ToString())
+                .FirstOrDefault();
+        }
+
         /// <summary>Gets the file path the source generator was called from.</summary>
         /// <param name="context">The context of the Generator's Execute method.</param>
         /// <returns>The file path the generator was called from.</returns>

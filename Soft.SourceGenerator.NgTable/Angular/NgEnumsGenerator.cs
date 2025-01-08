@@ -12,6 +12,7 @@ using System.IO;
 using System.Diagnostics;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
+using Soft.SourceGenerators.Enums;
 
 namespace Soft.SourceGenerator.NgTable.Angular
 {
@@ -28,14 +29,20 @@ namespace Soft.SourceGenerator.NgTable.Angular
 //#endif
             IncrementalValuesProvider<EnumDeclarationSyntax> enumDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
-                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEnums(s),
-                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEnums(ctx))
+                    predicate: static (s, _) => Helper.IsEnumSyntaxTargetForGeneration(s),
+                    transform: static (ctx, _) => Helper.GetEnumSemanticTargetForGeneration(ctx))
                 .Where(static c => c is not null);
 
             IncrementalValuesProvider<ClassDeclarationSyntax> settingsDeclaration = context.SyntaxProvider
                .CreateSyntaxProvider(
-                   predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntities(s),
-                   transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEntities(ctx))
+                   predicate: static (s, _) => Helper.IsClassSyntaxTargetForGeneration(s, new List<NamespaceExtensionCodes> 
+                   { 
+                       NamespaceExtensionCodes.Entities
+                   }),
+                   transform: static (ctx, _) => Helper.GetClassSemanticTargetForGeneration(ctx, new List<NamespaceExtensionCodes>
+                   {
+                       NamespaceExtensionCodes.Entities
+                   }))
                .Where(static c => c is not null);
 
             var combinedDeclarations = enumDeclarations.Collect().Combine(settingsDeclaration.Collect());

@@ -31,8 +31,14 @@ namespace Soft.SourceGenerator.NgTable.Angular
 //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
-                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationControllers(s),
-                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationControllers(ctx))
+                   predicate: static (s, _) => Helper.IsClassSyntaxTargetForGeneration(s, new List<NamespaceExtensionCodes>
+                   {
+                       NamespaceExtensionCodes.Controllers,
+                   }),
+                   transform: static (ctx, _) => Helper.GetClassSemanticTargetForGeneration(ctx, new List<NamespaceExtensionCodes>
+                   {
+                       NamespaceExtensionCodes.Controllers,
+                   }))
                 .Where(static c => c is not null);
 
             IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
@@ -47,6 +53,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
 
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
+
         private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, SourceProductionContext context)
         {
             if (classes.Count <= 1)

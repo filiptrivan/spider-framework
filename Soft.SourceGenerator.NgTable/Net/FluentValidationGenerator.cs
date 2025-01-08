@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Soft.SourceGenerator.NgTable.Angular;
 using Soft.SourceGenerator.NgTable.Helpers;
+using Soft.SourceGenerators.Enums;
 using Soft.SourceGenerators.Helpers;
 using Soft.SourceGenerators.Models;
 using System;
@@ -29,8 +30,16 @@ namespace Soft.SourceGenerator.NgTable.Net
 //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
-                    predicate: static (s, _) => Helper.IsSyntaxTargetForGenerationEntitiesAndDTO(s),
-                    transform: static (ctx, _) => Helper.GetSemanticTargetForGenerationEntitiesAndDTO(ctx))
+                   predicate: static (s, _) => Helper.IsClassSyntaxTargetForGeneration(s, new List<NamespaceExtensionCodes>
+                   {
+                       NamespaceExtensionCodes.Entities,
+                       NamespaceExtensionCodes.DTO
+                   }),
+                   transform: static (ctx, _) => Helper.GetClassSemanticTargetForGeneration(ctx, new List<NamespaceExtensionCodes>
+                   {
+                       NamespaceExtensionCodes.Entities,
+                       NamespaceExtensionCodes.DTO
+                   }))
                 .Where(static c => c is not null);
 
             context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
