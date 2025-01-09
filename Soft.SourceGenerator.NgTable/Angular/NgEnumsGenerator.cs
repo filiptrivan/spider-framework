@@ -33,17 +33,10 @@ namespace Soft.SourceGenerator.NgTable.Angular
                     transform: static (ctx, _) => Helper.GetEnumSemanticTargetForGeneration(ctx))
                 .Where(static c => c is not null);
 
-            IncrementalValuesProvider<ClassDeclarationSyntax> settingsDeclaration = context.SyntaxProvider
-               .CreateSyntaxProvider(
-                   predicate: static (s, _) => Helper.IsClassSyntaxTargetForGeneration(s, new List<NamespaceExtensionCodes> 
-                   { 
-                       NamespaceExtensionCodes.Entities
-                   }),
-                   transform: static (ctx, _) => Helper.GetClassSemanticTargetForGeneration(ctx, new List<NamespaceExtensionCodes>
-                   {
-                       NamespaceExtensionCodes.Entities
-                   }))
-               .Where(static c => c is not null);
+            IncrementalValuesProvider<ClassDeclarationSyntax> settingsDeclaration = Helper.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                });
 
             var combinedDeclarations = enumDeclarations.Collect().Combine(settingsDeclaration.Collect());
 

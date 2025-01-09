@@ -21,23 +21,16 @@ namespace Soft.SourceGenerator.NgTable.Net
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//#if DEBUG
-//            if (!Debugger.IsAttached)
-//            {
-//                Debugger.Launch();
-//            }
-//#endif
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
-                .CreateSyntaxProvider(
-                    predicate: static (s, _) => Helper.IsClassSyntaxTargetForGeneration(s, new List<NamespaceExtensionCodes>
-                   {
-                       NamespaceExtensionCodes.Entities
-                   }),
-                   transform: static (ctx, _) => Helper.GetClassSemanticTargetForGeneration(ctx, new List<NamespaceExtensionCodes>
-                   {
-                       NamespaceExtensionCodes.Entities
-                   }))
-                .Where(static c => c is not null);
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helper.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                });
 
             IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
                 new List<NamespaceExtensionCodes>
@@ -111,7 +104,7 @@ namespace {{basePartOfNamespace}}.DTO
         {
             List<string> DTOproperties = new List<string>(); // public string Email { get; set; }
 
-            List<SoftProperty> propertiesOfTheCurrentClass = entityClass.Properties.Where(x => x.ClassName == entityClass.Name).ToList();
+            List<SoftProperty> propertiesOfTheCurrentClass = entityClass.Properties.Where(x => x.EntityName == entityClass.Name).ToList();
 
             foreach (SoftProperty prop in propertiesOfTheCurrentClass)
             {

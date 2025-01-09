@@ -93,7 +93,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 {
                     foreach (PropertyDeclarationSyntax prop in baseClass.Members.OfType<PropertyDeclarationSyntax>())
                     {
-                        properties.Add(GetPropWithModifiedT(prop, typeGeneric));
+                        properties.Add(GetPropWithModifiedT(prop, typeGeneric, baseClass));
                     }
                 }
 
@@ -230,7 +230,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 {
                     Type = prop.Type.ToString(),
                     Name = prop.Identifier.Text,
-                    ClassName = c.Identifier.Text,
+                    EntityName = c.Identifier.Text,
                     Attributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
                     {
                         return GetSoftAttribute(x);
@@ -424,10 +424,10 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return value;
         }
 
-        private static SoftProperty GetPropWithModifiedT(PropertyDeclarationSyntax prop, TypeSyntax typeGeneric)
+        private static SoftProperty GetPropWithModifiedT(PropertyDeclarationSyntax prop, TypeSyntax typeGeneric, ClassDeclarationSyntax baseClass)
         {
             List<SoftAttribute> attributes = GetAllAttributesOfTheMember(prop);
-            SoftProperty newProp = new SoftProperty() { Type = prop.Type.ToString(), Name = prop.Identifier.Text, Attributes = attributes };
+            SoftProperty newProp = new SoftProperty() { Type = prop.Type.ToString(), Name = prop.Identifier.Text, Attributes = attributes, EntityName = baseClass.Identifier.Text };
 
             if (prop.Type.ToString() == "T") // If some property has type of T, we change it to long for example
             {
@@ -442,12 +442,21 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
         #region Syntax and Semantic targets
 
+        public static IncrementalValuesProvider<ClassDeclarationSyntax> GetClassInrementalValuesProvider(SyntaxValueProvider syntaxValueProvider, List<NamespaceExtensionCodes> namespaceExtensions)
+        {
+            return syntaxValueProvider
+                .CreateSyntaxProvider(
+                   predicate: (s, _) => IsClassSyntaxTargetForGeneration(s, namespaceExtensions),
+                   transform: (ctx, _) => GetClassSemanticTargetForGeneration(ctx, namespaceExtensions))
+                .Where(static c => c is not null);
+        }
+
         public static bool IsClassSyntaxTargetForGeneration(SyntaxNode node, List<NamespaceExtensionCodes> namespaceExtensions)
         {
             if (node is ClassDeclarationSyntax classDeclaration)
             {
                 string namespaceName = classDeclaration.GetNamespace();
-                
+
                 if (namespaceName != null && (namespaceExtensions.Any(namespaceExtension => namespaceName.EndsWith($".{namespaceExtension}")) || namespaceName.EndsWith($".GeneratorSettings")))
                     return true;
             }
@@ -607,7 +616,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         SoftProperty softProperty = new SoftProperty
                         {
                             Name = member.Name,
-                            ClassName = type.Name,
+                            EntityName = type.Name,
                             Type = property.Type.TypeToDisplayString(),
                             Attributes = GetAttributesFromReferencedAssemblies(member)
                         };

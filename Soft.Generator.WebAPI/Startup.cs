@@ -6,7 +6,6 @@ using System.Text;
 using Soft.Generator.WebAPI;
 using LightInject;
 using Soft.Generator.WebAPI.DI;
-using Soft.Generator.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Soft.Generator.Shared.Interfaces;
 using Microsoft.AspNetCore.Diagnostics;

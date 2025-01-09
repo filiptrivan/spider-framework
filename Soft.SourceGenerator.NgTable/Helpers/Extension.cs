@@ -23,8 +23,8 @@ namespace Soft.SourceGenerators.Helpers
         {
             switch (input)
             {
-                case null: throw new ArgumentNullException(nameof(input));
-                case "": throw new ArgumentException($"{nameof(input)} cannot be empty", nameof(input));
+                case null: return null;
+                case "": return null;
                 default: return input.First().ToString().ToUpper() + input.Substring(1);
             }
         }
@@ -36,8 +36,8 @@ namespace Soft.SourceGenerators.Helpers
         {
             switch (input)
             {
-                case null: throw new ArgumentNullException(nameof(input));
-                case "": throw new ArgumentException($"{nameof(input)} cannot be empty", nameof(input));
+                case null: return null;
+                case "": return null;
                 default: return input.First().ToString().ToLower() + input.Substring(1);
             }
         }
@@ -599,6 +599,26 @@ namespace Soft.SourceGenerators.Helpers
         public static string Translate(this SoftProperty property, LanguageCodes language)
         {
             return property.Attributes.Where(x => x.Name == $"TranslateSingular{language}").Select(x => x.Value).SingleOrDefault();
+        }
+
+        public static string GetDecimalScale(this SoftProperty property)
+        {
+            SoftAttribute precissionAttribute = property.Attributes.Where(x => x.Name == "Precision").SingleOrDefault();
+
+            if (precissionAttribute == null)
+                return null;
+
+            return precissionAttribute.Value.Split(',').Last();
+        }
+
+        public static bool IsBlob(this SoftProperty property)
+        {
+            SoftAttribute blobNameAttribute = property.Attributes.Where(x => x.Name == "BlobName").SingleOrDefault();
+
+            if (blobNameAttribute == null)
+                return false;
+
+            return true;
         }
 
         #endregion

@@ -28,17 +28,11 @@ namespace Soft.SourceGenerator.NgTable.Angular
             //                Debugger.Launch();
             //            }
             //#endif
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
-                .CreateSyntaxProvider(
-                   predicate: static (s, _) => Helper.IsClassSyntaxTargetForGeneration(s, new List<NamespaceExtensionCodes>
-                   {
-                       NamespaceExtensionCodes.DTO
-                   }),
-                   transform: static (ctx, _) => Helper.GetClassSemanticTargetForGeneration(ctx, new List<NamespaceExtensionCodes>
-                   {
-                       NamespaceExtensionCodes.DTO
-                   }))
-                .Where(static c => c is not null);
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helper.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.DTO,
+                });
 
             context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
             static (spc, source) => Execute(source, spc));
