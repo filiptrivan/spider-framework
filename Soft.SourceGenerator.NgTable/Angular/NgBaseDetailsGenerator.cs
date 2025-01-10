@@ -81,7 +81,9 @@ namespace Soft.SourceGenerators.Angular
         {
             List<string> result = new List<string>();
 
-            foreach (SoftClass entity in entities)
+            foreach (SoftClass entity in entities
+                .Where(x => x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false)
+            )
             {
                 if (entity.IsManyToMany())
                     continue;
@@ -130,6 +132,8 @@ export class {{entity.Name}}BaseComponent {
     @Input() {{entity.Name.FirstCharToLower()}}FormGroup: SoftFormGroup<{{entity.Name}}>;
     @Input() onSave: (reroute?: boolean) => void; 
 
+{{string.Join("\n", GetPrimengOptionVariables(entity))}}
+
     constructor(
         private apiService: ApiService
     ) {
@@ -139,6 +143,8 @@ export class {{entity.Name}}BaseComponent {
     ngOnInit(){
 
     }
+
+{{string.Join("\n\n", GetAutocompleteSearchMethods(entity))}}
 
     control(formControlName: keyof {{entity.Name}}, formGroup: SoftFormGroup){
         return getControl<{{entity.Name}}>(formControlName, formGroup);
@@ -151,17 +157,53 @@ export class {{entity.Name}}BaseComponent {
             return result;
         }
 
+        private static List<string> GetPrimengOptionVariables(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties
+                .Where(x =>
+                    GetUIControlType(x) == UIControlTypeCodes.Autocomplete &&
+                    x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false
+                )
+            )
+            {
+                result.Add($$"""
+    {{property.Name.FirstCharToLower()}}Options: PrimengOption[];
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetAutocompleteSearchMethods(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties
+                .Where(x => 
+                    GetUIControlType(x) == UIControlTypeCodes.Autocomplete &&
+                    x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false
+                )
+            )
+            {
+                result.Add($$"""
+    search{{property.Name}}(event: AutoCompleteCompleteEvent) {
+        this.apiService.getPrimengNamebookListForAutocomplete(this.apiService.get{{property.Type}}ListForAutocomplete, 50, event.query).subscribe(po => {
+            this.{{property.Name.FirstCharToLower()}}Options = po;
+        });
+    }
+""");
+            }
+
+            return result;
+        }
+
         private static List<string> GetPropertyBlocks(List<SoftProperty> properties, SoftClass entity)
         {
             List<string> result = new List<string>();
 
-            foreach (SoftProperty property in properties
-                .Where(x =>
-                    x.Name != "Version" &&
-                    x.Name != "Id" &&
-                    x.Name != "CreatedAt" &&
-                    x.Name != "ModifiedAt" &&
-                    x.Type.IsEnumerable() == false))
+            foreach (SoftProperty property in GetPropertiesForUIBlocks(properties))
             {
                 string controlType = GetUIStringControlType(GetUIControlType(property));
 
@@ -175,6 +217,25 @@ export class {{entity.Name}}BaseComponent {
             return result;
         }
 
+        private static List<SoftProperty> GetPropertiesForUIBlocks(List<SoftProperty> properties)
+        {
+            List<SoftProperty> orderedProperties = properties
+                .Where(x =>
+                    x.Name != "Version" &&
+                    x.Name != "Id" &&
+                    x.Name != "CreatedAt" &&
+                    x.Name != "ModifiedAt" &&
+                    x.Type.IsEnumerable() == false &&
+                    x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false
+                )
+                .OrderBy(x =>
+                    x.Attributes.Any(attr => attr.Name == "BlobName") ? 0 :
+                    x.Attributes.Any(attr => attr.Value == "TextArea") ? 2 : 1)
+                .ToList();
+
+            return orderedProperties;
+        }
+
         private static string GetFormControlName(SoftProperty property)
         {
             if (property.Type.IsManyToOneType())
@@ -185,19 +246,23 @@ export class {{entity.Name}}BaseComponent {
 
         private static string GetControlAttributes(SoftProperty property, SoftClass entity)
         {
-            UIControlType controlType = GetUIControlType(property);
+            UIControlTypeCodes controlType = GetUIControlType(property);
 
-            if (controlType == UIControlType.Decimal)
+            if (controlType == UIControlTypeCodes.Decimal)
             {
                 return $"[decimal]=\"true\" [maxFractionDigits]=\"{property.GetDecimalScale()}\"";
             }
-            else if (controlType == UIControlType.File)
+            else if (controlType == UIControlTypeCodes.File)
             {
                 return $"[fileData]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}Data.getRawValue()\" [objectId]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.id.getRawValue()\"";
             }
-            else if (controlType == UIControlType.Dropdown)
+            else if (controlType == UIControlTypeCodes.Dropdown)
             {
                 return $"[options]=\"{property.Name.FirstCharToLower()}Options\"";
+            }
+            else if (controlType == UIControlTypeCodes.Autocomplete)
+            {
+                return $"[options]=\"{property.Name.FirstCharToLower()}Options\" (onTextInput)=\"search{property.Name}($event)\"";
             }
 
             return null;
@@ -210,10 +275,10 @@ export class {{entity.Name}}BaseComponent {
             if (uiColWidthAttribute != null)
                 return uiColWidthAttribute.Value;
 
-            UIControlType controlType = GetUIControlType(property);
+            UIControlTypeCodes controlType = GetUIControlType(property);
 
-            if (controlType == UIControlType.File ||
-                controlType == UIControlType.TextArea)
+            if (controlType == UIControlTypeCodes.File ||
+                controlType == UIControlTypeCodes.TextArea)
             {
                 return "col-12";
             }
@@ -221,87 +286,87 @@ export class {{entity.Name}}BaseComponent {
             return "col-12 md:col-6";
         }
 
-        private static UIControlType GetUIControlType(SoftProperty property)
+        private static UIControlTypeCodes GetUIControlType(SoftProperty property)
         {
             SoftAttribute uiControlTypeAttribute = property.Attributes.Where(x => x.Name == "UIControlType").SingleOrDefault();
 
             if (uiControlTypeAttribute != null)
             {
-                Enum.TryParse(uiControlTypeAttribute.Value, out UIControlType parseResult);
+                Enum.TryParse(uiControlTypeAttribute.Value, out UIControlTypeCodes parseResult);
                 return parseResult;
             }
 
             if (property.IsBlob())
-                return UIControlType.File;
+                return UIControlTypeCodes.File;
 
             if (property.Type.IsManyToOneType())
-                return UIControlType.Autocomplete;
+                return UIControlTypeCodes.Autocomplete;
 
             switch (property.Type)
             {
                 case "string":
-                    return UIControlType.TextBox;
+                    return UIControlTypeCodes.TextBox;
                 case "bool":
                 case "bool?":
-                    return UIControlType.CheckBox;
+                    return UIControlTypeCodes.CheckBox;
                 case "DateTime":
                 case "DateTime?":
-                    return UIControlType.Calendar;
+                    return UIControlTypeCodes.Calendar;
                 case "decimal":
                 case "decimal?":
                 case "float":
                 case "float?":
                 case "double":
                 case "double?":
-                    return UIControlType.Decimal;
+                    return UIControlTypeCodes.Decimal;
                 case "long":
                 case "long?":
                 case "int":
                 case "int?":
                 case "byte":
                 case "byte?":
-                    return UIControlType.Integer;
+                    return UIControlTypeCodes.Integer;
                 default:
                     break;
             }
 
-            return UIControlType.TODO;
+            return UIControlTypeCodes.TODO;
         }
 
-        private static string GetUIStringControlType(UIControlType controlType)
+        private static string GetUIStringControlType(UIControlTypeCodes controlType)
         {
             switch (controlType)
             {
-                case UIControlType.Autocomplete:
+                case UIControlTypeCodes.Autocomplete:
                     return "soft-autocomplete";
-                case UIControlType.Calendar:
+                case UIControlTypeCodes.Calendar:
                     return "soft-calendar";
-                case UIControlType.CheckBox:
+                case UIControlTypeCodes.CheckBox:
                     return "soft-checkbox";
-                case UIControlType.ColorPick:
+                case UIControlTypeCodes.ColorPick:
                     return "soft-colorpick";
-                case UIControlType.Dropdown:
+                case UIControlTypeCodes.Dropdown:
                     return "soft-dropdown";
-                case UIControlType.Editor:
+                case UIControlTypeCodes.Editor:
                     return "soft-editor";
-                case UIControlType.File:
+                case UIControlTypeCodes.File:
                     return "soft-file";
-                case UIControlType.MultiAutocomplete:
+                case UIControlTypeCodes.MultiAutocomplete:
                     return "soft-multiautocomplete";
-                case UIControlType.MultiSelect:
+                case UIControlTypeCodes.MultiSelect:
                     return "soft-multiselect";
-                case UIControlType.Integer:
-                case UIControlType.Decimal:
+                case UIControlTypeCodes.Integer:
+                case UIControlTypeCodes.Decimal:
                     return "soft-number";
-                case UIControlType.Password:
+                case UIControlTypeCodes.Password:
                     return "soft-password";
-                case UIControlType.TextArea:
+                case UIControlTypeCodes.TextArea:
                     return "soft-textarea";
-                case UIControlType.TextBlock:
+                case UIControlTypeCodes.TextBlock:
                     return "soft-textblock";
-                case UIControlType.TextBox:
+                case UIControlTypeCodes.TextBox:
                     return "soft-textbox";
-                case UIControlType.TODO:
+                case UIControlTypeCodes.TODO:
                     return "TODO";
                 default:
                     return "TODO";
@@ -320,8 +385,10 @@ import { PrimengModule } from 'src/app/core/modules/primeng.module';
 import { ApiService } from '../../services/api/api.service';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { SoftControlsModule } from 'src/app/core/controls/soft-controls.module';
-import { getControl } from 'src/app/core/services/helper-functions';
 import { SoftFormGroup } from 'src/app/core/components/soft-form-control/soft-form-control';
+import { PrimengOption } from 'src/app/core/entities/primeng-option';
+import { AutoCompleteCompleteEvent } from 'primeng/autocomplete';
+import { getControl } from 'src/app/core/services/helper-functions';
 import { {{string.Join(", ", classNamesForImport)}} } from '../../entities/{{projectName.FromPascalToKebabCase()}}-entities.generated';
 """;
         }
