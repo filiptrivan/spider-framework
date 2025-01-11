@@ -21,14 +21,16 @@ namespace Soft.Generator.Infrastructure
 
                 foreach (PropertyInfo property in clrType.GetProperties())
                 {
-                    SetNullAttribute attributeValue = property.GetCustomAttribute<SetNullAttribute>();
+                    SetNullAttribute setNullAttribute = property.GetCustomAttribute<SetNullAttribute>();
 
-                    if (attributeValue == null)
+                    if (setNullAttribute == null)
                         continue;
+
+                    WithManyAttribute withManyAttribute = property.GetCustomAttribute<WithManyAttribute>();
 
                     modelBuilder.Entity(clrType)
                         .HasOne(property.PropertyType, property.Name)
-                        .WithMany(attributeValue.WithManyProperty)
+                        .WithMany(withManyAttribute.WithMany)
                         .OnDelete(DeleteBehavior.SetNull)
                         .IsRequired(false)
                         .HasForeignKey($"{property.Name}Id");
@@ -104,14 +106,16 @@ namespace Soft.Generator.Infrastructure
 
                 foreach (PropertyInfo property in clrType.GetProperties())
                 {
-                    ManyToOneRequiredAttribute attributeValue = property.GetCustomAttribute<ManyToOneRequiredAttribute>();
+                    ManyToOneRequiredAttribute manyToOneRequiredAttribute = property.GetCustomAttribute<ManyToOneRequiredAttribute>();
 
-                    if (attributeValue == null)
+                    if (manyToOneRequiredAttribute == null)
                         continue;
+
+                    WithManyAttribute withManyAttribute = property.GetCustomAttribute<WithManyAttribute>();
 
                     modelBuilder.Entity(clrType)
                         .HasOne(property.PropertyType, property.Name)
-                        .WithMany(attributeValue.WithManyProperty)
+                        .WithMany(withManyAttribute.WithMany)
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired(true)
                         .HasForeignKey($"{property.Name}Id");

@@ -6,10 +6,13 @@ using System.Threading.Tasks;
 
 namespace Soft.Generator.Shared.Attributes.EF
 {
-    public class SetNullAttribute : Attribute
+    public class WithManyAttribute : Attribute
     {
-        public SetNullAttribute()
+        public string WithMany { get; set; }
+
+        public WithManyAttribute(string withMany) 
         {
+            WithMany = withMany;    
         }
     }
 }

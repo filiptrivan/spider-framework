@@ -9,11 +9,8 @@ namespace Soft.Generator.Shared.Attributes.EF
 {
     public class ManyToOneRequiredAttribute : RequiredAttribute
     {
-        public string WithManyProperty { get; set; }
-
-        public ManyToOneRequiredAttribute(string withManyProperty) 
+        public ManyToOneRequiredAttribute() 
         {
-            WithManyProperty = withManyProperty;
         }
     }
 }

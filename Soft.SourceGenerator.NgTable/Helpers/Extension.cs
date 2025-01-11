@@ -621,6 +621,11 @@ namespace Soft.SourceGenerators.Helpers
             return true;
         }
 
+        public static string WithMany(this SoftProperty property)
+        {
+            return property.Attributes.Where(x => x.Name == "WithMany").Select(x => x.Value).SingleOrDefault();
+        }
+
         #endregion
 
         #region Helpers

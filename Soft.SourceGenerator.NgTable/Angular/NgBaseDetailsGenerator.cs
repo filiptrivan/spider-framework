@@ -88,17 +88,6 @@ namespace Soft.SourceGenerators.Angular
                 if (entity.IsManyToMany())
                     continue;
 
-                List<SoftProperty> properties = entity.Properties;
-
-                SoftClass customDTOClass = customDTOClasses.Where(x => x.Name.Replace("DTO", "") == entity.Name).SingleOrDefault();
-
-                if (customDTOClass != null)
-                {
-                    List<SoftProperty> customDTOClassProperties = customDTOClass.Properties;
-
-                    properties.AddRange(customDTOClassProperties);
-                }
-
                 result.Add($$"""
 @Component({
     selector: '{{entity.Name.FromPascalToKebabCase()}}-base-details',
@@ -109,7 +98,7 @@ namespace Soft.SourceGenerators.Angular
 
         <panel-body>
             <form class="grid">
-{{string.Join("\n", GetPropertyBlocks(properties, entity))}}
+{{string.Join("\n", GetPropertyBlocks(entity.Properties, entity, $"{entity.Name.FirstCharToLower()}FormGroup", "control", entities, customDTOClasses))}}
             </form>
         </panel-body>
 
@@ -199,22 +188,82 @@ export class {{entity.Name}}BaseComponent {
             return result;
         }
 
-        private static List<string> GetPropertyBlocks(List<SoftProperty> properties, SoftClass entity)
+        private static List<string> GetPropertyBlocks(
+            List<SoftProperty> properties, 
+            SoftClass entity, 
+            string formGroupName, 
+            string getFormControlMethodName,
+            List<SoftClass> entities, 
+            List<SoftClass> customDTOClasses
+        )
         {
             List<string> result = new List<string>();
 
+            SoftClass customDTOClass = customDTOClasses.Where(x => x.Name.Replace("DTO", "") == entity.Name).SingleOrDefault();
+
+            if (customDTOClass != null)
+            {
+                List<SoftProperty> customDTOClassProperties = customDTOClass.Properties;
+
+                properties.AddRange(customDTOClassProperties);
+            }
+
             foreach (SoftProperty property in GetPropertiesForUIBlocks(properties))
             {
+                if (property.Attributes.Any(x => x.Name == "UIOrderedOneToMany"))
+                {
+                    result.Add(GetOrderedOneToManyBlock(property, entities, customDTOClasses));
+
+                    continue;
+                }
+
                 string controlType = GetUIStringControlType(GetUIControlType(property));
 
                 result.Add($$"""
                 <div class="{{GetUIColWidth(property)}}">
-                    <{{controlType}} [control]="control('{{GetFormControlName(property)}}', {{entity.Name.Replace("DTO", "").FirstCharToLower()}}FormGroup)" {{GetControlAttributes(property, entity)}}></{{controlType}}>
+                    <{{controlType}} [control]="{{getFormControlMethodName}}('{{GetFormControlName(property)}}', {{formGroupName}})" {{GetControlAttributes(property, entity)}}></{{controlType}}>
                 </div>
 """);
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="property">eg. List<SegmentationItem> SegmentationItems</param>
+        /// <param name="entities"></param>
+        /// <param name="customDTOClasses"></param>
+        /// <returns></returns>
+        private static string GetOrderedOneToManyBlock(SoftProperty property, List<SoftClass> entities, List<SoftClass> customDTOClasses)
+        {
+            SoftClass entity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault(); // eg. SegmentationItem
+
+            // Every property of SegmentationItem without the many to one reference (Segmentation)
+            List<SoftProperty> propertyBlocks = entity.Properties.Where(x => x.WithMany() != property.Name).ToList();
+
+            return $$"""
+                 <div class="col-12">
+                    <soft-panel>
+                        <panel-header [title]="t('{{property.Name}}')" icon="pi pi-list"></panel-header>
+                        <panel-body [normalBottomPadding]="true">
+                            @for (formGroup of getFormArrayGroups({{property.Name.FirstCharToLower()}}FormArray); track formGroup; let index = $index; let last = $last) {
+                                <index-card [index]="index" [last]="false" [crudMenu]="{{property.Name.FirstCharToLower()}}CrudMenu" (onMenuIconClick)="{{property.Name.FirstCharToLower()}}LastIndexClicked.index = $event">
+                                    <form [formGroup]="formGroup" class="grid">
+{{string.Join("\n", GetPropertyBlocks(propertyBlocks, entity, $"{property.Name.FirstCharToLower()}FormArray, index", "getFormArrayControlByIndex", entities, customDTOClasses))}}
+                                    </form>
+                                </index-card>
+                            }
+
+                            <div class="panel-add-button">
+                                <p-button (onClick)="addNewTo{{property.Name}}(null)" [label]="t('AddNew{{Helper.ExtractTypeFromGenericType(property.Type)}}')" icon="pi pi-plus"></p-button>
+                            </div>
+
+                        </panel-body>
+                    </soft-panel>
+                </div>       
+""";
         }
 
         private static List<SoftProperty> GetPropertiesForUIBlocks(List<SoftProperty> properties)
@@ -225,7 +274,7 @@ export class {{entity.Name}}BaseComponent {
                     x.Name != "Id" &&
                     x.Name != "CreatedAt" &&
                     x.Name != "ModifiedAt" &&
-                    x.Type.IsEnumerable() == false &&
+                    (x.Type.IsEnumerable() == false || x.Attributes.Any(x => x.Name == "UIOrderedOneToMany")) &&
                     x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false
                 )
                 .OrderBy(x =>
