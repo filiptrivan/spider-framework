@@ -33,34 +33,40 @@ namespace Soft.SourceGenerator.NgTable.Angular
                     transform: static (ctx, _) => Helper.GetEnumSemanticTargetForGeneration(ctx))
                 .Where(static c => c is not null);
 
-            IncrementalValuesProvider<ClassDeclarationSyntax> settingsDeclaration = Helper.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helper.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
                 });
 
-            var combinedDeclarations = enumDeclarations.Collect().Combine(settingsDeclaration.Collect());
+            IncrementalValueProvider<string> callingProjectDirectory = context.GetCallingPath();
 
-            context.RegisterImplementationSourceOutput(combinedDeclarations,
-            static (spc, source) => Execute(source.Left, source.Right, spc));
+            var combined = enumDeclarations.Collect()
+                .Combine(classDeclarations.Collect())
+                .Combine(callingProjectDirectory);
 
+            context.RegisterImplementationSourceOutput(combined, static (spc, source) =>
+            {
+                var (enumsAndClasses, callingPath) = source;
+                var (enums, classDeclarations) = enumsAndClasses;
+
+                Execute(enums, classDeclarations, callingPath, spc);
+            });
         }
-        private static void Execute(IList<EnumDeclarationSyntax> enums, IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+
+        private static void Execute(IList<EnumDeclarationSyntax> enums, IList<ClassDeclarationSyntax> classes, string callingProjectDirectory, SourceProductionContext context)
         {
             if (enums.Count == 0) 
                 return;
 
-            string outputPath = Helper.GetGeneratorOutputPath(nameof(NgEnumsGenerator), classes);
-
-            if (outputPath == null) 
-                return;
-
-            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
-
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
 
-            StringBuilder sb = new StringBuilder();
+            // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\enums\{projectName}-enums.ts
+            string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\enums\{projectName.FromPascalToKebabCase()}-enums.generated.ts");
 
+            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
+
+            StringBuilder sb = new StringBuilder();
 
             foreach (EnumDeclarationSyntax enume in enums)
             {

@@ -61,7 +61,7 @@ namespace Soft.SourceGenerators.Angular
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
 
-            // E:\Projects\PlayertyLoyals\API\PlayertyLoyals.Business -> E:\Projects\PlayertyLoyals\Angular\src\app\business\components\base-details\{projectName}.ts
+            // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\components\base-details\{projectName}.ts
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\components\base-details\{projectName.FromPascalToKebabCase()}-base-details.generated.ts");
 
             List<SoftClass> softClasses = Helper.GetSoftClasses(classes);
@@ -98,7 +98,7 @@ namespace Soft.SourceGenerators.Angular
 
         <panel-body>
             <form class="grid">
-{{string.Join("\n", GetPropertyBlocks(entity.Properties, entity, $"{entity.Name.FirstCharToLower()}FormGroup", "control", entities, customDTOClasses))}}
+{{string.Join("\n", GetPropertyBlocks(entity.Properties, entity, entities, customDTOClasses))}}
             </form>
         </panel-body>
 
@@ -111,17 +111,19 @@ namespace Soft.SourceGenerators.Angular
     `,
     standalone: true,
     imports: [
-        CommonModule,
+        CommonModule, 
         PrimengModule,
         SoftControlsModule,
         TranslocoDirective,
+        CardSkeletonComponent,
+        IndexCardComponent
     ]
 })
 export class {{entity.Name}}BaseComponent {
     @Input() {{entity.Name.FirstCharToLower()}}FormGroup: SoftFormGroup<{{entity.Name}}>;
     @Input() onSave: (reroute?: boolean) => void; 
 
-{{string.Join("\n", GetPrimengOptionVariables(entity))}}
+{{string.Join("\n", GetPrimengOptionVariables(entity.Properties, entity, entities))}}
 
     constructor(
         private apiService: ApiService
@@ -133,7 +135,7 @@ export class {{entity.Name}}BaseComponent {
 
     }
 
-{{string.Join("\n\n", GetAutocompleteSearchMethods(entity))}}
+{{string.Join("\n\n", GetAutocompleteSearchMethods(entity.Properties, entity, entities))}}
 
     control(formControlName: keyof {{entity.Name}}, formGroup: SoftFormGroup){
         return getControl<{{entity.Name}}>(formControlName, formGroup);
@@ -146,54 +148,87 @@ export class {{entity.Name}}BaseComponent {
             return result;
         }
 
-        private static List<string> GetPrimengOptionVariables(SoftClass entity)
+        private static List<string> GetPrimengOptionVariables(List<SoftProperty> properties, SoftClass entity, List<SoftClass> entities)
         {
             List<string> result = new List<string>();
 
-            foreach (SoftProperty property in entity.Properties
-                .Where(x =>
-                    GetUIControlType(x) == UIControlTypeCodes.Autocomplete &&
-                    x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false
-                )
-            )
+            foreach (SoftProperty property in properties.Where(x => x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false))
             {
-                result.Add($$"""
-    {{property.Name.FirstCharToLower()}}Options: PrimengOption[];
+                if (property.Attributes.Any(x => x.Name == "UIOrderedOneToMany"))
+                {
+                    SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+                    List<SoftProperty> extractedProperties = extractedEntity.Properties
+                        .Where(x =>
+                            x.WithMany() != property.Name &&
+                            x.Type.IsEnumerable() == false
+                        )
+                        .ToList();
+
+                    GetPrimengOptionVariables(extractedProperties, extractedEntity, entities);
+
+                    continue;
+                }
+
+                UIControlTypeCodes controlType = GetUIControlType(property);
+
+                if (controlType == UIControlTypeCodes.Autocomplete ||
+                    controlType == UIControlTypeCodes.Dropdown)
+                {
+                    result.Add($$"""
+    {{property.Name.FirstCharToLower()}}For{{entity.Name}}Options: PrimengOption[];
 """);
+
+                }
             }
 
             return result;
         }
 
-        private static List<string> GetAutocompleteSearchMethods(SoftClass entity)
+        private static List<string> GetAutocompleteSearchMethods(List<SoftProperty> properties, SoftClass entity, List<SoftClass> entities)
         {
             List<string> result = new List<string>();
 
-            foreach (SoftProperty property in entity.Properties
-                .Where(x => 
-                    GetUIControlType(x) == UIControlTypeCodes.Autocomplete &&
-                    x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false
-                )
-            )
+            foreach (SoftProperty property in properties.Where(x => x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false))
             {
-                result.Add($$"""
-    search{{property.Name}}(event: AutoCompleteCompleteEvent) {
+                if (property.Attributes.Any(x => x.Name == "UIOrderedOneToMany"))
+                {
+                    SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+                    List<SoftProperty> extractedProperties = extractedEntity.Properties
+                        .Where(x =>
+                            x.WithMany() != property.Name &&
+                            x.Type.IsEnumerable() == false
+                        )
+                        .ToList();
+
+                    GetAutocompleteSearchMethods(extractedProperties, extractedEntity, entities);
+
+                    continue;
+                }
+
+                UIControlTypeCodes controlType = GetUIControlType(property);
+
+                if (controlType == UIControlTypeCodes.Autocomplete ||
+                    controlType == UIControlTypeCodes.Dropdown)
+                {
+                    result.Add($$"""
+    search{{property.Name}}For{{entity.Name}}(event: AutoCompleteCompleteEvent) {
         this.apiService.getPrimengNamebookListForAutocomplete(this.apiService.get{{property.Type}}ListForAutocomplete, 50, event.query).subscribe(po => {
-            this.{{property.Name.FirstCharToLower()}}Options = po;
+            this.{{property.Name.FirstCharToLower()}}For{{entity.Name}}Options = po;
         });
     }
 """);
+
+                }
+
             }
 
             return result;
         }
 
         private static List<string> GetPropertyBlocks(
-            List<SoftProperty> properties, 
-            SoftClass entity, 
-            string formGroupName, 
-            string getFormControlMethodName,
-            List<SoftClass> entities, 
+            List<SoftProperty> properties,
+            SoftClass entity,
+            List<SoftClass> entities,
             List<SoftClass> customDTOClasses
         )
         {
@@ -221,7 +256,7 @@ export class {{entity.Name}}BaseComponent {
 
                 result.Add($$"""
                 <div class="{{GetUIColWidth(property)}}">
-                    <{{controlType}} [control]="{{getFormControlMethodName}}('{{GetFormControlName(property)}}', {{formGroupName}})" {{GetControlAttributes(property, entity)}}></{{controlType}}>
+                    <{{controlType}} [control]="control('{{GetFormControlName(property)}}', {{entity.Name.FirstCharToLower()}}FormGroup)" {{GetControlAttributes(property, entity)}}></{{controlType}}>
                 </div>
 """);
             }
@@ -230,7 +265,6 @@ export class {{entity.Name}}BaseComponent {
         }
 
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="property">eg. List<SegmentationItem> SegmentationItems</param>
         /// <param name="entities"></param>
@@ -240,24 +274,29 @@ export class {{entity.Name}}BaseComponent {
         {
             SoftClass entity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault(); // eg. SegmentationItem
 
-            // Every property of SegmentationItem without the many to one reference (Segmentation)
-            List<SoftProperty> propertyBlocks = entity.Properties.Where(x => x.WithMany() != property.Name).ToList();
+            // Every property of SegmentationItem without the many to one reference (Segmentation) and enumerable properties
+            List<SoftProperty> propertyBlocks = entity.Properties
+                .Where(x =>
+                    x.WithMany() != property.Name &&
+                    x.Type.IsEnumerable() == false
+                )
+                .ToList();
 
             return $$"""
                  <div class="col-12">
                     <soft-panel>
                         <panel-header [title]="t('{{property.Name}}')" icon="pi pi-list"></panel-header>
                         <panel-body [normalBottomPadding]="true">
-                            @for (formGroup of getFormArrayGroups({{property.Name.FirstCharToLower()}}FormArray); track formGroup; let index = $index; let last = $last) {
+                            @for ({{entity.Name.FirstCharToLower()}}FormGroup of getFormArrayGroups({{property.Name.FirstCharToLower()}}FormArray); track {{entity.Name.FirstCharToLower()}}FormGroup; let index = $index; let last = $last) {
                                 <index-card [index]="index" [last]="false" [crudMenu]="{{property.Name.FirstCharToLower()}}CrudMenu" (onMenuIconClick)="{{property.Name.FirstCharToLower()}}LastIndexClicked.index = $event">
-                                    <form [formGroup]="formGroup" class="grid">
-{{string.Join("\n", GetPropertyBlocks(propertyBlocks, entity, $"{property.Name.FirstCharToLower()}FormArray, index", "getFormArrayControlByIndex", entities, customDTOClasses))}}
+                                    <form [formGroup]="{{entity.Name.FirstCharToLower()}}FormGroup" class="grid">
+{{string.Join("\n", GetPropertyBlocks(propertyBlocks, entity, entities, customDTOClasses))}}
                                     </form>
                                 </index-card>
                             }
 
                             <div class="panel-add-button">
-                                <p-button (onClick)="addNewTo{{property.Name}}(null)" [label]="t('AddNew{{Helper.ExtractTypeFromGenericType(property.Type)}}')" icon="pi pi-plus"></p-button>
+                                <p-button (onClick)="addNewItemTo{{property.Name}}(null)" [label]="t('AddNew{{Helper.ExtractTypeFromGenericType(property.Type)}}')" icon="pi pi-plus"></p-button>
                             </div>
 
                         </panel-body>
@@ -274,7 +313,10 @@ export class {{entity.Name}}BaseComponent {
                     x.Name != "Id" &&
                     x.Name != "CreatedAt" &&
                     x.Name != "ModifiedAt" &&
-                    (x.Type.IsEnumerable() == false || x.Attributes.Any(x => x.Name == "UIOrderedOneToMany")) &&
+                    (
+                        x.Type.IsEnumerable() == false
+                        || x.Attributes.Any(x => x.Name == "UIOrderedOneToMany")
+                    ) &&
                     x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false
                 )
                 .OrderBy(x =>
@@ -307,11 +349,11 @@ export class {{entity.Name}}BaseComponent {
             }
             else if (controlType == UIControlTypeCodes.Dropdown)
             {
-                return $"[options]=\"{property.Name.FirstCharToLower()}Options\"";
+                return $"[options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\"";
             }
             else if (controlType == UIControlTypeCodes.Autocomplete)
             {
-                return $"[options]=\"{property.Name.FirstCharToLower()}Options\" (onTextInput)=\"search{property.Name}($event)\"";
+                return $"[options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\"";
             }
 
             return null;
@@ -428,16 +470,26 @@ export class {{entity.Name}}BaseComponent {
             List<string> classNamesForImport = customDTOClasses.Concat(entities).Select(x => x.Name.Replace("DTO", "")).Distinct().ToList();
 
             return $$"""
+import { ValidatorService } from 'src/app/business/services/validators/validation-rules';
+import { BaseFormService } from './../../../core/services/base-form.service';
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { PrimengModule } from 'src/app/core/modules/primeng.module';
 import { ApiService } from '../../services/api/api.service';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { SoftControlsModule } from 'src/app/core/controls/soft-controls.module';
-import { SoftFormGroup } from 'src/app/core/components/soft-form-control/soft-form-control';
+import { SoftFormArray, SoftFormGroup } from 'src/app/core/components/soft-form-control/soft-form-control';
 import { PrimengOption } from 'src/app/core/entities/primeng-option';
 import { AutoCompleteCompleteEvent } from 'primeng/autocomplete';
-import { getControl } from 'src/app/core/services/helper-functions';
+import { getControl, nameof } from 'src/app/core/services/helper-functions';
+import { ActivatedRoute } from '@angular/router';
+import { forkJoin, Observable } from 'rxjs';
+import { BaseEntity } from 'src/app/core/entities/base-entity';
+import { CardSkeletonComponent } from "../../../core/components/card-skeleton/card-skeleton.component";
+import { SoftButton } from 'src/app/core/entities/soft-button';
+import { IndexCardComponent } from 'src/app/core/components/index-card/index-card.component';
+import { LastMenuIconIndexClicked } from 'src/app/core/entities/last-menu-icon-index-clicked';
+import { MenuItem } from 'primeng/api';
 import { {{string.Join(", ", classNamesForImport)}} } from '../../entities/{{projectName.FromPascalToKebabCase()}}-entities.generated';
 """;
         }

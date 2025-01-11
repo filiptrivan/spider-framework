@@ -21,12 +21,12 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helper.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
@@ -132,7 +132,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Enumerable
 
-{{string.Join("\n\n", GetEnumerableGeneratedMethods(entity, allEntityClasses))}}
+{{string.Join("\n\n", GetOneToManyMethods(entity, allEntityClasses))}}
 
         #endregion
 
@@ -693,150 +693,141 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #endregion
 
-        #region Enumerable
+        #region One To Many
 
-        static List<string> GetEnumerableGeneratedMethods(SoftClass entityClass, List<SoftClass> allEntityClasses)
+        static List<string> GetOneToManyMethods(SoftClass entity, List<SoftClass> entities)
         {
-            string nameOfTheEntityClass = entityClass.Name; // User
-            string nameOfTheEntityClassFirstLower = entityClass.Name.FirstCharToLower(); // user
-            string idTypeOfTheEntityClass = Helper.GetIdType(entityClass, allEntityClasses); // long
+            string entityIdType = Helper.GetIdType(entity, entities);
 
-            List<SoftProperty> enumerablePropertiesOfTheEntityClass = entityClass.Properties
+            List<SoftProperty> oneToManyProperties = entity.Properties
                 .Where(prop => prop.Type.IsEnumerable())
                 .ToList();
 
             List<string> result = new List<string>();
 
-            foreach (SoftProperty prop in enumerablePropertiesOfTheEntityClass) // List<Role> Roles
+            foreach (SoftProperty property in oneToManyProperties) // List<Role> Roles
             {
-                string classNameFromTheList = GetClassNameFromTheEnumerableType(prop.Type); // Role
-                string classNameFromTheListFirstLower = classNameFromTheList.FirstCharToLower(); // role
-                SoftClass classFromTheList = allEntityClasses.Where(x => x.Name == classNameFromTheList).Single(); // Role
+                string extractedPropertyType = Helper.ExtractTypeFromGenericType(property.Type); // Role
+                SoftClass extractedPropertyEntity = entities.Where(x => x.Name == extractedPropertyType).Single(); // Role
 
-                //ClassDeclarationSyntax classFromTheListFromTheReferencedProjects = referencedClassesEntities.Where(x => x.Identifier.Text == classNameFromTheList).SingleOrDefault();
-                //if (classFromTheList == null) // && classFromTheListFromTheReferencedProjects == null  // TODO FT: Continue to do this...
-                //{
-                    //continue;
-                    //result.Add("INVALID ENTITY CLASS, YOU CAN'T MAKE LIST OF NO ENTITY CLASS"); // FT: It can, if the class is from another project.
-                //}
+                string extractedPropertyEntityIdType = Helper.GetIdType(extractedPropertyEntity, entities); // int
 
-                string idTypeOfTheClassFromTheList = Helper.GetIdType(classFromTheList, allEntityClasses); // int
-
-                if (idTypeOfTheClassFromTheList == null) // FT: M2M List, maybe do something else in the future.
+                if (extractedPropertyEntityIdType == null) // FT: M2M List, maybe do something else in the future.
                     continue;
 
-                string classNameFromTheListDisplayNameProp = Helper.GetDisplayNamePropForClass(classFromTheList); // Name
-                List<SoftProperty> classFromTheListProperties = classFromTheList.Properties;
+                string extractedPropertyEntityDisplayName = Helper.GetDisplayNamePropForClass(extractedPropertyEntity); // Name
 
-                SoftProperty manyToManyPropFromTheListProperties = classFromTheListProperties.Where(x => x.Type.IsEnumerable() && GetClassNameFromTheEnumerableType(x.Type) == nameOfTheEntityClass).SingleOrDefault(); // List<User> Users
-                SoftProperty manyToOneProp = classFromTheListProperties.Where(x => x.Type.IsManyToOneType() && prop.Type == nameOfTheEntityClass).SingleOrDefault(); // User / Userando
+                SoftProperty manyToManyPropFromTheListProperties = extractedPropertyEntity.Properties.Where(x => x.Type.IsEnumerable() && Helper.ExtractTypeFromGenericType(x.Type) == entity.Name).SingleOrDefault(); // List<User> Users
+                SoftProperty manyToOneProperty = extractedPropertyEntity.GetManyToOnePropertyWithManyAttribute(entity.Name, property.Name);
 
-                if (manyToOneProp != null)
+                if (manyToOneProperty != null)
                 {
                     result.Add($$"""
-        public async virtual Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Get{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{extractedPropertyType}}NamebookListFor{{entity.Name}}({{entityIdType}} id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{nameOfTheEntityClass}}SingleReadAuthorize({{nameOfTheEntityClassFirstLower}}Id);
+                    await _authorizationService.{{entity.Name}}SingleReadAuthorize(id);
                 }
 
-                return await _context.DbSet<{{classNameFromTheList}}>()
+                return await _context.DbSet<{{extractedPropertyType}}>()
                     .AsNoTracking()
-                    .Where(x => x.{{manyToOneProp.Name}} == {{nameOfTheEntityClassFirstLower}}Id)
-                    .Select(x => new NamebookDTO<{{idTypeOfTheClassFromTheList}}>
+                    .Where(x => x.{{manyToOneProperty.Name}}.Id == id)
+                    .Select(x => new NamebookDTO<{{extractedPropertyEntityIdType}}>
                     {
                         Id = x.Id,
-                        DisplayName = x.{{classNameFromTheListDisplayNameProp}},
+                        DisplayName = x.{{extractedPropertyEntityDisplayName}},
                     })
                     .ToListAsync();
             });
         }
 
-        public async Task<List<{{classNameFromTheList}}>> Get{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
+        public async Task<List<{{extractedPropertyType}}>> Get{{extractedPropertyType}}ListFor{{entity.Name}}({{entityIdType}} id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{nameOfTheEntityClass}}SingleReadAuthorize({{nameOfTheEntityClassFirstLower}}Id);
+                    await _authorizationService.{{entity.Name}}SingleReadAuthorize(id);
                 }
 
-                return await _context.DbSet<{{classNameFromTheList}}>()
-                    .Where(x => x.{{manyToOneProp.Name}} == {{nameOfTheEntityClassFirstLower}}Id)
+                return await _context.DbSet<{{extractedPropertyType}}>()
+                    .Where(x => x.{{manyToOneProperty.Name}}.Id == id)
                     .ToListAsync();
             });
         }
 """);
+                    if (property.Attributes.Any(x => x.Name == "UIOrderedOneToMany"))
+                        result.Add(GetOrderedOneToManyMethod(property, entity, entities));
                 }
                 else if (manyToManyPropFromTheListProperties != null)
                 {
                     result.Add($$"""
-        public async virtual Task<List<NamebookDTO<{{idTypeOfTheClassFromTheList}}>>> Get{{classNameFromTheList}}NamebookListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{extractedPropertyType}}NamebookListFor{{entity.Name}}({{entityIdType}} {{entity.Name.FirstCharToLower()}}Id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{nameOfTheEntityClass}}SingleReadAuthorize({{nameOfTheEntityClassFirstLower}}Id);
+                    await _authorizationService.{{entity.Name}}SingleReadAuthorize({{entity.Name.FirstCharToLower()}}Id);
                 }
 
-                return await _context.DbSet<{{classNameFromTheList}}>()
+                return await _context.DbSet<{{extractedPropertyType}}>()
                     .AsNoTracking()
-                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}.Any(x => x.Id == {{nameOfTheEntityClassFirstLower}}Id))
-                    .Select(x => new NamebookDTO<{{idTypeOfTheClassFromTheList}}>
+                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}.Any(x => x.Id == {{entity.Name.FirstCharToLower()}}Id))
+                    .Select(x => new NamebookDTO<{{extractedPropertyEntityIdType}}>
                     {
                         Id = x.Id,
-                        DisplayName = x.{{classNameFromTheListDisplayNameProp}},
+                        DisplayName = x.{{extractedPropertyEntityDisplayName}},
                     })
                     .ToListAsync();
             });
         }
 
-        public async Task<List<{{classNameFromTheList}}>> Get{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, bool authorize = true)
+        public async Task<List<{{extractedPropertyType}}>> Get{{extractedPropertyType}}ListFor{{entity.Name}}({{entityIdType}} {{entity.Name.FirstCharToLower()}}Id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{nameOfTheEntityClass}}SingleReadAuthorize({{nameOfTheEntityClassFirstLower}}Id);
+                    await _authorizationService.{{entity.Name}}SingleReadAuthorize({{entity.Name.FirstCharToLower()}}Id);
                 }
 
-                return await _context.DbSet<{{classNameFromTheList}}>()
-                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}.Any(x => x.Id == {{nameOfTheEntityClassFirstLower}}Id))
+                return await _context.DbSet<{{extractedPropertyType}}>()
+                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}.Any(x => x.Id == {{entity.Name.FirstCharToLower()}}Id))
                     .ToListAsync();
             });
         }
 
-        public async Task Update{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, List<{{idTypeOfTheClassFromTheList}}> selected{{classNameFromTheList}}Ids)
+        public async Task Update{{extractedPropertyType}}ListFor{{entity.Name}}({{entityIdType}} {{entity.Name.FirstCharToLower()}}Id, List<{{extractedPropertyEntityIdType}}> selected{{extractedPropertyType}}Ids)
         {
-            if (selected{{classNameFromTheList}}Ids == null)
+            if (selected{{extractedPropertyType}}Ids == null)
                 return;
 
-            List<{{idTypeOfTheClassFromTheList}}> selectedIdsHelper = selected{{classNameFromTheList}}Ids.ToList();
+            List<{{extractedPropertyEntityIdType}}> selectedIdsHelper = selected{{extractedPropertyType}}Ids.ToList();
 
             await _context.WithTransactionAsync(async () =>
             {
                 // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
 
-                {{((entityClass.IsBusinessObject() || entityClass.IsReadonlyObject() == false)
-                ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await GetInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
-                : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await GetInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
+                {{((entity.IsBusinessObject() || entity.IsReadonlyObject() == false)
+                ? $"{entity.Name} {entity.Name.FirstCharToLower()} = await GetInstanceAsync<{entity.Name}, {entityIdType}>({entity.Name.FirstCharToLower()}Id, null); // FT: Version will always be checked before or after this method"
+                : $"{entity.Name} {entity.Name.FirstCharToLower()} = await GetInstanceAsync<{entity.Name}, {entityIdType}>({entity.Name.FirstCharToLower()}Id);"
                 )}}
                 
-                foreach ({{classNameFromTheList}} {{classNameFromTheListFirstLower}} in {{nameOfTheEntityClassFirstLower}}.{{prop.Name}}.ToList())
+                foreach ({{extractedPropertyType}} {{extractedPropertyType.FirstCharToLower()}} in {{entity.Name.FirstCharToLower()}}.{{property.Name}}.ToList())
                 {
-                    if (selectedIdsHelper.Contains({{classNameFromTheListFirstLower}}.Id))
-                        selectedIdsHelper.Remove({{classNameFromTheListFirstLower}}.Id);
+                    if (selectedIdsHelper.Contains({{extractedPropertyType.FirstCharToLower()}}.Id))
+                        selectedIdsHelper.Remove({{extractedPropertyType.FirstCharToLower()}}.Id);
                     else
-                        {{nameOfTheEntityClassFirstLower}}.{{prop.Name}}.Remove({{classNameFromTheListFirstLower}});
+                        {{entity.Name.FirstCharToLower()}}.{{property.Name}}.Remove({{extractedPropertyType.FirstCharToLower()}});
                 }
 
-                List<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}ListToInsert = await _context.DbSet<{{classNameFromTheList}}>().Where(x => selectedIdsHelper.Contains(x.Id)).ToListAsync();
+                List<{{extractedPropertyType}}> {{extractedPropertyType.FirstCharToLower()}}ListToInsert = await _context.DbSet<{{extractedPropertyType}}>().Where(x => selectedIdsHelper.Contains(x.Id)).ToListAsync();
 
-                {{nameOfTheEntityClassFirstLower}}.{{prop.Name}}.AddRange({{classNameFromTheListFirstLower}}ListToInsert);
+                {{entity.Name.FirstCharToLower()}}.{{property.Name}}.AddRange({{extractedPropertyType.FirstCharToLower()}}ListToInsert);
                 await _context.SaveChangesAsync();
             });
         }
@@ -844,27 +835,27 @@ namespace {{basePartOfTheNamespace}}.Services
         /// <summary>
         /// It's mandatory to pass queryable ordered by the same field as the table data
         /// </summary>
-        public async Task<LazyLoadSelectedIdsResultDTO<{{idTypeOfTheClassFromTheList}}>> LazyLoadSelected{{classNameFromTheList}}IdsFor{{nameOfTheEntityClass}}(TableFilterDTO tableFilterDTO, IQueryable<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}Query)
+        public async Task<LazyLoadSelectedIdsResultDTO<{{extractedPropertyEntityIdType}}>> LazyLoadSelected{{extractedPropertyType}}IdsFor{{entity.Name}}(TableFilterDTO tableFilterDTO, IQueryable<{{extractedPropertyType}}> {{extractedPropertyType.FirstCharToLower()}}Query)
         {
-            LazyLoadSelectedIdsResultDTO<{{idTypeOfTheClassFromTheList}}> lazyLoadSelectedIdsResultDTO = new();
+            LazyLoadSelectedIdsResultDTO<{{extractedPropertyEntityIdType}}> lazyLoadSelectedIdsResultDTO = new();
 
-            {{classNameFromTheListFirstLower}}Query = {{classNameFromTheListFirstLower}}Query
+            {{extractedPropertyType.FirstCharToLower()}}Query = {{extractedPropertyType.FirstCharToLower()}}Query
                 .Skip(tableFilterDTO.First)
                 .Take(tableFilterDTO.Rows)
                 .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}
-                    .Any(x => x.Id == tableFilterDTO.{{idTypeOfTheClassFromTheList.GetTableFilterAdditionalFilterPropertyName()}}));
+                    .Any(x => x.Id == tableFilterDTO.{{extractedPropertyEntityIdType.GetTableFilterAdditionalFilterPropertyName()}}));
 
             await _context.WithTransactionAsync(async () =>
             {
-                PaginationResult<{{classNameFromTheList}}> paginationResult = await Get{{classNameFromTheList}}ListForPagination(tableFilterDTO, {{classNameFromTheListFirstLower}}Query);
+                var paginationResult = await Get{{extractedPropertyType}}ListForPagination(tableFilterDTO, {{extractedPropertyType.FirstCharToLower()}}Query);
 
                 lazyLoadSelectedIdsResultDTO.SelectedIds = await paginationResult.Query
                     .Select(x => x.Id)
                     .ToListAsync();
 
-                int count = await _context.DbSet<{{classNameFromTheList}}>()
+                int count = await _context.DbSet<{{extractedPropertyType}}>()
                     .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}
-                        .Any(x => x.Id == tableFilterDTO.{{idTypeOfTheClassFromTheList.GetTableFilterAdditionalFilterPropertyName()}}))
+                        .Any(x => x.Id == tableFilterDTO.{{extractedPropertyEntityIdType.GetTableFilterAdditionalFilterPropertyName()}}))
                     .CountAsync();
 
                 lazyLoadSelectedIdsResultDTO.TotalRecordsSelected = count;
@@ -873,41 +864,41 @@ namespace {{basePartOfTheNamespace}}.Services
             return lazyLoadSelectedIdsResultDTO;
         }
 
-        public async Task Update{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}WithLazyTableSelection(IQueryable<{{classNameFromTheList}}> {{classNameFromTheListFirstLower}}Query, {{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id, ILazyTableSelectionDTO<{{idTypeOfTheClassFromTheList}}> lazyTableSelectionDTO)
+        public async Task Update{{extractedPropertyType}}ListFor{{entity.Name}}WithLazyTableSelection(IQueryable<{{extractedPropertyType}}> {{extractedPropertyType.FirstCharToLower()}}Query, {{entityIdType}} {{entity.Name.FirstCharToLower()}}Id, ILazyTableSelectionDTO<{{extractedPropertyEntityIdType}}> lazyTableSelectionDTO)
         {
             await _context.WithTransactionAsync(async () =>
             {
-                List<{{idTypeOfTheClassFromTheList}}> {{classNameFromTheListFirstLower}}ListToInsert = null;
+                List<{{extractedPropertyEntityIdType}}> {{extractedPropertyType.FirstCharToLower()}}ListToInsert = null;
 
                 if (lazyTableSelectionDTO.IsAllSelected == true)
                 {
-                    {{classNameFromTheListFirstLower}}ListToInsert = await {{classNameFromTheListFirstLower}}Query.Where(x => lazyTableSelectionDTO.UnselectedIds.Contains(x.Id) == false).Select(x => x.Id).ToListAsync();
+                    {{extractedPropertyType.FirstCharToLower()}}ListToInsert = await {{extractedPropertyType.FirstCharToLower()}}Query.Where(x => lazyTableSelectionDTO.UnselectedIds.Contains(x.Id) == false).Select(x => x.Id).ToListAsync();
                 }
                 else if (lazyTableSelectionDTO.IsAllSelected == false)
                 {
-                    {{classNameFromTheListFirstLower}}ListToInsert = await {{classNameFromTheListFirstLower}}Query.Where(x => lazyTableSelectionDTO.SelectedIds.Contains(x.Id) == true).Select(x => x.Id).ToListAsync();
+                    {{extractedPropertyType.FirstCharToLower()}}ListToInsert = await {{extractedPropertyType.FirstCharToLower()}}Query.Where(x => lazyTableSelectionDTO.SelectedIds.Contains(x.Id) == true).Select(x => x.Id).ToListAsync();
                 }
                 else if (lazyTableSelectionDTO.IsAllSelected == null)
                 {
-                    {{((entityClass.IsBusinessObject() || entityClass.IsReadonlyObject() == false)
-                    ? $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await GetInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id, null); // FT: Version will always be checked before or after this method"
-                    : $"{nameOfTheEntityClass} {nameOfTheEntityClassFirstLower} = await GetInstanceAsync<{nameOfTheEntityClass}, {idTypeOfTheEntityClass}>({nameOfTheEntityClassFirstLower}Id);"
+                    {{((entity.IsBusinessObject() || entity.IsReadonlyObject() == false)
+                    ? $"var {entity.Name.FirstCharToLower()} = await GetInstanceAsync<{entity.Name}, {entityIdType}>({entity.Name.FirstCharToLower()}Id, null); // FT: Version will always be checked before or after this method"
+                    : $"var {entity.Name.FirstCharToLower()} = await GetInstanceAsync<{entity.Name}, {entityIdType}>({entity.Name.FirstCharToLower()}Id);"
                     )}}
 
-                    List<{{idTypeOfTheClassFromTheList}}> alreadySelected = {{nameOfTheEntityClassFirstLower}}.{{prop.Name}} == null ? new List<{{idTypeOfTheClassFromTheList}}>() : {{nameOfTheEntityClassFirstLower}}.{{prop.Name}}.Select(x => x.Id).ToList();
+                    var alreadySelected = {{entity.Name.FirstCharToLower()}}.{{property.Name}} == null ? new List<{{extractedPropertyEntityIdType}}>() : {{entity.Name.FirstCharToLower()}}.{{property.Name}}.Select(x => x.Id).ToList();
 
-                    {{classNameFromTheListFirstLower}}ListToInsert = alreadySelected
+                    {{extractedPropertyType.FirstCharToLower()}}ListToInsert = alreadySelected
                         .Union(lazyTableSelectionDTO.SelectedIds)
                         .Except(lazyTableSelectionDTO.UnselectedIds)
                         .ToList();
                 }
 
-                await Update{{classNameFromTheList}}ListFor{{nameOfTheEntityClass}}({{nameOfTheEntityClassFirstLower}}Id, {{classNameFromTheListFirstLower}}ListToInsert);
+                await Update{{extractedPropertyType}}ListFor{{entity.Name}}({{entity.Name.FirstCharToLower()}}Id, {{extractedPropertyType.FirstCharToLower()}}ListToInsert);
             });
         }
 """);
                 }
-                else if (classFromTheList == null)
+                else if (extractedPropertyEntity == null)
                 {
                     result.Add("Invalid entity class, you can't have List<Entity> without List<AssociationEntity> or AssociationEntity on the other side."); // He can (User/Role example, many to many on the one side)
                 }
@@ -917,10 +908,30 @@ namespace {{basePartOfTheNamespace}}.Services
             return result;
         }
 
-        private static string GetClassNameFromTheEnumerableType(string propType)
+        private static string GetOrderedOneToManyMethod(SoftProperty property, SoftClass entity, List<SoftClass> entities)
         {
-            string[] parts = propType.Split('<');
-            return parts[parts.Length-1].Replace(">", "");
+            if (property.Type.IsEnumerable() == false)
+                return null;
+
+            string entityIdType = Helper.GetIdType(entity, entities);
+
+            string extractedPropertyType = Helper.ExtractTypeFromGenericType(property.Type);
+            SoftClass extractedPropertyEntity = entities.Where(x => x.Name == extractedPropertyType).Single();
+            SoftProperty manyToOneProperty = extractedPropertyEntity.GetManyToOnePropertyWithManyAttribute(entity.Name, property.Name);
+
+            return $$"""
+        public async Task<List<{{extractedPropertyType}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}({{entityIdType}} id, bool authorize = true)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                IQueryable<{{extractedPropertyType}}> query = _context.DbSet<{{extractedPropertyType}}>()
+                    .Where(x => x.{{manyToOneProperty.Name}}.Id == id)
+                    .OrderBy(x => x.OrderNumber);
+
+                return await Get{{extractedPropertyType}}DTOList(query, authorize);
+            });
+        }
+""";
         }
 
         #endregion

@@ -1013,6 +1013,11 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return "any"; // eg. "ActionResult", "Task"...
         }
 
+        public static List<SoftProperty> GetUIOrderedOneToManyProperties(SoftClass entity)
+        {
+            return entity.Properties.Where(x => x.Attributes.Any(x => x.Name == "UIOrderedOneToMany")).ToList();
+        }
+
         #region Helpers
 
         private static string GetAngularDataTypeForImport(string CSharpDataType)

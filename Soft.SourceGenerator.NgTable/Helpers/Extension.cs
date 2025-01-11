@@ -626,6 +626,11 @@ namespace Soft.SourceGenerators.Helpers
             return property.Attributes.Where(x => x.Name == "WithMany").Select(x => x.Value).SingleOrDefault();
         }
 
+        public static SoftProperty GetManyToOnePropertyWithManyAttribute(this SoftClass entity, string manyToOneType, string withMany)
+        {
+            return entity.Properties.Where(x => x.Type == manyToOneType && x.WithMany() == withMany).SingleOrDefault();
+        }
+
         #endregion
 
         #region Helpers

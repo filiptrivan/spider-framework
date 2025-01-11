@@ -23,12 +23,12 @@ namespace Soft.SourceGenerator.NgTable.Angular
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helper.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Controllers,
@@ -41,21 +41,28 @@ namespace Soft.SourceGenerator.NgTable.Angular
                     NamespaceExtensionCodes.DTO,
                 });
 
-            var allClasses = classDeclarations.Collect()
-                .Combine(referencedProjectClasses);
+            IncrementalValueProvider<string> callingProjectDirectory = context.GetCallingPath();
 
-            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
+            var combined = classDeclarations.Collect()
+                .Combine(referencedProjectClasses)
+                .Combine(callingProjectDirectory);
+
+            context.RegisterImplementationSourceOutput(combined, static (spc, source) =>
+            {
+                var (classesAndEntities, callingPath) = source;
+                var (classes, referencedClasses) = classesAndEntities;
+
+                Execute(classes, referencedClasses, callingPath, spc);
+            });
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, string callingProjectDirectory, SourceProductionContext context)
         {
             if (classes.Count <= 1)
                 return; // FT: one because of config settings
 
-            string outputPath = Helper.GetGeneratorOutputPath(nameof(NgControllersGenerator), classes);
-
-            if (outputPath == null)
-                return;
+            // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\services\api\api.service.generated.ts
+            string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", @"\Angular\src\app\business\services\api\api.service.generated.ts");
 
             List<SoftClass> softClasses = Helper.GetSoftClasses(classes);
 
@@ -89,6 +96,33 @@ export class ApiGeneratedService extends ApiSecurityService {
             Helper.WriteToTheFile(result, outputPath);
         }
 
+        private static List<string> GetAngularHttpMethods(List<SoftClass> controllerClasses, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+            HashSet<string> alreadyAddedMethods = new HashSet<string>();
+            HashSet<string> entityNamesForGeneration = new HashSet<string>();
+
+            foreach (SoftClass controllerClass in controllerClasses)
+            {
+                string controllerName = controllerClass.Name.Replace("Controller", "");
+
+                if (controllerClass.BaseType != "SoftBaseController")
+                    entityNamesForGeneration.Add(controllerClass.BaseType.Replace("BaseController", ""));
+
+                foreach (SoftMethod controllerMethod in controllerClass.Methods)
+                {
+                    alreadyAddedMethods.Add(controllerMethod.Name);
+
+                    result.Add(GetCustomAngularControllerMethod(controllerMethod, controllerName));
+                }
+            }
+
+            foreach (SoftClass entity in entities.Where(x => entityNamesForGeneration.Contains(x.Name)))
+                result.Add(GetBaseAngularControllerMethods(entity, entities, alreadyAddedMethods));
+
+            return result;
+        }
+
         private static List<string> GetImports(List<SoftClass> DTOClasses)
         {
             List<string> result = new List<string>();
@@ -120,33 +154,6 @@ import { LazyLoadSelectedIdsResult } from 'src/app/core/entities/lazy-load-selec
 import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()}}-entities.generated';
 """);
             }
-
-            return result;
-        }
-
-        private static List<string> GetAngularHttpMethods(List<SoftClass> controllerClasses, List<SoftClass> entities)
-        {
-            List<string> result = new List<string>();
-            HashSet<string> alreadyAddedMethods = new HashSet<string>();
-            HashSet<string> entityNamesForGeneration = new HashSet<string>();
-
-            foreach (SoftClass controllerClass in controllerClasses)
-            {
-                string controllerName = controllerClass.Name.Replace("Controller", "");
-
-                if (controllerClass.BaseType != "SoftBaseController")
-                    entityNamesForGeneration.Add(controllerClass.BaseType.Replace("BaseController", ""));
-
-                foreach (SoftMethod controllerMethod in controllerClass.Methods)
-                {
-                    alreadyAddedMethods.Add(controllerMethod.Name);
-
-                    result.Add(GetCustomAngularControllerMethod(controllerMethod, controllerName));
-                }
-            }
-
-            foreach (SoftClass entity in entities.Where(x => entityNamesForGeneration.Contains(x.Name)))
-                result.Add(GetBaseAngularControllerMethods(entity, entities, alreadyAddedMethods));
 
             return result;
         }
@@ -228,6 +235,8 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
 {{GetBaseGetListForDropdownAngularControllerMethod(entity, alreadyAddedMethods)}}
 
+{{string.Join("\n\n", GetBaseOrderedOneToManyAngularControllerMethods(entity, entities, alreadyAddedMethods))}}
+
 {{GetBaseSaveAngularControllerMethod(entity, alreadyAddedMethods)}}
 
 {{string.Join("\n\n", GetBaseUploadBlobAngularControllerMethods(entity, entities, alreadyAddedMethods))}}
@@ -240,6 +249,34 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
         #endregion
 
         #region Generated Angular Controller Methods
+
+        private static List<string> GetBaseOrderedOneToManyAngularControllerMethods(SoftClass entity, List<SoftClass> entities, HashSet<string> alreadyAddedMethods)
+        {
+            List<string> result = new List<string>();
+
+            List<SoftProperty> uiOrderedOneToManyProperties = Helper.GetUIOrderedOneToManyProperties(entity);
+
+            foreach (SoftProperty property in uiOrderedOneToManyProperties)
+            {
+                result.Add(GetBaseOrderedOneToManyAngularControllerMethod(property, entity, alreadyAddedMethods));
+            }
+
+            return result;
+        }
+
+        private static string GetBaseOrderedOneToManyAngularControllerMethod(SoftProperty uiOrderedOneToManyProperty, SoftClass entity, HashSet<string> alreadyAddedMethods)
+        {
+            string methodName = $"GetOrdered{uiOrderedOneToManyProperty.Name}For{entity.Name}";
+
+            if (alreadyAddedMethods.Contains(methodName))
+                return null;
+
+            Dictionary<string, string> getAndDeleteParameter = new Dictionary<string, string> { { "id", "number" } };
+
+            return GetAngularControllerMethod(
+                methodName, getAndDeleteParameter, $"{Helper.ExtractTypeFromGenericType(uiOrderedOneToManyProperty.Type)}[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsBase
+            );
+        }
 
         private static string GetBaseDeleteAngularControllerMethods(SoftClass entity, HashSet<string> alreadyAddedMethods)
         {

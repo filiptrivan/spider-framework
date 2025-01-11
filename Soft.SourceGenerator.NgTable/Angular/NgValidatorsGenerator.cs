@@ -39,20 +39,27 @@ namespace Soft.SourceGenerator.NgTable.Angular
                     NamespaceExtensionCodes.DTO
                 });
 
-            var allClasses = classDeclarations.Collect()
-                .Combine(referencedProjectClasses);
+            IncrementalValueProvider<string> callingProjectDirectory = context.GetCallingPath();
 
-            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
+            var combined = classDeclarations.Collect()
+                .Combine(referencedProjectClasses)
+                .Combine(callingProjectDirectory);
+
+            context.RegisterImplementationSourceOutput(combined, static (spc, source) =>
+            {
+                var (classesAndEntities, callingPath) = source;
+                var (classes, referencedClasses) = classesAndEntities;
+
+                Execute(classes, referencedClasses, callingPath, spc);
+            });
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, string callingProjectDirectory, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
 
-            string outputPath = Helper.GetGeneratorOutputPath(nameof(NgValidatorsGenerator), classes);
-
-            if (outputPath == null)
-                return;
+            // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\services\validators
+            string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", @"\Angular\src\app\business\services\validators");
 
             List<SoftClass> entityClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
             List<SoftClass> DTOClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
@@ -103,7 +110,7 @@ export class ValidatorServiceGenerated {
 """);
             //sb.AppendLine(sbMethods.ToString());
 
-            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}\validation-rules.generated.ts");
+            Helper.WriteToTheFile(sb.ToString(), Path.Combine(outputPath, "validation-rules.generated.ts"));
         }
 
         public static string GenerateAngularValidationMethods(string DTOClassName, string validationClassConstructorBody, List<SoftProperty> DTOProperties)

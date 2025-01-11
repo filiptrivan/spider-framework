@@ -34,24 +34,41 @@ namespace Soft.SourceGenerator.NgTable.Angular
                     NamespaceExtensionCodes.DTO,
                 });
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-            static (spc, source) => Execute(source, spc));
 
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
+                {
+                    //NamespaceExtensionCodes.Entities,
+                    //NamespaceExtensionCodes.DTO,
+                });
+
+            IncrementalValueProvider<string> callingProjectDirectory = context.GetCallingPath();
+
+            var combined = classDeclarations.Collect()
+                .Combine(referencedProjectClasses)
+                .Combine(callingProjectDirectory);
+
+            context.RegisterImplementationSourceOutput(combined, static (spc, source) =>
+            {
+                var (classesAndEntities, callingPath) = source;
+                var (classes, referencedClasses) = classesAndEntities;
+
+                Execute(classes, referencedClasses, callingPath, spc);
+            });
         }
-        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, string callingProjectDirectory, SourceProductionContext context)
         {
             if (classes.Count <= 1) 
                 return; // FT: one because of config settings
 
-            string outputPath = Helper.GetGeneratorOutputPath(nameof(NgEntitiesGenerator), classes);
-
-            if (outputPath == null)
-                return;
-
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
-
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
+
+            // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\entities\{projectName}-entities.ts
+            string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\entities\{projectName.FromPascalToKebabCase()}-entities.generated.ts");
+
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
 
             StringBuilder sb = new StringBuilder();
             StringBuilder sbImports = new StringBuilder();

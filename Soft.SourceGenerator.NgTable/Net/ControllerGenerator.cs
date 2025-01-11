@@ -196,7 +196,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}ListForDropdown(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
         }
 
-{{string.Join("\n\n", GetOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
+{{string.Join("\n\n", GetOrderedOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
 
         #endregion
 
@@ -221,24 +221,22 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return result;
         }
 
-        private static List<string> GetOneToManyControllerMethods(SoftClass entity, List<SoftClass> entities, string businessServiceName)
+        private static List<string> GetOrderedOneToManyControllerMethods(SoftClass entity, List<SoftClass> entities, string businessServiceName)
         {
             List<string> result = new List<string>();
 
-            foreach (SoftProperty manyToOneProperty in entity.Properties.Where(x => x.Type.IsManyToOneType()))
+            List<SoftProperty> uiOrderedOneToManyProperties = Helper.GetUIOrderedOneToManyProperties(entity);
+
+            foreach (SoftProperty property in uiOrderedOneToManyProperties)
             {
-                SoftClass manyToOnePropertyClass = entities.Where(x => x.Name == manyToOneProperty.Type).SingleOrDefault();
-                string manyToOnePropertyIdType = Helper.GetIdType(manyToOnePropertyClass, entities);
-
-                //if (manyToOneProperty.IsAutocomplete())
-                //{
-                
-                //}
-
-                //if (manyToOneProperty.IsDropdown())
-                //{
-
-                //}
+                result.Add($$"""
+        [HttpGet]
+        [AuthGuard]
+        public async Task<List<{{Helper.ExtractTypeFromGenericType(property.Type)}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}(int id)
+        {
+            return await _{{businessServiceName.FirstCharToLower()}}.GetOrdered{{property.Name}}For{{entity.Name}}(id);
+        }
+""");
             }
 
             return result;

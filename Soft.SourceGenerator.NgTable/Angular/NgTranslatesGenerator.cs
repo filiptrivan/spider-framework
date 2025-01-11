@@ -40,25 +40,28 @@ namespace Soft.SourceGenerator.NgTable.Angular
                     NamespaceExtensionCodes.DTO
                 });
 
-            var allClasses = classDeclarations.Collect()
-                .Combine(referencedProjectClasses);
+            IncrementalValueProvider<string> callingProjectDirectory = context.GetCallingPath();
 
-            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
+            var combined = classDeclarations.Collect()
+                .Combine(referencedProjectClasses)
+                .Combine(callingProjectDirectory);
+
+            context.RegisterImplementationSourceOutput(combined, static (spc, source) =>
+            {
+                var (classesAndEntities, callingPath) = source;
+                var (classes, referencedClasses) = classesAndEntities;
+
+                Execute(classes, referencedClasses, callingPath, spc);
+            });
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedClassesDTO, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedClassesDTO, string callingProjectDirectory, SourceProductionContext context)
         {
             if (classes.Count <= 1) 
                 return;
 
-            string outputPath = Helper.GetGeneratorOutputPath(nameof(NgTranslatesGenerator), classes);
-            //List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
-
-            if (outputPath == null)
-                return;
-
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
-            //string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
+            // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\services\translates
+            string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", @"\Angular\src\app\business\services\translates");
 
             StringBuilder sbClassNames = new StringBuilder();
             StringBuilder sbLabels = new StringBuilder();
@@ -119,8 +122,8 @@ export class TranslateLabelsGeneratedService {
 }
 """);
             
-            Helper.WriteToTheFile(sbClassNames.ToString(), $@"{outputPath}\class-names.generated.ts");
-            Helper.WriteToTheFile(sbLabels.ToString(), $@"{outputPath}\labels.generated.ts");
+            Helper.WriteToTheFile(sbClassNames.ToString(), Path.Combine(outputPath, "class-names.generated.ts"));
+            Helper.WriteToTheFile(sbLabels.ToString(), Path.Combine(outputPath, "labels.generated.ts"));
         }
 
         private static List<string> GetCasesForLabelTranslate(List<SoftProperty> DTOProperties)
