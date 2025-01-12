@@ -107,7 +107,7 @@ namespace {{basePartOfNamespace}}.DTO
                 SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
 
                 result.Add($$"""
-        public List<{{extractedEntity}}DTO> {{property.Name}}DTO { get; set; }
+        public List<{{extractedEntity.Name}}DTO> {{property.Name}}DTO { get; set; }
 """);
             }
 

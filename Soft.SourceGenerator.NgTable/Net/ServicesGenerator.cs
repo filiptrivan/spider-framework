@@ -21,12 +21,12 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//#if DEBUG
-//            if (!Debugger.IsAttached)
-//            {
-//                Debugger.Launch();
-//            }
-//#endif
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helper.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
@@ -46,12 +46,12 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectEntityClasses, SourceProductionContext context)
         {
-            if (classes.Count <= 1) 
+            if (classes.Count <= 1)
                 return;
 
             List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
             List<SoftClass> allEntityClasses = entityClasses.Concat(referencedProjectEntityClasses).ToList();
-            
+
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0].Namespace);
 
             string basePartOfTheNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
@@ -107,7 +107,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 }
                 else
                 {
-                result.Add($$"""
+                    result.Add($$"""
         #region {{entity.Name}}
 
         #region Read
@@ -355,28 +355,15 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Save
 
-        static string GetSavingData(SoftClass entity, List<SoftClass> allEntityClasses)
+        static string GetSavingData(SoftClass entity, List<SoftClass> entities)
         {
             if (entity.IsAbstract || entity.IsReadonlyObject())
                 return null;
 
-            string entityIdType = Helper.GetIdType(entity, allEntityClasses);
+            string entityIdType = Helper.GetIdType(entity, entities);
 
             return $$"""
-        public async Task<{{entity.Name}}SaveBodyDTO> Save{{entity.Name}}AndReturnSaveBodyDTOAsync({{entity.Name}}SaveBodyDTO saveBodyDTO, bool authorizeUpdate = true, bool authorizeInsert = true)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                var saved{{entity.Name}}DTO = await Save{{entity.Name}}AndReturnDTOAsync(saveBodyDTO.{{entity.Name}}DTO, true, true);
-
-                var result = new {{entity.Name}}SaveBodyDTO
-                {
-                    {{entity.Name}}DTO = saved{{entity.Name}}DTO
-                };
-
-                return result;
-            });
-        }
+{{GetSaveAndReturnSaveBodyDTOData(entity, entities)}}
 
         public async Task<{{entity.Name}}DTO> Save{{entity.Name}}AndReturnDTOAsync({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO, bool authorizeUpdate = true, bool authorizeInsert = true)
         {
@@ -422,7 +409,7 @@ namespace {{basePartOfTheNamespace}}.Services
                     await dbSet.AddAsync(poco);
                 }
 
-{{string.Join("\n", GetManyToOneInstancesForSave(entity, allEntityClasses))}}
+{{string.Join("\n", GetManyToOneInstancesForSave(entity, entities))}}
 
                 await _context.SaveChangesAsync();
 
@@ -437,6 +424,120 @@ namespace {{basePartOfTheNamespace}}.Services
         protected virtual async Task OnBefore{{entity.Name}}Update({{entity.Name}} {{entity.Name.FirstCharToLower()}}, {{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO) { }
 """;
         }
+
+        private static string GetSaveAndReturnSaveBodyDTOData(SoftClass entity, List<SoftClass> entities)
+        {
+            return $$"""
+        public async Task<{{entity.Name}}SaveBodyDTO> Save{{entity.Name}}AndReturnSaveBodyDTOAsync({{entity.Name}}SaveBodyDTO saveBodyDTO, bool authorizeUpdate = true, bool authorizeInsert = true)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                await OnBeforeSave{{entity.Name}}AndReturnSaveBodyDTO(saveBodyDTO);
+                var saved{{entity.Name}}DTO = await Save{{entity.Name}}AndReturnDTOAsync(saveBodyDTO.{{entity.Name}}DTO, authorizeUpdate, authorizeInsert);
+{{string.Join("\n", GetOrderedOneToManyUpdateVariables(entity, entities))}}
+
+                var result = new {{entity.Name}}SaveBodyDTO
+                {
+                    {{entity.Name}}DTO = saved{{entity.Name}}DTO,
+{{string.Join(",\n", GetOrderedOneToManySaveBodyDTOVariables(entity, entities))}}
+                };
+
+                return result;
+            });
+        }
+
+{{string.Join("\n\n", GetOrderedOneToManyUpdateMethods(entity, entities))}}
+
+        protected virtual async Task OnBeforeSave{{entity.Name}}AndReturnSaveBodyDTO({{entity.Name}}SaveBodyDTO {{entity.Name.FirstCharToLower()}}SaveBodyDTO) { }
+""";
+        }
+
+        #region Ordered One To Many
+
+        private static List<string> GetOrderedOneToManyUpdateVariables(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                result.Add($$"""
+                var saved{{property.Name}}DTO = await UpdateOrdered{{property.Name}}For{{entity.Name}}(saved{{entity.Name}}DTO.Id, saveBodyDTO.{{property.Name}}DTO);
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetOrderedOneToManySaveBodyDTOVariables(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                result.Add($$"""
+                    {{property.Name}}DTO = saved{{property.Name}}DTO
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetOrderedOneToManyUpdateMethods(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                result.Add($$"""
+        public async Task<List<{{extractedEntity.Name}}DTO>> UpdateOrdered{{property.Name}}For{{entity.Name}}({{Helper.GetIdType(entity, entities)}} id, List<{{extractedEntity.Name}}DTO> orderedItemsDTO)
+        {
+            List<{{Helper.GetIdType(extractedEntity, entities)}}> orderedItemIds = orderedItemsDTO.Select(x => x.Id).ToList();
+
+{{GetOrderedOneToManyNonEmptyValidation(property, entity)}}
+
+            return await _context.WithTransactionAsync(async () =>
+            {
+                await _context.DbSet<{{extractedEntity.Name}}>().Where(x => x.{{extractedEntity.GetManyToOnePropertyWithManyAttribute(entity.Name, property.Name)?.Name}}.Id == id && orderedItemIds.Contains(x.Id) == false).ExecuteDeleteAsync();
+
+                List<{{extractedEntity.Name}}DTO> savedOrderedItemsDTO = new List<{{extractedEntity.Name}}DTO>();
+
+                for (int i = 0; i < orderedItemsDTO.Count; i++)
+                {
+                    orderedItemsDTO[i].{{extractedEntity.GetManyToOnePropertyWithManyAttribute(entity.Name, property.Name)?.Name}}Id = id;
+                    orderedItemsDTO[i].OrderNumber = i + 1;
+                    savedOrderedItemsDTO.Add(await Save{{extractedEntity.Name}}AndReturnDTOAsync(orderedItemsDTO[i], false, false));
+                }
+
+                return savedOrderedItemsDTO;
+            });
+        } 
+""");
+            }
+
+            return result;
+        }
+
+        private static string GetOrderedOneToManyNonEmptyValidation(SoftProperty property, SoftClass entity)
+        {
+            if (property.IsNonEmpty())
+            {
+                return $$"""
+            if (orderedItemIds.Count == 0)
+                throw new HackerException("The ordered {{property.Name}} for {{entity.Name}} can't be empty.");
+""";
+
+            }
+
+            return null;
+        }
+
+        #endregion
 
         static List<string> GetManyToOneInstancesForSave(SoftClass entityClass, List<SoftClass> allEntityClasses)
         {
@@ -970,7 +1071,7 @@ namespace {{basePartOfTheNamespace}}.Services
             string mainEntityIdType = Helper.GetIdType(mainEntityClass, allEntityClasses);
 
             string extendEntityPropertyName = extendEntityProperty.Name;
-            string extendEntityClassName = extendEntityProperty.Type; 
+            string extendEntityClassName = extendEntityProperty.Type;
             SoftClass extendEntityClass = allEntityClasses.Where(x => x.Name == extendEntityClassName).Single();
             string extendEntityIdType = Helper.GetIdType(extendEntityClass, allEntityClasses);
 

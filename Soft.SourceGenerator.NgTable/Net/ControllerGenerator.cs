@@ -234,7 +234,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
         [AuthGuard]
         public async Task<List<{{Helper.ExtractTypeFromGenericType(property.Type)}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}(int id)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.GetOrdered{{property.Name}}For{{entity.Name}}(id);
+            return await _{{businessServiceName.FirstCharToLower()}}.GetOrdered{{property.Name}}For{{entity.Name}}(id, false);
         }
 """);
             }

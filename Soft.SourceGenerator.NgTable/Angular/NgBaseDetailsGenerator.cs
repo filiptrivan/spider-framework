@@ -124,9 +124,7 @@ namespace Soft.SourceGenerators.Angular
     ]
 })
 export class {{entity.Name}}BaseComponent {
-    @Input() saveObservableMethod: (saveBodyDTO: {{entity.Name}}SaveBody) => Observable<{{entity.Name}}SaveBody>;
     @Input() onSave: (reroute?: boolean) => void;
-    @Input() initSaveBody: () => BaseEntity;
     @Input() getCrudMenuForOrderedData: (formArray: SoftFormArray, modelConstructor: BaseEntity, lastMenuIconIndexClicked: LastMenuIconIndexClicked, adjustFormArrayManually: boolean) => MenuItem[];
     @Input() formGroup: SoftFormGroup;
     @Input() {{entity.Name.FirstCharToLower()}}FormGroup: SoftFormGroup<{{entity.Name}}>;
@@ -147,14 +145,14 @@ export class {{entity.Name}}BaseComponent {
     ) {}
 
     ngOnInit(){
-        this.initSaveBody = () => { 
+        this.formGroup.initSaveBody = () => { 
             let saveBody = new {{entity.Name}}SaveBody();
             saveBody.{{entity.Name.FirstCharToLower()}}DTO = this.{{entity.Name.FirstCharToLower()}}FormGroup.getRawValue();
 {{string.Join("\n", GetOrderedOneToManySaveBodyAssignements(entity, entities))}}
             return saveBody;
         }
 
-        this.saveObservableMethod = this.apiService.save{{entity.Name}};
+        this.formGroup.saveObservableMethod = this.apiService.save{{entity.Name}};
         this.formGroup.mainDTOName = this.{{entity.Name.FirstCharToLower()}}SaveBodyName;
 
         this.route.params.subscribe((params) => {
@@ -541,7 +539,8 @@ export class {{entity.Name}}BaseComponent {
                 )
                 .OrderBy(x =>
                     x.Attributes.Any(attr => attr.Name == "BlobName") ? 0 :
-                    x.Attributes.Any(attr => attr.Value == "TextArea") ? 2 : 1)
+                    x.Attributes.Any(attr => attr.Value == "TextArea") ? 2 :
+                    x.Attributes.Any(attr => attr.Name == "UIOrderedOneToMany") ? 3 : 1)
                 .ToList();
 
             return orderedProperties;
@@ -573,7 +572,7 @@ export class {{entity.Name}}BaseComponent {
             }
             else if (controlType == UIControlTypeCodes.Autocomplete)
             {
-                return $"[options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\"";
+                return $"[options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" [displayName]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}DisplayName.getRawValue()\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\"";
             }
 
             return null;
