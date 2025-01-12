@@ -97,9 +97,13 @@ namespace Soft.SourceGenerators.Angular
         <panel-header></panel-header>
 
         <panel-body>
-            <form class="grid">
+            @defer (when {{entity.Name.FirstCharToLower()}}FormGroup != null) {
+                <form class="grid">
 {{string.Join("\n", GetPropertyBlocks(entity.Properties, entity, entities, customDTOClasses))}}
-            </form>
+                </form>
+            } @placeholder {
+                <card-skeleton [height]="502"></card-skeleton>
+            }
         </panel-body>
 
         <panel-footer>
@@ -120,29 +124,286 @@ namespace Soft.SourceGenerators.Angular
     ]
 })
 export class {{entity.Name}}BaseComponent {
+    @Input() saveObservableMethod: (saveBodyDTO: {{entity.Name}}SaveBody) => Observable<{{entity.Name}}SaveBody>;
+    @Input() onSave: (reroute?: boolean) => void;
+    @Input() initSaveBody: () => BaseEntity;
+    @Input() getCrudMenuForOrderedData: (formArray: SoftFormArray, modelConstructor: BaseEntity, lastMenuIconIndexClicked: LastMenuIconIndexClicked, adjustFormArrayManually: boolean) => MenuItem[];
+    @Input() formGroup: SoftFormGroup;
     @Input() {{entity.Name.FirstCharToLower()}}FormGroup: SoftFormGroup<{{entity.Name}}>;
-    @Input() onSave: (reroute?: boolean) => void; 
+    @Input() additionalButtons: SoftButton[] = [];
+    modelId: number;
+
+    {{entity.Name.FirstCharToLower()}}SaveBodyName: string = nameof<{{entity.Name}}SaveBody>('{{entity.Name.FirstCharToLower()}}DTO');
+
+{{string.Join("\n\n", GetOrderedOneToManyVariables(entity, entities))}}
 
 {{string.Join("\n", GetPrimengOptionVariables(entity.Properties, entity, entities))}}
 
     constructor(
-        private apiService: ApiService
-    ) {
-
-    }
+        private apiService: ApiService,
+        private route: ActivatedRoute,
+        private baseFormService: BaseFormService,
+        private validatorService: ValidatorService,
+    ) {}
 
     ngOnInit(){
+        this.initSaveBody = () => { 
+            let saveBody = new {{entity.Name}}SaveBody();
+            saveBody.{{entity.Name.FirstCharToLower()}}DTO = this.{{entity.Name.FirstCharToLower()}}FormGroup.getRawValue();
+{{string.Join("\n", GetOrderedOneToManySaveBodyAssignements(entity, entities))}}
+            return saveBody;
+        }
 
+        this.saveObservableMethod = this.apiService.save{{entity.Name}};
+        this.formGroup.mainDTOName = this.{{entity.Name.FirstCharToLower()}}SaveBodyName;
+
+        this.route.params.subscribe((params) => {
+            this.modelId = params['id'];
+
+            if(this.modelId > 0){
+                forkJoin({
+                    {{entity.Name.FirstCharToLower()}}: this.apiService.get{{entity.Name}}(this.modelId),
+{{string.Join("\n", GetOrderedOneToManyForkJoinParameters(entity))}}
+                })
+                .subscribe(({ {{entity.Name.FirstCharToLower()}} {{string.Join("", GetOrderedOneToManyForkJoinParameterNames(entity))}} }) => {
+                    this.init{{entity.Name}}FormGroup(new {{entity.Name}}({{entity.Name.FirstCharToLower()}}));
+{{string.Join("\n", GetOrderedOneToManyInitFormGroupForExistingObject(entity))}}
+                });
+            }
+            else{
+                this.init{{entity.Name}}FormGroup(new {{entity.Name}}({id: 0}));
+{{string.Join("\n", GetOrderedOneToManyInitFormGroupForNonExistingObject(entity))}}
+            }
+        });
     }
+
+    init{{entity.Name}}FormGroup({{entity.Name.FirstCharToLower()}}: {{entity.Name}}) {
+        this.{{entity.Name.FirstCharToLower()}}FormGroup = this.baseFormService.initFormGroup<{{entity.Name}}>(
+            this.formGroup, {{entity.Name.FirstCharToLower()}}, this.{{entity.Name.FirstCharToLower()}}SaveBodyName, [{{string.Join(", ", GetCustomOnChangeProperties(entity))}}]
+        );
+        this.{{entity.Name.FirstCharToLower()}}FormGroup.mainDTOName = this.{{entity.Name.FirstCharToLower()}}SaveBodyName;
+    }
+
+{{string.Join("\n", GetOrderedOneToManyInitFormArrayMethods(entity, entities))}}
+
+{{string.Join("\n", GetOrderedOneToManyAddNewItemMethods(entity, entities))}}
 
 {{string.Join("\n\n", GetAutocompleteSearchMethods(entity.Properties, entity, entities))}}
 
-    control(formControlName: keyof {{entity.Name}}, formGroup: SoftFormGroup){
-        return getControl<{{entity.Name}}>(formControlName, formGroup);
+    control(formControlName: string, formGroup: SoftFormGroup){
+        return getControl(formControlName, formGroup);
+    }
+
+    getFormArrayGroups<T>(formArray: SoftFormArray): SoftFormGroup<T>[]{
+        return this.baseFormService.getFormArrayGroups<T>(formArray);
     }
 
 }
 """);
+            }
+
+            return result;
+        }
+
+        #region Ordered One To Many
+
+        private static List<string> GetOrderedOneToManyForkJoinParameterNames(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                result.Add($", {property.Name.FirstCharToLower()}");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetOrderedOneToManyAddNewItemMethods(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                result.Add($$"""
+    addNewItemTo{{property.Name}}(index: number){ 
+        this.baseFormService.addNewFormGroupToFormArray(this.{{property.Name.FirstCharToLower()}}FormArray, new {{extractedEntity.Name}}({id: 0}), index);
+    }
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetOrderedOneToManyInitFormArrayMethods(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                result.Add($$"""
+    init{{property.Name}}FormArray({{property.Name.FirstCharToLower()}}: {{extractedEntity.Name}}[]){
+        this.{{property.Name.FirstCharToLower()}}FormArray = this.baseFormService.initFormArray(
+            this.formGroup, {{property.Name.FirstCharToLower()}}, this.{{property.Name.FirstCharToLower()}}Model, this.{{property.Name.FirstCharToLower()}}SaveBodyName, this.{{property.Name.FirstCharToLower()}}TranslationKey, true
+        );
+        this.{{property.Name.FirstCharToLower()}}CrudMenu = this.getCrudMenuForOrderedData(this.{{property.Name.FirstCharToLower()}}FormArray, new {{extractedEntity.Name}}({id: 0}), this.{{property.Name.FirstCharToLower()}}LastIndexClicked, false);
+{{GetFormArrayEmptyValidator(property)}}
+    }
+""");
+            }
+
+            return result;
+        }
+
+        private static string GetFormArrayEmptyValidator(SoftProperty property)
+        {
+            if (property.IsNonEmpty())
+            {
+                return $$"""
+        this.{{property.Name.FirstCharToLower()}}FormArray.validator = this.validatorService.isFormArrayEmpty(this.{{property.Name.FirstCharToLower()}}FormArray);
+""";
+            }
+
+            return null;
+        }
+
+        private static List<string> GetOrderedOneToManyForkJoinParameters(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                result.Add($$"""
+                    {{property.Name.FirstCharToLower()}}: this.apiService.getOrdered{{property.Name}}For{{entity.Name}}(this.modelId),
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetOrderedOneToManyInitFormGroupForExistingObject(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                result.Add($$"""
+                    this.init{{property.Name}}FormArray({{property.Name.FirstCharToLower()}});
+""");
+            }
+
+            return result;
+        }
+        
+        private static List<string> GetOrderedOneToManyInitFormGroupForNonExistingObject(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                result.Add($$"""
+                this.init{{property.Name}}FormArray([]);
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetOrderedOneToManySaveBodyAssignements(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                result.Add($$"""
+            saveBody.{{property.Name.FirstCharToLower()}}DTO = this.{{property.Name.FirstCharToLower()}}FormArray.getRawValue();
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetOrderedOneToManyVariables(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                result.Add($$"""
+    {{property.Name.FirstCharToLower()}}Model: {{extractedEntity.Name}} = new {{extractedEntity.Name}}();
+    {{property.Name.FirstCharToLower()}}SaveBodyName: string = nameof<{{extractedEntity.Name}}SaveBody>('{{extractedEntity.Name.FirstCharToLower()}}DTO');
+    {{property.Name.FirstCharToLower()}}TranslationKey: string = new {{extractedEntity.Name}}().typeName;
+    {{property.Name.FirstCharToLower()}}FormArray: SoftFormArray<{{extractedEntity.Name}}[]>;
+    {{property.Name.FirstCharToLower()}}LastIndexClicked: LastMenuIconIndexClicked = new LastMenuIconIndexClicked();
+    {{property.Name.FirstCharToLower()}}CrudMenu: MenuItem[] = [];
+""");
+            }
+
+            return result;
+        }
+
+
+        /// <summary>
+        /// </summary>
+        /// <param name="property">eg. List<SegmentationItem> SegmentationItems</param>
+        /// <param name="entities"></param>
+        /// <param name="customDTOClasses"></param>
+        /// <returns></returns>
+        private static string GetOrderedOneToManyBlock(SoftProperty property, List<SoftClass> entities, List<SoftClass> customDTOClasses)
+        {
+            SoftClass entity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault(); // eg. SegmentationItem
+
+            // Every property of SegmentationItem without the many to one reference (Segmentation) and enumerable properties
+            List<SoftProperty> propertyBlocks = entity.Properties
+                .Where(x =>
+                    x.WithMany() != property.Name &&
+                    x.Type.IsEnumerable() == false
+                )
+                .ToList();
+
+            return $$"""
+                 <div class="col-12">
+                    <soft-panel>
+                        <panel-header [title]="t('{{property.Name}}')" icon="pi pi-list"></panel-header>
+                        <panel-body [normalBottomPadding]="true">
+                            @for ({{entity.Name.FirstCharToLower()}}FormGroup of getFormArrayGroups({{property.Name.FirstCharToLower()}}FormArray); track {{entity.Name.FirstCharToLower()}}FormGroup; let index = $index; let last = $last) {
+                                <index-card [index]="index" [last]="false" [crudMenu]="{{property.Name.FirstCharToLower()}}CrudMenu" (onMenuIconClick)="{{property.Name.FirstCharToLower()}}LastIndexClicked.index = $event">
+                                    <form [formGroup]="{{entity.Name.FirstCharToLower()}}FormGroup" class="grid">
+{{string.Join("\n", GetPropertyBlocks(propertyBlocks, entity, entities, customDTOClasses))}}
+                                    </form>
+                                </index-card>
+                            }
+
+                            <div class="panel-add-button">
+                                <p-button (onClick)="addNewItemTo{{property.Name}}(null)" [label]="t('AddNew{{Helper.ExtractTypeFromGenericType(property.Type)}}')" icon="pi pi-plus"></p-button>
+                            </div>
+
+                        </panel-body>
+                    </soft-panel>
+                </div>       
+""";
+        }
+
+        #endregion
+
+        private static List<string> GetCustomOnChangeProperties(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties)
+            {
+                if (property.IsColorControlType())
+                {
+                    result.Add($"'{property.Name.FirstCharToLower()}'");
+                }
             }
 
             return result;
@@ -255,54 +516,13 @@ export class {{entity.Name}}BaseComponent {
                 string controlType = GetUIStringControlType(GetUIControlType(property));
 
                 result.Add($$"""
-                <div class="{{GetUIColWidth(property)}}">
-                    <{{controlType}} [control]="control('{{GetFormControlName(property)}}', {{entity.Name.FirstCharToLower()}}FormGroup)" {{GetControlAttributes(property, entity)}}></{{controlType}}>
-                </div>
+                    <div class="{{GetUIColWidth(property)}}">
+                        <{{controlType}} [control]="control('{{GetFormControlName(property)}}', {{entity.Name.FirstCharToLower()}}FormGroup)" {{GetControlAttributes(property, entity)}}></{{controlType}}>
+                    </div>
 """);
             }
 
             return result;
-        }
-
-        /// <summary>
-        /// </summary>
-        /// <param name="property">eg. List<SegmentationItem> SegmentationItems</param>
-        /// <param name="entities"></param>
-        /// <param name="customDTOClasses"></param>
-        /// <returns></returns>
-        private static string GetOrderedOneToManyBlock(SoftProperty property, List<SoftClass> entities, List<SoftClass> customDTOClasses)
-        {
-            SoftClass entity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault(); // eg. SegmentationItem
-
-            // Every property of SegmentationItem without the many to one reference (Segmentation) and enumerable properties
-            List<SoftProperty> propertyBlocks = entity.Properties
-                .Where(x =>
-                    x.WithMany() != property.Name &&
-                    x.Type.IsEnumerable() == false
-                )
-                .ToList();
-
-            return $$"""
-                 <div class="col-12">
-                    <soft-panel>
-                        <panel-header [title]="t('{{property.Name}}')" icon="pi pi-list"></panel-header>
-                        <panel-body [normalBottomPadding]="true">
-                            @for ({{entity.Name.FirstCharToLower()}}FormGroup of getFormArrayGroups({{property.Name.FirstCharToLower()}}FormArray); track {{entity.Name.FirstCharToLower()}}FormGroup; let index = $index; let last = $last) {
-                                <index-card [index]="index" [last]="false" [crudMenu]="{{property.Name.FirstCharToLower()}}CrudMenu" (onMenuIconClick)="{{property.Name.FirstCharToLower()}}LastIndexClicked.index = $event">
-                                    <form [formGroup]="{{entity.Name.FirstCharToLower()}}FormGroup" class="grid">
-{{string.Join("\n", GetPropertyBlocks(propertyBlocks, entity, entities, customDTOClasses))}}
-                                    </form>
-                                </index-card>
-                            }
-
-                            <div class="panel-add-button">
-                                <p-button (onClick)="addNewItemTo{{property.Name}}(null)" [label]="t('AddNew{{Helper.ExtractTypeFromGenericType(property.Type)}}')" icon="pi pi-plus"></p-button>
-                            </div>
-
-                        </panel-body>
-                    </soft-panel>
-                </div>       
-""";
         }
 
         private static List<SoftProperty> GetPropertiesForUIBlocks(List<SoftProperty> properties)
@@ -467,7 +687,11 @@ export class {{entity.Name}}BaseComponent {
 
         private static string GetImports(List<SoftClass> customDTOClasses, List<SoftClass> entities, string projectName)
         {
-            List<string> classNamesForImport = customDTOClasses.Concat(entities).Select(x => x.Name.Replace("DTO", "")).Distinct().ToList();
+            List<string> customDTOImports = customDTOClasses.Select(x => x.Name.Replace("DTO", "")).Distinct().ToList();
+            List<string> entityImports = entities.Select(x => x.Name).ToList();
+            List<string> saveBodyImports = entities.Select(x => $"{x.Name}SaveBody").ToList();
+
+            List<string> imports = customDTOImports.Concat(entityImports).Concat(saveBodyImports).Distinct().ToList();
 
             return $$"""
 import { ValidatorService } from 'src/app/business/services/validators/validation-rules';
@@ -490,7 +714,7 @@ import { SoftButton } from 'src/app/core/entities/soft-button';
 import { IndexCardComponent } from 'src/app/core/components/index-card/index-card.component';
 import { LastMenuIconIndexClicked } from 'src/app/core/entities/last-menu-icon-index-clicked';
 import { MenuItem } from 'primeng/api';
-import { {{string.Join(", ", classNamesForImport)}} } from '../../entities/{{projectName.FromPascalToKebabCase()}}-entities.generated';
+import { {{string.Join(", ", imports)}} } from '../../entities/{{projectName.FromPascalToKebabCase()}}-entities.generated';
 """;
         }
 

@@ -119,7 +119,7 @@ export class {{angularClassIdentifier}} extends BaseEntity
 
             sbImports.Append(sb);
 
-            Helper.WriteToTheFile(sbImports.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-entities.generated.ts");
+            Helper.WriteToTheFile(sbImports.ToString(), outputPath);
         }
 
         private static List<string> GetAllAngularPropertyDefinitions(List<SoftProperty> DTOProperties)

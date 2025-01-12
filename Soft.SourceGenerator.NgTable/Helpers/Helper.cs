@@ -263,31 +263,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return methods;
         }
 
-        /// <summary>
-        /// eg. if we have List2:List1, List1:List0 we will return List2
-        /// </summary>
-        public static List<ClassDeclarationSyntax> GetUninheritedClasses(IList<ClassDeclarationSyntax> classes)
-        {
-            List<string> baseTypeNames = classes.SelectMany(x => GetBaseTypeNames(x)).ToList();
-            List<ClassDeclarationSyntax> helper = new List<ClassDeclarationSyntax>();
-            foreach (ClassDeclarationSyntax entityClass in classes)
-            {
-                if (baseTypeNames.Contains(entityClass.Identifier.Text) == false) // FT: Ako se neki entity ne nalazi nigde kao base type onda ga koristimo
-                    helper.Add(entityClass);
-            }
-            return helper;
-        }
-
-        public static List<string> GetBaseTypeNames(ClassDeclarationSyntax c)
-        {
-            List<string> baseTypeNames = c.BaseList?.Types.Select(x => x.Type.ToString()).ToList();
-
-            if (baseTypeNames == null)
-                return new List<string>();
-            else
-                return baseTypeNames;
-        }
-
         public static string GetDisplayNamePropForClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
         {
             List<SoftProperty> props = GetAllPropertiesOfTheClass(c, classes);
@@ -842,7 +817,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                             new SoftClass
                             {
                                 Name = $"{x.Name}SaveBodyDTO",
-                                Properties = new List<SoftProperty> { new SoftProperty { Name = $"{x.Name}DTO", Type = $"{x.Name}DTO" } },
+                                Properties = GetSaveBodyDTOProperties(x, classes),
                                 Namespace = x.Namespace.Replace(".Entities", ".DTO"),
                                 IsGenerated = true
                             },
@@ -850,6 +825,21 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     }
                 })
                 .ToList();
+        }
+
+        private static List<SoftProperty> GetSaveBodyDTOProperties(SoftClass entity, List<SoftClass> entities)
+        {
+            List<SoftProperty> result = new List<SoftProperty>();
+            result.Add(new SoftProperty { Name = $"{entity.Name}DTO", Type = $"{entity.Name}DTO" });
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                result.Add(new SoftProperty { Name = $"{property.Name}DTO", Type = $"List<{extractedEntity.Name}>" });
+            }
+
+            return result;
         }
 
         public static List<SoftClass> GetSoftClasses(IList<ClassDeclarationSyntax> classes)

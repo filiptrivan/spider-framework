@@ -88,7 +88,7 @@ export enum {{enumName}}
 """);
             }
 
-            Helper.WriteToTheFile(sb.ToString(), $@"{outputPath}\{projectName.FromPascalToKebabCase()}-enums.generated.ts");
+            Helper.WriteToTheFile(sb.ToString(), outputPath);
         }
 
         private static List<string> GetAngularEnumMemberValuePairs(List<SoftEnum> enumMembers)

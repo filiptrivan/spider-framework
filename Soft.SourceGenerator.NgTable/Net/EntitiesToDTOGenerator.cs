@@ -72,25 +72,42 @@ namespace {{basePartOfNamespace}}.DTO
             context.AddSource($"{projectName}DTOList.generated", SourceText.From(result, Encoding.UTF8));
         }
 
-        private static List<string> GetDTOClasses(List<SoftClass> entityClasses, List<SoftClass> allClasses)
+        private static List<string> GetDTOClasses(List<SoftClass> entities, List<SoftClass> allClasses)
         {
             List<string> result = new List<string>();
 
-            foreach (SoftClass entityClass in entityClasses)
+            foreach (SoftClass entity in entities)
             {
-                string DTObaseType = entityClass.GetDTOBaseType();
+                string DTObaseType = entity.GetDTOBaseType();
 
                 // Add table selection base class to SaveBodyDTO if there is some attribute on the class
                 result.Add($$"""
-    public partial class {{entityClass.Name}}DTO {{(DTObaseType == null ? "" : $": {DTObaseType}")}}
+    public partial class {{entity.Name}}DTO {{(DTObaseType == null ? "" : $": {DTObaseType}")}}
     {
-{{string.Join("\n", GetDTOPropertiesWithoutBaseType(entityClass, allClasses))}}
+{{string.Join("\n", GetDTOPropertiesWithoutBaseType(entity, allClasses))}}
     }
 
-    public partial class {{entityClass.Name}}SaveBodyDTO
+    public partial class {{entity.Name}}SaveBodyDTO
     {
-        public {{entityClass.Name}}DTO {{entityClass.Name}}DTO { get; set; }
+        public {{entity.Name}}DTO {{entity.Name}}DTO { get; set; }
+{{string.Join("\n", GetOrderedOneToManyProperties(entity, entities))}}
     }
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetOrderedOneToManyProperties(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                result.Add($$"""
+        public List<{{extractedEntity}}DTO> {{property.Name}}DTO { get; set; }
 """);
             }
 

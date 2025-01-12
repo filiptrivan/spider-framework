@@ -521,6 +521,16 @@ namespace Soft.SourceGenerators.Helpers
             return properties.SelectMany(x => x.Attributes).Any(x => x.Name == "BlobName");
         }
 
+        public static bool IsColorControlType(this SoftProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "UIControlType" && x.Value == UIControlTypeCodes.ColorPick.ToString());
+        }
+
+        public static bool IsNonEmpty(this SoftProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "NonEmpty");
+        }
+
         #endregion
 
         #region Source Generator
@@ -629,6 +639,11 @@ namespace Soft.SourceGenerators.Helpers
         public static SoftProperty GetManyToOnePropertyWithManyAttribute(this SoftClass entity, string manyToOneType, string withMany)
         {
             return entity.Properties.Where(x => x.Type == manyToOneType && x.WithMany() == withMany).SingleOrDefault();
+        }
+
+        public static List<SoftProperty> GetOrderedOneToManyProperties(this SoftClass entity)
+        {
+            return entity.Properties.Where(x => x.Attributes.Any(x => x.Name == "UIOrderedOneToMany")).ToList();
         }
 
         #endregion

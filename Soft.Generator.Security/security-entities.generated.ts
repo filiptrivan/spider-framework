@@ -6,58 +6,6 @@ import { MimeTypes } from "src/app/core/entities/mime-type";
 import { Status } from "../../enums/generated/security-enums.generated";
 
 
-export class AuthResult extends BaseEntity
-{
-    userId?: number;
-	email?: string;
-	accessToken?: string;
-	refreshToken?: string;
-
-    constructor(
-    {
-        userId,
-		email,
-		accessToken,
-		refreshToken
-    }:{
-        userId?: number;
-		email?: string;
-		accessToken?: string;
-		refreshToken?: string;     
-    } = {}
-    ) {
-        super('AuthResult'); 
-
-        this.userId = userId;
-		this.email = email;
-		this.accessToken = accessToken;
-		this.refreshToken = refreshToken;
-    }
-}
-
-
-export class ExternalProvider extends BaseEntity
-{
-    idToken?: string;
-	browserId?: string;
-
-    constructor(
-    {
-        idToken,
-		browserId
-    }:{
-        idToken?: string;
-		browserId?: string;     
-    } = {}
-    ) {
-        super('ExternalProvider'); 
-
-        this.idToken = idToken;
-		this.browserId = browserId;
-    }
-}
-
-
 export class JwtAuthResult extends BaseEntity
 {
     userId?: number;
@@ -88,132 +36,106 @@ export class JwtAuthResult extends BaseEntity
 }
 
 
-export class Login extends BaseEntity
+export class RolePermission extends BaseEntity
 {
-    email?: string;
-	browserId?: string;
+    roleDisplayName?: string;
+	roleId?: number;
+	permissionDisplayName?: string;
+	permissionId?: number;
 
     constructor(
     {
-        email,
-		browserId
+        roleDisplayName,
+		roleId,
+		permissionDisplayName,
+		permissionId
     }:{
-        email?: string;
-		browserId?: string;     
+        roleDisplayName?: string;
+		roleId?: number;
+		permissionDisplayName?: string;
+		permissionId?: number;     
     } = {}
     ) {
-        super('Login'); 
+        super('RolePermission'); 
 
-        this.email = email;
-		this.browserId = browserId;
+        this.roleDisplayName = roleDisplayName;
+		this.roleId = roleId;
+		this.permissionDisplayName = permissionDisplayName;
+		this.permissionId = permissionId;
     }
 }
 
 
-export class LoginVerificationToken extends BaseEntity
+export class RolePermissionSaveBody extends BaseEntity
 {
-    email?: string;
-	userId?: number;
-	browserId?: string;
-	expireAt?: Date;
+    rolePermissionDTO?: RolePermission;
 
     constructor(
     {
-        email,
-		userId,
+        rolePermissionDTO
+    }:{
+        rolePermissionDTO?: RolePermission;     
+    } = {}
+    ) {
+        super('RolePermissionSaveBody'); 
+
+        this.rolePermissionDTO = rolePermissionDTO;
+    }
+}
+
+
+export class AuthResult extends BaseEntity
+{
+    userId?: number;
+	email?: string;
+	accessToken?: string;
+	refreshToken?: string;
+
+    constructor(
+    {
+        userId,
+		email,
+		accessToken,
+		refreshToken
+    }:{
+        userId?: number;
+		email?: string;
+		accessToken?: string;
+		refreshToken?: string;     
+    } = {}
+    ) {
+        super('AuthResult'); 
+
+        this.userId = userId;
+		this.email = email;
+		this.accessToken = accessToken;
+		this.refreshToken = refreshToken;
+    }
+}
+
+
+export class VerificationTokenRequest extends BaseEntity
+{
+    verificationCode?: string;
+	browserId?: string;
+	email?: string;
+
+    constructor(
+    {
+        verificationCode,
 		browserId,
-		expireAt
+		email
     }:{
-        email?: string;
-		userId?: number;
+        verificationCode?: string;
 		browserId?: string;
-		expireAt?: Date;     
+		email?: string;     
     } = {}
     ) {
-        super('LoginVerificationToken'); 
+        super('VerificationTokenRequest'); 
 
-        this.email = email;
-		this.userId = userId;
+        this.verificationCode = verificationCode;
 		this.browserId = browserId;
-		this.expireAt = expireAt;
-    }
-}
-
-
-export class RefreshToken extends BaseEntity
-{
-    email?: string;
-	ipAddress?: string;
-	browserId?: string;
-	tokenString?: string;
-	expireAt?: Date;
-
-    constructor(
-    {
-        email,
-		ipAddress,
-		browserId,
-		tokenString,
-		expireAt
-    }:{
-        email?: string;
-		ipAddress?: string;
-		browserId?: string;
-		tokenString?: string;
-		expireAt?: Date;     
-    } = {}
-    ) {
-        super('RefreshToken'); 
-
-        this.email = email;
-		this.ipAddress = ipAddress;
-		this.browserId = browserId;
-		this.tokenString = tokenString;
-		this.expireAt = expireAt;
-    }
-}
-
-
-export class RefreshTokenRequest extends BaseEntity
-{
-    refreshToken?: string;
-	browserId?: string;
-
-    constructor(
-    {
-        refreshToken,
-		browserId
-    }:{
-        refreshToken?: string;
-		browserId?: string;     
-    } = {}
-    ) {
-        super('RefreshTokenRequest'); 
-
-        this.refreshToken = refreshToken;
-		this.browserId = browserId;
-    }
-}
-
-
-export class Registration extends BaseEntity
-{
-    email?: string;
-	browserId?: string;
-
-    constructor(
-    {
-        email,
-		browserId
-    }:{
-        email?: string;
-		browserId?: string;     
-    } = {}
-    ) {
-        super('Registration'); 
-
-        this.email = email;
-		this.browserId = browserId;
+		this.email = email;
     }
 }
 
@@ -266,54 +188,258 @@ export class RegistrationVerificationToken extends BaseEntity
 }
 
 
-export class RoleSaveBody extends BaseEntity
+export class ExternalProvider extends BaseEntity
 {
-    selectedPermissionIds?: number[];
-	selectedUserIds?: number[];
-	roleDTO?: Role;
+    idToken?: string;
+	browserId?: string;
 
     constructor(
     {
-        selectedPermissionIds,
-		selectedUserIds,
-		roleDTO
+        idToken,
+		browserId
     }:{
-        selectedPermissionIds?: number[];
-		selectedUserIds?: number[];
-		roleDTO?: Role;     
+        idToken?: string;
+		browserId?: string;     
     } = {}
     ) {
-        super('RoleSaveBody'); 
+        super('ExternalProvider'); 
 
-        this.selectedPermissionIds = selectedPermissionIds;
-		this.selectedUserIds = selectedUserIds;
-		this.roleDTO = roleDTO;
+        this.idToken = idToken;
+		this.browserId = browserId;
     }
 }
 
 
-export class VerificationTokenRequest extends BaseEntity
+export class UserRole extends BaseEntity
 {
-    verificationCode?: string;
-	browserId?: string;
-	email?: string;
+    roleId?: number;
+	userId?: number;
 
     constructor(
     {
-        verificationCode,
-		browserId,
-		email
+        roleId,
+		userId
     }:{
-        verificationCode?: string;
-		browserId?: string;
-		email?: string;     
+        roleId?: number;
+		userId?: number;     
     } = {}
     ) {
-        super('VerificationTokenRequest'); 
+        super('UserRole'); 
 
-        this.verificationCode = verificationCode;
+        this.roleId = roleId;
+		this.userId = userId;
+    }
+}
+
+
+export class UserRoleSaveBody extends BaseEntity
+{
+    userRoleDTO?: UserRole;
+
+    constructor(
+    {
+        userRoleDTO
+    }:{
+        userRoleDTO?: UserRole;     
+    } = {}
+    ) {
+        super('UserRoleSaveBody'); 
+
+        this.userRoleDTO = userRoleDTO;
+    }
+}
+
+
+export class LoginVerificationToken extends BaseEntity
+{
+    email?: string;
+	userId?: number;
+	browserId?: string;
+	expireAt?: Date;
+
+    constructor(
+    {
+        email,
+		userId,
+		browserId,
+		expireAt
+    }:{
+        email?: string;
+		userId?: number;
+		browserId?: string;
+		expireAt?: Date;     
+    } = {}
+    ) {
+        super('LoginVerificationToken'); 
+
+        this.email = email;
+		this.userId = userId;
 		this.browserId = browserId;
-		this.email = email;
+		this.expireAt = expireAt;
+    }
+}
+
+
+export class Login extends BaseEntity
+{
+    email?: string;
+	browserId?: string;
+
+    constructor(
+    {
+        email,
+		browserId
+    }:{
+        email?: string;
+		browserId?: string;     
+    } = {}
+    ) {
+        super('Login'); 
+
+        this.email = email;
+		this.browserId = browserId;
+    }
+}
+
+
+export class RefreshTokenRequest extends BaseEntity
+{
+    refreshToken?: string;
+	browserId?: string;
+
+    constructor(
+    {
+        refreshToken,
+		browserId
+    }:{
+        refreshToken?: string;
+		browserId?: string;     
+    } = {}
+    ) {
+        super('RefreshTokenRequest'); 
+
+        this.refreshToken = refreshToken;
+		this.browserId = browserId;
+    }
+}
+
+
+export class Registration extends BaseEntity
+{
+    email?: string;
+	browserId?: string;
+
+    constructor(
+    {
+        email,
+		browserId
+    }:{
+        email?: string;
+		browserId?: string;     
+    } = {}
+    ) {
+        super('Registration'); 
+
+        this.email = email;
+		this.browserId = browserId;
+    }
+}
+
+
+export class Role extends BaseEntity
+{
+    name?: string;
+	description?: string;
+	version?: number;
+	id?: number;
+	createdAt?: Date;
+	modifiedAt?: Date;
+
+    constructor(
+    {
+        name,
+		description,
+		version,
+		id,
+		createdAt,
+		modifiedAt
+    }:{
+        name?: string;
+		description?: string;
+		version?: number;
+		id?: number;
+		createdAt?: Date;
+		modifiedAt?: Date;     
+    } = {}
+    ) {
+        super('Role'); 
+
+        this.name = name;
+		this.description = description;
+		this.version = version;
+		this.id = id;
+		this.createdAt = createdAt;
+		this.modifiedAt = modifiedAt;
+    }
+}
+
+
+export class RoleSaveBody extends BaseEntity
+{
+    roleDTO?: Role;
+	selectedPermissionIds?: number[];
+	selectedUserIds?: number[];
+
+    constructor(
+    {
+        roleDTO,
+		selectedPermissionIds,
+		selectedUserIds
+    }:{
+        roleDTO?: Role;
+		selectedPermissionIds?: number[];
+		selectedUserIds?: number[];     
+    } = {}
+    ) {
+        super('RoleSaveBody'); 
+
+        this.roleDTO = roleDTO;
+		this.selectedPermissionIds = selectedPermissionIds;
+		this.selectedUserIds = selectedUserIds;
+    }
+}
+
+
+export class RefreshToken extends BaseEntity
+{
+    email?: string;
+	ipAddress?: string;
+	browserId?: string;
+	tokenString?: string;
+	expireAt?: Date;
+
+    constructor(
+    {
+        email,
+		ipAddress,
+		browserId,
+		tokenString,
+		expireAt
+    }:{
+        email?: string;
+		ipAddress?: string;
+		browserId?: string;
+		tokenString?: string;
+		expireAt?: Date;     
+    } = {}
+    ) {
+        super('RefreshToken'); 
+
+        this.email = email;
+		this.ipAddress = ipAddress;
+		this.browserId = browserId;
+		this.tokenString = tokenString;
+		this.expireAt = expireAt;
     }
 }
 
@@ -370,132 +496,6 @@ export class PermissionSaveBody extends BaseEntity
         super('PermissionSaveBody'); 
 
         this.permissionDTO = permissionDTO;
-    }
-}
-
-
-export class Role extends BaseEntity
-{
-    name?: string;
-	description?: string;
-	version?: number;
-	id?: number;
-	createdAt?: Date;
-	modifiedAt?: Date;
-
-    constructor(
-    {
-        name,
-		description,
-		version,
-		id,
-		createdAt,
-		modifiedAt
-    }:{
-        name?: string;
-		description?: string;
-		version?: number;
-		id?: number;
-		createdAt?: Date;
-		modifiedAt?: Date;     
-    } = {}
-    ) {
-        super('Role'); 
-
-        this.name = name;
-		this.description = description;
-		this.version = version;
-		this.id = id;
-		this.createdAt = createdAt;
-		this.modifiedAt = modifiedAt;
-    }
-}
-
-
-export class RolePermission extends BaseEntity
-{
-    roleDisplayName?: string;
-	roleId?: number;
-	permissionDisplayName?: string;
-	permissionId?: number;
-
-    constructor(
-    {
-        roleDisplayName,
-		roleId,
-		permissionDisplayName,
-		permissionId
-    }:{
-        roleDisplayName?: string;
-		roleId?: number;
-		permissionDisplayName?: string;
-		permissionId?: number;     
-    } = {}
-    ) {
-        super('RolePermission'); 
-
-        this.roleDisplayName = roleDisplayName;
-		this.roleId = roleId;
-		this.permissionDisplayName = permissionDisplayName;
-		this.permissionId = permissionId;
-    }
-}
-
-
-export class RolePermissionSaveBody extends BaseEntity
-{
-    rolePermissionDTO?: RolePermission;
-
-    constructor(
-    {
-        rolePermissionDTO
-    }:{
-        rolePermissionDTO?: RolePermission;     
-    } = {}
-    ) {
-        super('RolePermissionSaveBody'); 
-
-        this.rolePermissionDTO = rolePermissionDTO;
-    }
-}
-
-
-export class UserRole extends BaseEntity
-{
-    roleId?: number;
-	userId?: number;
-
-    constructor(
-    {
-        roleId,
-		userId
-    }:{
-        roleId?: number;
-		userId?: number;     
-    } = {}
-    ) {
-        super('UserRole'); 
-
-        this.roleId = roleId;
-		this.userId = userId;
-    }
-}
-
-
-export class UserRoleSaveBody extends BaseEntity
-{
-    userRoleDTO?: UserRole;
-
-    constructor(
-    {
-        userRoleDTO
-    }:{
-        userRoleDTO?: UserRole;     
-    } = {}
-    ) {
-        super('UserRoleSaveBody'); 
-
-        this.userRoleDTO = userRoleDTO;
     }
 }
 
