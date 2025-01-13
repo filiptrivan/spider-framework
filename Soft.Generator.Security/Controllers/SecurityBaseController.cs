@@ -158,7 +158,7 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [AuthGuard]
         public async Task<List<NamebookDTO<int>>> GetPermissionListForRole(int roleId)
         {
-            return await _securityBusinessService.GetPermissionNamebookListForRole(roleId);
+            return await _securityBusinessService.GetPermissionsNamebookListForRole(roleId);
         }
 
         #endregion

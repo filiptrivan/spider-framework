@@ -60,12 +60,10 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         /// Getting all properties of the single class <paramref name="c"/>, including inherited ones.
         /// The inherited properties doesn't have any attributes
         /// </summary>
-        public static List<SoftProperty> GetAllPropertiesOfTheClass(ClassDeclarationSyntax c, IEnumerable<ClassDeclarationSyntax> allClasses, bool getEnumerableProperties = false)
+        public static List<SoftProperty> GetAllPropertiesOfTheClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> currentProjectClasses, List<SoftClass> referencedProjectsClasses)
         {
             TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
-            ClassDeclarationSyntax baseClass = GetClass(baseType, allClasses);
-
-            string s = c.Identifier.Text;
+            ClassDeclarationSyntax baseClass = GetClass(baseType, currentProjectClasses);
 
             List<SoftProperty> properties = GetPropsOfCurrentClass(c);
 
@@ -82,10 +80,20 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 else if (baseClass == null)
                 {
                     if (baseType.ToString() == "Role")
+                    {
                         properties.AddRange(GetRoleProperties());
-
-                    if (baseType.ToString() == "RoleDTO")
+                    }
+                    else if (baseType.ToString() == "RoleDTO")
+                    {
                         properties.AddRange(GetRoleDTOProperties());
+                    }
+                    else
+                    {
+                        SoftClass softBaseClass = referencedProjectsClasses.Where(x => x.Name == c.Identifier.Text).SingleOrDefault();
+
+                        if (softBaseClass != null)
+                            properties.AddRange(softBaseClass.Properties);
+                    }
 
                     break;
                 }
@@ -98,20 +106,13 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 }
 
                 baseType = baseClass.BaseList?.Types.FirstOrDefault()?.Type;
-                baseClass = GetClass(baseType, allClasses);
-            }
-
-            if (getEnumerableProperties == false)
-            {
-                properties = properties
-                    .Where(prop => prop.Type.IsEnumerable() == false)
-                    .ToList();
+                baseClass = GetClass(baseType, currentProjectClasses);
             }
 
             return properties;
         }
 
-        public static List<SoftAttribute> GetAllAttributesOfTheClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
+        public static List<SoftAttribute> GetAllAttributesOfTheClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> currentProjectClasses, List<SoftClass> allClasses)
         {
             if (c == null) return null;
 
@@ -127,7 +128,19 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     return GetSoftAttribute(x);
                 })
                 .ToList());
-                cHelper = classes.Where(x => x.Identifier.Text == baseType?.ToString()).FirstOrDefault();
+                
+                cHelper = currentProjectClasses.Where(x => x.Identifier.Text == baseType?.ToString()).SingleOrDefault();
+
+                if (baseType != null && cHelper == null)
+                {
+                    SoftClass softBaseClass = allClasses.Where(x => x.Name == c.Identifier.Text || $"{x.Name}DTO" == c.Identifier.Text).SingleOrDefault();
+
+                    if (softBaseClass != null)
+                        softAttributes.AddRange(softBaseClass.Attributes);
+
+                    break;
+                }
+
                 baseType = cHelper?.BaseList?.Types.FirstOrDefault()?.Type;
             }
             while (baseType != null);
@@ -186,7 +199,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         public static string GetIdType(SoftClass c, List<SoftClass> classes)
         {
             if (c == null)
-                return "TheClassDoesNotExist";
+                return "GetIdType.TheClassDoesNotExist";
 
             string baseType = c.BaseType; //BaseClass<long>
 
@@ -265,7 +278,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
         public static string GetDisplayNamePropForClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
         {
-            List<SoftProperty> props = GetAllPropertiesOfTheClass(c, classes);
+            List<SoftProperty> props = GetAllPropertiesOfTheClass(c, classes, new List<SoftClass>());
             SoftProperty displayNamePropForClass = props.Where(x => x.Attributes.Any(x => x.Name == DisplayNameAttribute)).SingleOrDefault();
 
             if (displayNamePropForClass == null)
@@ -277,9 +290,14 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return displayNamePropForClass.Name;
         }
 
-        public static string GetDisplayNamePropForClass(SoftClass c)
+        public static string GetDisplayNameProperty(SoftClass entity)
         {
-            List<SoftProperty> props = c.Properties;
+            SoftAttribute entityDisplayNameAttribute = entity.Attributes.Where(x => x.Name == "SoftDisplayName").SingleOrDefault();
+
+            if (entityDisplayNameAttribute != null)
+                return entityDisplayNameAttribute.Value;
+
+            List<SoftProperty> props = entity.Properties;
             SoftProperty displayNamePropForClass = props.Where(x => x.Attributes.Any(x => x.Name == DisplayNameAttribute)).SingleOrDefault();
 
             if (displayNamePropForClass == null)
@@ -368,8 +386,11 @@ namespace Soft.SourceGenerator.NgTable.Helpers
         /// </summary>
         public static string ExtractTypeFromGenericType(string input)
         {
+            if (input == null)
+                return null;
+
             string[] parts = input.Split('<'); // List, long>
-            string result = parts[1].Replace(">", "");
+            string result = parts.Last().Replace(">", "");
 
             return result;
         }
@@ -735,7 +756,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             if (settingsClass == null)
                 return null;
 
-            List<SoftProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes);
+            List<SoftProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes, new List<SoftClass>());
             SoftProperty p = properties?.Where(x => x.Name == generatorName)?.SingleOrDefault();
             string outputPath = p?.Attributes?.Where(x => x.Name == "Output")?.SingleOrDefault()?.Value;
             return outputPath;
@@ -748,7 +769,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             if (settingsClass == null)
                 return false;
 
-            List<SoftProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes);
+            List<SoftProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes, new List<SoftClass>());
             SoftProperty p = properties?.Where(x => x.Name == generatorName)?.SingleOrDefault();
 
             bool.TryParse(p?.Attributes?.Where(x => x.Name == "Output")?.SingleOrDefault()?.Value, out bool shouldStart);
@@ -766,16 +787,9 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 .ToList();
         }
 
-        public static List<SoftClass> GetSoftEntityClasses(IList<ClassDeclarationSyntax> classes)
+        public static List<SoftClass> GetSoftEntityClasses(IList<ClassDeclarationSyntax> currentProjectClasses, List<SoftClass> referencedProjectsClasses)
         {
-            return GetSoftClasses(classes)
-                .Where(x => x.Namespace.EndsWith(".Entities"))
-                .ToList();
-        }
-
-        public static List<SoftClass> GetSoftEntityClasses(IList<SoftClass> classes)
-        {
-            return classes
+            return GetSoftClasses(currentProjectClasses, referencedProjectsClasses)
                 .Where(x => x.Namespace.EndsWith(".Entities"))
                 .ToList();
         }
@@ -832,19 +846,30 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             List<SoftProperty> result = new List<SoftProperty>();
             result.Add(new SoftProperty { Name = $"{entity.Name}DTO", Type = $"{entity.Name}DTO" });
 
-            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            foreach (SoftProperty property in entity.Properties)
             {
                 SoftClass extractedEntity = entities.Where(x => x.Name == ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
 
-                result.Add(new SoftProperty { Name = $"{property.Name}DTO", Type = $"List<{extractedEntity.Name}>" });
+                if (property.HasOrderedOneToManyAttribute())
+                {
+                    result.Add(new SoftProperty { Name = $"{property.Name}DTO", Type = $"List<{extractedEntity.Name}>" });
+                }
+                else if (
+                    property.IsMultiSelectControlType() ||
+                    property.IsMultiAutocompleteControlType())
+                {
+                    string extractedEntityIdType = GetIdType(entity, entities);
+
+                    result.Add(new SoftProperty { Name = $"Selected{property.Name}Ids", Type = $"List<{extractedEntityIdType}>" });
+                }
             }
 
             return result;
         }
 
-        public static List<SoftClass> GetSoftClasses(IList<ClassDeclarationSyntax> classes)
+        public static List<SoftClass> GetSoftClasses(IList<ClassDeclarationSyntax> currentProjectClasses, List<SoftClass> referencedProjectsClasses)
         {
-            return classes
+            return currentProjectClasses
                 .Select(x =>
                 {
                     return new SoftClass
@@ -855,8 +880,8 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                          .FirstOrDefault()?.Name.ToString(),
                         BaseType = x.GetBaseType(),
                         IsAbstract = x.IsAbstract(),
-                        Properties = GetAllPropertiesOfTheClass(x, classes, true),
-                        Attributes = GetAllAttributesOfTheClass(x, classes),
+                        Properties = GetAllPropertiesOfTheClass(x, currentProjectClasses, referencedProjectsClasses),
+                        Attributes = GetAllAttributesOfTheClass(x, currentProjectClasses, referencedProjectsClasses),
                         Methods = GetMethodsOfCurrentClass(x)
                     };
                 })
@@ -1136,7 +1161,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         .Select(ns => ns.Name.ToString())
                         .FirstOrDefault(ns => ns.EndsWith($".{MapperNamespaceEnding}"));
 
-                    List<SoftAttribute> classAttributes = GetAllAttributesOfTheClass(x, classes);
+                    List<SoftAttribute> classAttributes = GetAllAttributesOfTheClass(x, classes, new List<SoftClass>());
 
                     bool hasCustomMapperAttribute = classAttributes.Any(x => x.Name == "CustomMapper");
 

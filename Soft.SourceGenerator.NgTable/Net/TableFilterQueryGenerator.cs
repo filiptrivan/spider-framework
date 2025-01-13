@@ -38,6 +38,7 @@ namespace Soft.SourceGenerator.NgTable.NgTable
                 new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.DTO,
                 });
 
             var allClasses = classDeclarations.Collect()
@@ -46,19 +47,21 @@ namespace Soft.SourceGenerator.NgTable.NgTable
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectEntityClasses, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
 
-            List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
-            List<SoftClass> allEntityClasses = entityClasses.Concat(referencedProjectEntityClasses).ToList();
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
+            List<SoftClass> softClasses = Helper.GetSoftClasses(classes, referencedProjectClasses);
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(softClasses);
+            List<SoftClass> entities = softClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SoftClass> referencedProjectEntities = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SoftClass> allEntityClasses = entities.Concat(referencedProjectEntities).ToList();
 
             StringBuilder sb = new StringBuilder();
             List<string> usings = new List<string>();
             StringBuilder sbUsings = new StringBuilder();
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0].Namespace);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entities[0].Namespace);
 
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
@@ -76,7 +79,7 @@ namespace {{basePartOfNamespace}}.TableFiltering
     public static class TableFilterQueryable
     {
 """);
-            foreach (SoftClass entityClass in entityClasses)
+            foreach (SoftClass entityClass in entities)
             {
                 string baseType = entityClass.BaseType;
 
@@ -115,7 +118,7 @@ namespace {{basePartOfNamespace}}.TableFiltering
                             if (entityDotNotation.EndsWith("CommaSeparated") && pairDTOClass.IsGenerated == true)
                             {
                                 string entityPropName = entityDotNotation.Replace("CommaSeparated", ""); // "SegmentationItems"
-                                string idType = Helper.GetIdType(entityClass, entityClasses); // FT: Id type of SegmentationItem class
+                                string idType = Helper.GetIdType(entityClass, entities); // FT: Id type of SegmentationItem class
 
                                 sb.AppendLine(GetCaseForEnumerable(DTOprop.Name, entityPropName, idType));
 
@@ -335,7 +338,7 @@ using {{item}};
                 SoftProperty propertyInEntityClass = entitySoftClass.Properties.Where(x => x.Name == baseClassInDotNotation).Single();
                 string typeOfThePropertyInEntityClass = propertyInEntityClass.Type; // "Role"
                 SoftClass entityClassWhichWeAreSearchingDisplayNameFor = allClasses.Where(x => x.Name == typeOfThePropertyInEntityClass).Single();
-                string displayName = Helper.GetDisplayNamePropForClass(entityClassWhichWeAreSearchingDisplayNameFor); // Name
+                string displayName = Helper.GetDisplayNameProperty(entityClassWhichWeAreSearchingDisplayNameFor); // Name
                 displayName = displayName.Replace(".ToString()", "");
                 return $"{baseClassInDotNotation}.{displayName}"; // FT: It's okay to do it like this, because when we generating DisplayNames for DTO, we are doing it just for the first level.
             }

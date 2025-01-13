@@ -124,7 +124,7 @@ namespace {{basePartOfNamespace}}.DataMappers
         {
             List<string> result = new List<string>();
 
-            List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
+            List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, new List<SoftClass>());
 
             foreach (SoftProperty entityProp in entityProperties)
             {
@@ -172,7 +172,7 @@ namespace {{basePartOfNamespace}}.DataMappers
 
         public static List<string> GetConfigForManyToOneClass(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
         {
-            List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, true);
+            List<SoftProperty> entityProperties = Helper.GetAllPropertiesOfTheClass(entityClass, entityClasses, new List<SoftClass>());
 
             List<string> manyToOneAttributeMappers = new List<string>();
 

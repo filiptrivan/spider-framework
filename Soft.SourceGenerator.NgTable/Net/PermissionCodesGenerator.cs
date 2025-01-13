@@ -39,15 +39,15 @@ namespace Soft.SourceGenerator.NgTable.Net
         {
             if (classes.Count <= 1) return;
 
-            List<ClassDeclarationSyntax> entityClasses = Helper.GetEntityClasses(classes);
+            List<ClassDeclarationSyntax> entities = Helper.GetEntityClasses(classes);
 
             StringBuilder sb = new StringBuilder();
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0]);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entities[0]);
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
-            List<string> enumHelper = Helper.GetPermissionCodesForEntites(entityClasses);
+            List<string> enumHelper = Helper.GetPermissionCodesForEntites(entities);
 
             sb.AppendLine($$"""
 using System;

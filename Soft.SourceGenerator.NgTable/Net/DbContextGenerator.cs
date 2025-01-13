@@ -56,7 +56,7 @@ namespace Soft.SourceGenerators.Net
             if (shouldGenerateDbContext == false)
                 return;
 
-            List<SoftClass> projectClasses = Helper.GetSoftClasses(classes);
+            List<SoftClass> projectClasses = Helper.GetSoftClasses(classes, referencedProjectEntityClasses);
 
             SoftClass customDbContextClass = projectClasses.Where(x => x.BaseType != null && x.BaseType.Contains("ApplicationDbContext<")).SingleOrDefault();
 

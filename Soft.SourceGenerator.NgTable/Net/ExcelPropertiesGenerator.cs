@@ -32,15 +32,24 @@ namespace Soft.SourceGenerator.NgTable.Net
                     NamespaceExtensionCodes.DataMappers,
                 });
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-                static (spc, source) => Execute(source, spc));
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.DTO,
+                });
+
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
 
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes, referencedProjectClasses));
 
             ClassDeclarationSyntax mapperClass = Helper.GetManualyWrittenMapperClass(classes);
 

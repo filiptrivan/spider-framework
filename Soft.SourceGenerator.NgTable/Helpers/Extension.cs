@@ -511,25 +511,43 @@ namespace Soft.SourceGenerators.Helpers
             return splitType;
         }
 
-        public static bool HasBlobProperty(this SoftClass c)
-        {
-            return c.Properties.SelectMany(x => x.Attributes).Any(x => x.Name == "BlobName");
-        }
+        #region Has Attribute
 
-        public static bool HasBlobProperty(this List<SoftProperty> properties)
+        public static bool HasBlobNameAttribute(this List<SoftProperty> properties)
         {
             return properties.SelectMany(x => x.Attributes).Any(x => x.Name == "BlobName");
         }
+
+        public static bool HasNonEmptyAttribute(this SoftProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "NonEmpty");
+        }
+
+        public static bool HasOrderedOneToManyAttribute(this SoftProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "UIOrderedOneToMany");
+        }
+
+        #endregion
+
+        #region IsControlType
 
         public static bool IsColorControlType(this SoftProperty property)
         {
             return property.Attributes.Any(x => x.Name == "UIControlType" && x.Value == UIControlTypeCodes.ColorPick.ToString());
         }
 
-        public static bool IsNonEmpty(this SoftProperty property)
+        public static bool IsMultiSelectControlType(this SoftProperty property)
         {
-            return property.Attributes.Any(x => x.Name == "NonEmpty");
+            return property.Attributes.Any(x => x.Name == "UIControlType" && x.Value == UIControlTypeCodes.MultiSelect.ToString());
         }
+
+        public static bool IsMultiAutocompleteControlType(this SoftProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "UIControlType" && x.Value == UIControlTypeCodes.MultiAutocomplete.ToString());
+        }
+
+        #endregion
 
         #endregion
 

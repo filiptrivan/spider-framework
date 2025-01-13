@@ -64,7 +64,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\services\api\api.service.generated.ts
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", @"\Angular\src\app\business\services\api\api.service.generated.ts");
 
-            List<SoftClass> softClasses = Helper.GetSoftClasses(classes);
+            List<SoftClass> softClasses = Helper.GetSoftClasses(classes, referencedProjectClasses);
 
             List<SoftClass> controllerClasses = softClasses
                 .Where(x => x.Namespace.EndsWith($".{NamespaceExtensionCodes.Controllers}"))
@@ -237,6 +237,8 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
 {{string.Join("\n\n", GetBaseOrderedOneToManyAngularControllerMethods(entity, entities, alreadyAddedMethods))}}
 
+{{string.Join("\n\n", GetBaseManyToManyAngularControllerMethods(entity, entities, alreadyAddedMethods))}}
+
 {{GetBaseSaveAngularControllerMethod(entity, alreadyAddedMethods)}}
 
 {{string.Join("\n\n", GetBaseUploadBlobAngularControllerMethods(entity, entities, alreadyAddedMethods))}}
@@ -249,6 +251,8 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
         #endregion
 
         #region Generated Angular Controller Methods
+
+        #region Ordered One To Many
 
         private static List<string> GetBaseOrderedOneToManyAngularControllerMethods(SoftClass entity, List<SoftClass> entities, HashSet<string> alreadyAddedMethods)
         {
@@ -277,6 +281,46 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
                 methodName, getAndDeleteParameter, $"{Helper.ExtractTypeFromGenericType(uiOrderedOneToManyProperty.Type)}[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsBase
             );
         }
+
+        #endregion
+
+        #region Many To Many
+
+        #region Multi Control Types
+
+        private static List<string> GetBaseManyToManyAngularControllerMethods(SoftClass entity, List<SoftClass> entities, HashSet<string> alreadyAddedMethods)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties)
+            {
+                if (property.IsMultiSelectControlType() ||
+                    property.IsMultiAutocompleteControlType())
+                {
+                    result.Add(GetBaseManyToManyAngularControllerMethod(property, entity, alreadyAddedMethods));
+                }
+            }
+
+            return result;
+        }
+
+        private static string GetBaseManyToManyAngularControllerMethod(SoftProperty property, SoftClass entity, HashSet<string> alreadyAddedMethods)
+        {
+            string methodName = $"Get{property.Name}NamebookListFor{entity.Name}";
+
+            if (alreadyAddedMethods.Contains(methodName))
+                return null;
+
+            Dictionary<string, string> getAndDeleteParameter = new Dictionary<string, string> { { "id", "number" } };
+
+            return GetAngularControllerMethod(
+                methodName, getAndDeleteParameter, "Namebook[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsSkipSpinner
+            );
+        }
+
+        #endregion
+
+        #endregion
 
         private static string GetBaseDeleteAngularControllerMethods(SoftClass entity, HashSet<string> alreadyAddedMethods)
         {
@@ -332,29 +376,6 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
             Dictionary<string, string> postAndPutParameter = new Dictionary<string, string> { { "saveBodyDTO", $"{entity.Name}SaveBody" } };
 
             return GetAngularControllerMethod(methodName, postAndPutParameter, $"{entity.Name}SaveBody", HttpTypeCodes.Put, entity.ControllerName, Settings.HttpOptionsBase);
-        }
-
-        private static List<string> GetBaseOneToManyAngularControllerMethods(SoftClass entity, List<SoftClass> entities, HashSet<string> alreadyAddedMethods)
-        {
-            List<string> result = new List<string>();
-
-            foreach (SoftProperty manyToOneProperty in entity.Properties.Where(x => x.Type.IsManyToOneType()))
-            {
-                SoftClass manyToOnePropertyClass = entities.Where(x => x.Name == manyToOneProperty.Type).SingleOrDefault();
-                string manyToOnePropertyIdType = Helper.GetIdType(manyToOnePropertyClass, entities);
-
-                //if (manyToOneProperty.IsAutocomplete())
-                //{
-                //result.Add(GetBaseGetListForAutocompleteAngularControllerMethod(manyToOneProperty, entity, alreadyAddedMethods));
-                //}
-
-                //if (manyToOneProperty.IsDropdown())
-                //{
-                //result.Add(GetBaseGetListForDropdownAngularControllerMethod(manyToOneProperty, entity, alreadyAddedMethods));
-                //}
-            }
-
-            return result;
         }
 
         private static string GetBaseGetListForDropdownAngularControllerMethod(SoftClass entity, HashSet<string> alreadyAddedMethods)

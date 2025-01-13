@@ -34,8 +34,8 @@ namespace Soft.SourceGenerators.Angular
             IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
                 new List<NamespaceExtensionCodes>
                 {
-                    //NamespaceExtensionCodes.Entities,
-                    //NamespaceExtensionCodes.DTO,
+                    NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.DTO,
                 });
 
             IncrementalValueProvider<string> callingProjectDirectory = context.GetCallingPath();
@@ -64,7 +64,7 @@ namespace Soft.SourceGenerators.Angular
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\components\base-details\{projectName}.ts
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\components\base-details\{projectName.FromPascalToKebabCase()}-base-details.generated.ts");
 
-            List<SoftClass> softClasses = Helper.GetSoftClasses(classes);
+            List<SoftClass> softClasses = Helper.GetSoftClasses(classes, referencedProjectClasses);
             List<SoftClass> customDTOClasses = softClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
             List<SoftClass> entities = softClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
 
@@ -137,6 +137,8 @@ export class {{entity.Name}}BaseComponent {
 
 {{string.Join("\n", GetPrimengOptionVariables(entity.Properties, entity, entities))}}
 
+{{string.Join("\n", GetSoftFormControls(entity))}}
+
     constructor(
         private apiService: ApiService,
         private route: ActivatedRoute,
@@ -149,6 +151,8 @@ export class {{entity.Name}}BaseComponent {
             let saveBody = new {{entity.Name}}SaveBody();
             saveBody.{{entity.Name.FirstCharToLower()}}DTO = this.{{entity.Name.FirstCharToLower()}}FormGroup.getRawValue();
 {{string.Join("\n", GetOrderedOneToManySaveBodyAssignements(entity, entities))}}
+{{string.Join("\n", GetManyToManyMultiSelectSaveBodyAssignements(entity))}}
+{{string.Join("\n", GetManyToManyMultiAutocompleteSaveBodyAssignements(entity))}}
             return saveBody;
         }
 
@@ -158,14 +162,19 @@ export class {{entity.Name}}BaseComponent {
         this.route.params.subscribe((params) => {
             this.modelId = params['id'];
 
+{{string.Join("\n\n", GetManyToManyMultiSelectListForDropdownMethods(entity, entities))}}
+
             if(this.modelId > 0){
                 forkJoin({
                     {{entity.Name.FirstCharToLower()}}: this.apiService.get{{entity.Name}}(this.modelId),
 {{string.Join("\n", GetOrderedOneToManyForkJoinParameters(entity))}}
+{{string.Join("\n", GetManyToManyMultiControlTypesForkJoinParameters(entity))}}
                 })
-                .subscribe(({ {{entity.Name.FirstCharToLower()}} {{string.Join("", GetOrderedOneToManyForkJoinParameterNames(entity))}} }) => {
+                .subscribe(({ {{string.Join(", ", GetForkJoinParameterNames(entity))}} }) => {
                     this.init{{entity.Name}}FormGroup(new {{entity.Name}}({{entity.Name.FirstCharToLower()}}));
 {{string.Join("\n", GetOrderedOneToManyInitFormGroupForExistingObject(entity))}}
+{{string.Join("\n", GetManyToManyMultiSelectInitFormControls(entity))}}
+{{string.Join("\n", GetManyToManyMultiAutocompleteInitFormControls(entity))}}
                 });
             }
             else{
@@ -203,19 +212,125 @@ export class {{entity.Name}}BaseComponent {
             return result;
         }
 
-        #region Ordered One To Many
-
-        private static List<string> GetOrderedOneToManyForkJoinParameterNames(SoftClass entity)
+        private static List<string> GetManyToManyMultiSelectSaveBodyAssignements(SoftClass entity)
         {
             List<string> result = new List<string>();
 
-            foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
+            foreach (SoftProperty property in entity.Properties.Where(x => x.IsMultiSelectControlType()))
             {
-                result.Add($", {property.Name.FirstCharToLower()}");
+                result.Add($$"""
+            saveBody.selected{{property.Name}}Ids = this.selected{{property.Name}}For{{entity.Name}}.getRawValue();
+""");
             }
 
             return result;
         }
+
+        private static List<string> GetManyToManyMultiAutocompleteSaveBodyAssignements(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties.Where(x => x.IsMultiAutocompleteControlType()))
+            {
+                result.Add($$"""
+            saveBody.selected{{property.Name}}Ids = this.selected{{property.Name}}For{{entity.Name}}.getRawValue()?.map(n => n.value);
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetManyToManyMultiSelectInitFormControls(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties.Where(x => x.IsMultiSelectControlType()))
+            {
+                result.Add($$"""
+                    this.selected{{property.Name}}For{{entity.Name}}.setValue(
+                        {{property.Name.FirstCharToLower()}}For{{entity.Name}}.map(n => { return n.id })
+                    );
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetManyToManyMultiAutocompleteInitFormControls(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties.Where(x => x.IsMultiAutocompleteControlType()))
+            {
+                result.Add($$"""
+                    this.selected{{property.Name}}For{{entity.Name}}.setValue(
+                        {{property.Name.FirstCharToLower()}}For{{entity.Name}}.map(n => ({ label: n.displayName, value: n.id }))
+                    );
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetManyToManyMultiSelectListForDropdownMethods(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties.Where(x => x.IsMultiSelectControlType()))
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                result.Add($$"""
+            this.apiService.getPrimengNamebookListForDropdown(this.apiService.get{{extractedEntity.Name}}ListForDropdown).subscribe(po => {
+                this.{{property.Name.FirstCharToLower()}}For{{entity.Name}}Options = po;
+            });
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetManyToManyMultiControlTypesForkJoinParameters(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties
+                .Where(x => 
+                    x.IsMultiSelectControlType() ||
+                    x.IsMultiAutocompleteControlType()))
+            {
+                result.Add($$"""
+                    {{property.Name.FirstCharToLower()}}For{{entity.Name}}: this.apiService.get{{property.Name}}NamebookListFor{{entity.Name}}(this.modelId),
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetSoftFormControls(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties)
+            {
+                if (property.IsMultiSelectControlType())
+                {
+                    result.Add($$"""
+    selected{{property.Name}}For{{entity.Name}} = new SoftFormControl<number[]>(null, {updateOn: 'change'});
+""");
+                }
+                else if (property.IsMultiAutocompleteControlType())
+                {
+                    result.Add($$"""
+    selected{{property.Name}}For{{entity.Name}} = new SoftFormControl<PrimengOption[]>(null, {updateOn: 'change'});
+""");
+                }
+            }
+
+            return result;
+        }
+
+        #region Ordered One To Many
 
         private static List<string> GetOrderedOneToManyAddNewItemMethods(SoftClass entity, List<SoftClass> entities)
         {
@@ -259,7 +374,7 @@ export class {{entity.Name}}BaseComponent {
 
         private static string GetFormArrayEmptyValidator(SoftProperty property)
         {
-            if (property.IsNonEmpty())
+            if (property.HasNonEmptyAttribute())
             {
                 return $$"""
         this.{{property.Name.FirstCharToLower()}}FormArray.validator = this.validatorService.isFormArrayEmpty(this.{{property.Name.FirstCharToLower()}}FormArray);
@@ -276,7 +391,7 @@ export class {{entity.Name}}BaseComponent {
             foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
             {
                 result.Add($$"""
-                    {{property.Name.FirstCharToLower()}}: this.apiService.getOrdered{{property.Name}}For{{entity.Name}}(this.modelId),
+                    {{property.Name.FirstCharToLower()}}For{{entity.Name}}: this.apiService.getOrdered{{property.Name}}For{{entity.Name}}(this.modelId),
 """);
             }
 
@@ -290,13 +405,13 @@ export class {{entity.Name}}BaseComponent {
             foreach (SoftProperty property in entity.GetOrderedOneToManyProperties())
             {
                 result.Add($$"""
-                    this.init{{property.Name}}FormArray({{property.Name.FirstCharToLower()}});
+                    this.init{{property.Name}}FormArray({{property.Name.FirstCharToLower()}}For{{entity.Name}});
 """);
             }
 
             return result;
         }
-        
+
         private static List<string> GetOrderedOneToManyInitFormGroupForNonExistingObject(SoftClass entity)
         {
             List<string> result = new List<string>();
@@ -431,7 +546,9 @@ export class {{entity.Name}}BaseComponent {
                 UIControlTypeCodes controlType = GetUIControlType(property);
 
                 if (controlType == UIControlTypeCodes.Autocomplete ||
-                    controlType == UIControlTypeCodes.Dropdown)
+                    controlType == UIControlTypeCodes.Dropdown ||
+                    controlType == UIControlTypeCodes.MultiAutocomplete ||
+                    controlType == UIControlTypeCodes.MultiSelect)
                 {
                     result.Add($$"""
     {{property.Name.FirstCharToLower()}}For{{entity.Name}}Options: PrimengOption[];
@@ -467,11 +584,12 @@ export class {{entity.Name}}BaseComponent {
                 UIControlTypeCodes controlType = GetUIControlType(property);
 
                 if (controlType == UIControlTypeCodes.Autocomplete ||
-                    controlType == UIControlTypeCodes.Dropdown)
+                    controlType == UIControlTypeCodes.Dropdown ||
+                    controlType == UIControlTypeCodes.MultiAutocomplete)
                 {
                     result.Add($$"""
     search{{property.Name}}For{{entity.Name}}(event: AutoCompleteCompleteEvent) {
-        this.apiService.getPrimengNamebookListForAutocomplete(this.apiService.get{{property.Type}}ListForAutocomplete, 50, event.query).subscribe(po => {
+        this.apiService.getPrimengNamebookListForAutocomplete(this.apiService.get{{Helper.ExtractTypeFromGenericType(property.Type)}}ListForAutocomplete, 50, event?.query ?? '').subscribe(po => {
             this.{{property.Name.FirstCharToLower()}}For{{entity.Name}}Options = po;
         });
     }
@@ -479,6 +597,25 @@ export class {{entity.Name}}BaseComponent {
 
                 }
 
+            }
+
+            return result;
+        }
+
+        private static List<string> GetForkJoinParameterNames(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            result.Add(entity.Name.FirstCharToLower());
+
+            foreach (SoftProperty property in entity.Properties)
+            {
+                if (property.HasOrderedOneToManyAttribute() ||
+                    property.IsMultiSelectControlType() ||
+                    property.IsMultiAutocompleteControlType())
+                {
+                    result.Add($"{property.Name.FirstCharToLower()}For{entity.Name}");
+                }
             }
 
             return result;
@@ -515,12 +652,23 @@ export class {{entity.Name}}BaseComponent {
 
                 result.Add($$"""
                     <div class="{{GetUIColWidth(property)}}">
-                        <{{controlType}} [control]="control('{{GetFormControlName(property)}}', {{entity.Name.FirstCharToLower()}}FormGroup)" {{GetControlAttributes(property, entity)}}></{{controlType}}>
+                        <{{controlType}} [control]="{{GetControlHtmlAttributeValue(property, entity)}}" {{GetControlAttributes(property, entity)}}></{{controlType}}>
                     </div>
 """);
             }
 
             return result;
+        }
+
+        private static object GetControlHtmlAttributeValue(SoftProperty property, SoftClass entity)
+        {
+            if (property.IsMultiSelectControlType() ||
+                property.IsMultiAutocompleteControlType())
+            {
+                return $"selected{property.Name}For{entity.Name}";
+            }
+
+            return $"control('{GetFormControlName(property)}', {entity.Name.FirstCharToLower()}FormGroup)";
         }
 
         private static List<SoftProperty> GetPropertiesForUIBlocks(List<SoftProperty> properties)
@@ -532,8 +680,10 @@ export class {{entity.Name}}BaseComponent {
                     x.Name != "CreatedAt" &&
                     x.Name != "ModifiedAt" &&
                     (
-                        x.Type.IsEnumerable() == false
-                        || x.Attributes.Any(x => x.Name == "UIOrderedOneToMany")
+                        x.Type.IsEnumerable() == false ||
+                        x.Attributes.Any(x => x.Name == "UIOrderedOneToMany") ||
+                        x.IsMultiSelectControlType() ||
+                        x.IsMultiAutocompleteControlType()
                     ) &&
                     x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false
                 )
@@ -574,6 +724,14 @@ export class {{entity.Name}}BaseComponent {
             {
                 return $"[options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" [displayName]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}DisplayName.getRawValue()\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\"";
             }
+            else if (controlType == UIControlTypeCodes.MultiSelect)
+            {
+                return $"[options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" [label]=\"t('{property.Name}')\"";
+            }
+            else if (controlType == UIControlTypeCodes.MultiAutocomplete)
+            {
+                return $"[options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\" [label]=\"t('{property.Name}')\"";
+            }
 
             return null;
         }
@@ -588,7 +746,9 @@ export class {{entity.Name}}BaseComponent {
             UIControlTypeCodes controlType = GetUIControlType(property);
 
             if (controlType == UIControlTypeCodes.File ||
-                controlType == UIControlTypeCodes.TextArea)
+                controlType == UIControlTypeCodes.TextArea ||
+                controlType == UIControlTypeCodes.MultiSelect ||
+                controlType == UIControlTypeCodes.MultiAutocomplete)
             {
                 return "col-12";
             }
@@ -701,7 +861,7 @@ import { PrimengModule } from 'src/app/core/modules/primeng.module';
 import { ApiService } from '../../services/api/api.service';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { SoftControlsModule } from 'src/app/core/controls/soft-controls.module';
-import { SoftFormArray, SoftFormGroup } from 'src/app/core/components/soft-form-control/soft-form-control';
+import { SoftFormArray, SoftFormControl, SoftFormGroup } from 'src/app/core/components/soft-form-control/soft-form-control';
 import { PrimengOption } from 'src/app/core/entities/primeng-option';
 import { AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { getControl, nameof } from 'src/app/core/services/helper-functions';

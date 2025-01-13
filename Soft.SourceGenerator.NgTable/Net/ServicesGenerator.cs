@@ -44,15 +44,15 @@ namespace Soft.SourceGenerator.NgTable.Net
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectEntityClasses, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectEntities, SourceProductionContext context)
         {
             if (classes.Count <= 1)
                 return;
 
-            List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
-            List<SoftClass> allEntityClasses = entityClasses.Concat(referencedProjectEntityClasses).ToList();
+            List<SoftClass> entities = Helper.GetSoftEntityClasses(classes, referencedProjectEntities);
+            List<SoftClass> allEntities = entities.Concat(referencedProjectEntities).ToList();
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0].Namespace);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entities[0].Namespace);
 
             string basePartOfTheNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
@@ -80,7 +80,7 @@ namespace {{basePartOfTheNamespace}}.Services
             _blobContainerClient = blobContainerClient;
         }
 
-{{string.Join("\n\n", GetBusinessServiceMethods(entityClasses, allEntityClasses))}}
+{{string.Join("\n\n", GetBusinessServiceMethods(entities, allEntities))}}
 
     }
 }
@@ -130,7 +130,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #endregion
 
-        #region Enumerable
+        #region One To Many
 
 {{string.Join("\n\n", GetOneToManyMethods(entity, allEntityClasses))}}
 
@@ -149,7 +149,7 @@ namespace {{basePartOfTheNamespace}}.Services
         private static string GetReadBusinessServiceMethods(SoftClass entity, List<SoftClass> allEntityClasses)
         {
             string entityIdType = Helper.GetIdType(entity, allEntityClasses);
-            string entityDisplayNameProperty = Helper.GetDisplayNamePropForClass(entity);
+            string entityDisplayNameProperty = Helper.GetDisplayNameProperty(entity);
 
             return $$"""
         public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTOAsync({{entityIdType}} id, bool authorize = true)
@@ -435,6 +435,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 await OnBeforeSave{{entity.Name}}AndReturnSaveBodyDTO(saveBodyDTO);
                 var saved{{entity.Name}}DTO = await Save{{entity.Name}}AndReturnDTOAsync(saveBodyDTO.{{entity.Name}}DTO, authorizeUpdate, authorizeInsert);
 {{string.Join("\n", GetOrderedOneToManyUpdateVariables(entity, entities))}}
+{{string.Join("\n", GetManyToManyMultiControlTypesUpdateMethods(entity, entities))}}
 
                 var result = new {{entity.Name}}SaveBodyDTO
                 {
@@ -525,7 +526,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static string GetOrderedOneToManyNonEmptyValidation(SoftProperty property, SoftClass entity)
         {
-            if (property.IsNonEmpty())
+            if (property.HasNonEmptyAttribute())
             {
                 return $$"""
             if (orderedItemIds.Count == 0)
@@ -535,6 +536,28 @@ namespace {{basePartOfTheNamespace}}.Services
             }
 
             return null;
+        }
+
+        #endregion
+
+        #region Many To Many
+
+        private static List<string> GetManyToManyMultiControlTypesUpdateMethods(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties)
+            {
+                if (property.IsMultiSelectControlType() ||
+                    property.IsMultiAutocompleteControlType())
+                {
+                    result.Add($$"""
+                await Update{{property.Name}}For{{entity.Name}}(saved{{entity.Name}}DTO.Id, saveBodyDTO.Selected{{property.Name}}Ids);
+""");
+                }
+            }
+
+            return result;
         }
 
         #endregion
@@ -816,7 +839,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 if (extractedPropertyEntityIdType == null) // FT: M2M List, maybe do something else in the future.
                     continue;
 
-                string extractedPropertyEntityDisplayName = Helper.GetDisplayNamePropForClass(extractedPropertyEntity); // Name
+                string extractedPropertyEntityDisplayName = Helper.GetDisplayNameProperty(extractedPropertyEntity); // Name
 
                 SoftProperty manyToManyPropFromTheListProperties = extractedPropertyEntity.Properties.Where(x => x.Type.IsEnumerable() && Helper.ExtractTypeFromGenericType(x.Type) == entity.Name).SingleOrDefault(); // List<User> Users
                 SoftProperty manyToOneProperty = extractedPropertyEntity.GetManyToOnePropertyWithManyAttribute(entity.Name, property.Name);
@@ -824,7 +847,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 if (manyToOneProperty != null)
                 {
                     result.Add($$"""
-        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{extractedPropertyType}}NamebookListFor{{entity.Name}}({{entityIdType}} id, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{property.Name}}NamebookListFor{{entity.Name}}({{entityIdType}} id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -845,7 +868,7 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-        public async Task<List<{{extractedPropertyType}}>> Get{{extractedPropertyType}}ListFor{{entity.Name}}({{entityIdType}} id, bool authorize = true)
+        public async Task<List<{{extractedPropertyType}}>> Get{{property.Name}}For{{entity.Name}}({{entityIdType}} id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -866,18 +889,18 @@ namespace {{basePartOfTheNamespace}}.Services
                 else if (manyToManyPropFromTheListProperties != null)
                 {
                     result.Add($$"""
-        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{extractedPropertyType}}NamebookListFor{{entity.Name}}({{entityIdType}} {{entity.Name.FirstCharToLower()}}Id, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{property.Name}}NamebookListFor{{entity.Name}}({{entityIdType}} id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}SingleReadAuthorize({{entity.Name.FirstCharToLower()}}Id);
+                    await _authorizationService.{{entity.Name}}SingleReadAuthorize(id);
                 }
 
                 return await _context.DbSet<{{extractedPropertyType}}>()
                     .AsNoTracking()
-                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}.Any(x => x.Id == {{entity.Name.FirstCharToLower()}}Id))
+                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}.Any(x => x.Id == id))
                     .Select(x => new NamebookDTO<{{extractedPropertyEntityIdType}}>
                     {
                         Id = x.Id,
@@ -887,48 +910,48 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-        public async Task<List<{{extractedPropertyType}}>> Get{{extractedPropertyType}}ListFor{{entity.Name}}({{entityIdType}} {{entity.Name.FirstCharToLower()}}Id, bool authorize = true)
+        public async Task<List<{{extractedPropertyType}}>> Get{{property.Name}}For{{entity.Name}}({{entityIdType}} id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}SingleReadAuthorize({{entity.Name.FirstCharToLower()}}Id);
+                    await _authorizationService.{{entity.Name}}SingleReadAuthorize(id);
                 }
 
                 return await _context.DbSet<{{extractedPropertyType}}>()
-                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}.Any(x => x.Id == {{entity.Name.FirstCharToLower()}}Id))
+                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}.Any(x => x.Id == id))
                     .ToListAsync();
             });
         }
 
-        public async Task Update{{extractedPropertyType}}ListFor{{entity.Name}}({{entityIdType}} {{entity.Name.FirstCharToLower()}}Id, List<{{extractedPropertyEntityIdType}}> selected{{extractedPropertyType}}Ids)
+        public async Task Update{{property.Name}}For{{entity.Name}}({{entityIdType}} id, List<{{extractedPropertyEntityIdType}}> selectedIds)
         {
-            if (selected{{extractedPropertyType}}Ids == null)
+            if (selectedIds == null)
                 return;
 
-            List<{{extractedPropertyEntityIdType}}> selectedIdsHelper = selected{{extractedPropertyType}}Ids.ToList();
+            List<{{extractedPropertyEntityIdType}}> selectedIdsHelper = selectedIds.ToList();
 
             await _context.WithTransactionAsync(async () =>
             {
                 // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
 
                 {{((entity.IsBusinessObject() || entity.IsReadonlyObject() == false)
-                ? $"{entity.Name} {entity.Name.FirstCharToLower()} = await GetInstanceAsync<{entity.Name}, {entityIdType}>({entity.Name.FirstCharToLower()}Id, null); // FT: Version will always be checked before or after this method"
-                : $"{entity.Name} {entity.Name.FirstCharToLower()} = await GetInstanceAsync<{entity.Name}, {entityIdType}>({entity.Name.FirstCharToLower()}Id);"
+                ? $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id, null); // FT: Version will always be checked before or after this method"
+                : $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id);"
                 )}}
                 
-                foreach ({{extractedPropertyType}} {{extractedPropertyType.FirstCharToLower()}} in {{entity.Name.FirstCharToLower()}}.{{property.Name}}.ToList())
+                foreach ({{extractedPropertyType}} item in entity.{{property.Name}}.ToList())
                 {
-                    if (selectedIdsHelper.Contains({{extractedPropertyType.FirstCharToLower()}}.Id))
-                        selectedIdsHelper.Remove({{extractedPropertyType.FirstCharToLower()}}.Id);
+                    if (selectedIdsHelper.Contains(item.Id))
+                        selectedIdsHelper.Remove(item.Id);
                     else
-                        {{entity.Name.FirstCharToLower()}}.{{property.Name}}.Remove({{extractedPropertyType.FirstCharToLower()}});
+                        entity.{{property.Name}}.Remove(item);
                 }
 
-                List<{{extractedPropertyType}}> {{extractedPropertyType.FirstCharToLower()}}ListToInsert = await _context.DbSet<{{extractedPropertyType}}>().Where(x => selectedIdsHelper.Contains(x.Id)).ToListAsync();
+                var listToInsert = await _context.DbSet<{{extractedPropertyType}}>().Where(x => selectedIdsHelper.Contains(x.Id)).ToListAsync();
 
-                {{entity.Name.FirstCharToLower()}}.{{property.Name}}.AddRange({{extractedPropertyType.FirstCharToLower()}}ListToInsert);
+                entity.{{property.Name}}.AddRange(listToInsert);
                 await _context.SaveChangesAsync();
             });
         }
@@ -936,11 +959,11 @@ namespace {{basePartOfTheNamespace}}.Services
         /// <summary>
         /// It's mandatory to pass queryable ordered by the same field as the table data
         /// </summary>
-        public async Task<LazyLoadSelectedIdsResultDTO<{{extractedPropertyEntityIdType}}>> LazyLoadSelected{{extractedPropertyType}}IdsFor{{entity.Name}}(TableFilterDTO tableFilterDTO, IQueryable<{{extractedPropertyType}}> {{extractedPropertyType.FirstCharToLower()}}Query)
+        public async Task<LazyLoadSelectedIdsResultDTO<{{extractedPropertyEntityIdType}}>> LazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(TableFilterDTO tableFilterDTO, IQueryable<{{extractedPropertyType}}> query)
         {
             LazyLoadSelectedIdsResultDTO<{{extractedPropertyEntityIdType}}> lazyLoadSelectedIdsResultDTO = new();
 
-            {{extractedPropertyType.FirstCharToLower()}}Query = {{extractedPropertyType.FirstCharToLower()}}Query
+            query = query
                 .Skip(tableFilterDTO.First)
                 .Take(tableFilterDTO.Rows)
                 .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}
@@ -948,7 +971,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
             await _context.WithTransactionAsync(async () =>
             {
-                var paginationResult = await Get{{extractedPropertyType}}ListForPagination(tableFilterDTO, {{extractedPropertyType.FirstCharToLower()}}Query);
+                var paginationResult = await Get{{extractedPropertyType}}ListForPagination(tableFilterDTO, query);
 
                 lazyLoadSelectedIdsResultDTO.SelectedIds = await paginationResult.Query
                     .Select(x => x.Id)
@@ -965,36 +988,36 @@ namespace {{basePartOfTheNamespace}}.Services
             return lazyLoadSelectedIdsResultDTO;
         }
 
-        public async Task Update{{extractedPropertyType}}ListFor{{entity.Name}}WithLazyTableSelection(IQueryable<{{extractedPropertyType}}> {{extractedPropertyType.FirstCharToLower()}}Query, {{entityIdType}} {{entity.Name.FirstCharToLower()}}Id, ILazyTableSelectionDTO<{{extractedPropertyEntityIdType}}> lazyTableSelectionDTO)
+        public async Task Update{{property.Name}}For{{entity.Name}}WithLazyTableSelection(IQueryable<{{extractedPropertyType}}> query, {{entityIdType}} id, ILazyTableSelectionDTO<{{extractedPropertyEntityIdType}}> lazyTableSelectionDTO)
         {
             await _context.WithTransactionAsync(async () =>
             {
-                List<{{extractedPropertyEntityIdType}}> {{extractedPropertyType.FirstCharToLower()}}ListToInsert = null;
+                List<{{extractedPropertyEntityIdType}}> listToInsert = null;
 
                 if (lazyTableSelectionDTO.IsAllSelected == true)
                 {
-                    {{extractedPropertyType.FirstCharToLower()}}ListToInsert = await {{extractedPropertyType.FirstCharToLower()}}Query.Where(x => lazyTableSelectionDTO.UnselectedIds.Contains(x.Id) == false).Select(x => x.Id).ToListAsync();
+                    listToInsert = await query.Where(x => lazyTableSelectionDTO.UnselectedIds.Contains(x.Id) == false).Select(x => x.Id).ToListAsync();
                 }
                 else if (lazyTableSelectionDTO.IsAllSelected == false)
                 {
-                    {{extractedPropertyType.FirstCharToLower()}}ListToInsert = await {{extractedPropertyType.FirstCharToLower()}}Query.Where(x => lazyTableSelectionDTO.SelectedIds.Contains(x.Id) == true).Select(x => x.Id).ToListAsync();
+                    listToInsert = await query.Where(x => lazyTableSelectionDTO.SelectedIds.Contains(x.Id) == true).Select(x => x.Id).ToListAsync();
                 }
                 else if (lazyTableSelectionDTO.IsAllSelected == null)
                 {
                     {{((entity.IsBusinessObject() || entity.IsReadonlyObject() == false)
-                    ? $"var {entity.Name.FirstCharToLower()} = await GetInstanceAsync<{entity.Name}, {entityIdType}>({entity.Name.FirstCharToLower()}Id, null); // FT: Version will always be checked before or after this method"
-                    : $"var {entity.Name.FirstCharToLower()} = await GetInstanceAsync<{entity.Name}, {entityIdType}>({entity.Name.FirstCharToLower()}Id);"
+                    ? $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id, null); // FT: Version will always be checked before or after this method"
+                    : $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id);"
                     )}}
 
-                    var alreadySelected = {{entity.Name.FirstCharToLower()}}.{{property.Name}} == null ? new List<{{extractedPropertyEntityIdType}}>() : {{entity.Name.FirstCharToLower()}}.{{property.Name}}.Select(x => x.Id).ToList();
+                    var alreadySelected = entity.{{property.Name}} == null ? new List<{{extractedPropertyEntityIdType}}>() : entity.{{property.Name}}.Select(x => x.Id).ToList();
 
-                    {{extractedPropertyType.FirstCharToLower()}}ListToInsert = alreadySelected
+                    listToInsert = alreadySelected
                         .Union(lazyTableSelectionDTO.SelectedIds)
                         .Except(lazyTableSelectionDTO.UnselectedIds)
                         .ToList();
                 }
 
-                await Update{{extractedPropertyType}}ListFor{{entity.Name}}({{entity.Name.FirstCharToLower()}}Id, {{extractedPropertyType.FirstCharToLower()}}ListToInsert);
+                await Update{{property.Name}}For{{entity.Name}}(id, listToInsert);
             });
         }
 """);

@@ -54,7 +54,7 @@ namespace Soft.SourceGenerators.Net
             if (shouldGenerate == false)
                 return;
 
-            List<SoftClass> projectClasses = Helper.GetSoftClasses(classes);
+            List<SoftClass> projectClasses = Helper.GetSoftClasses(classes, referencedProjectEntityClassesAndServices);
 
             List<SoftClass> customControllers = projectClasses.Where(x => x.Namespace.EndsWith(".Controllers")).ToList();
 
@@ -198,6 +198,8 @@ namespace {{basePartOfTheNamespace}}.Controllers
 
 {{string.Join("\n\n", GetOrderedOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
 
+{{string.Join("\n\n", GetManyToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
+
         #endregion
 
         #region Save
@@ -219,6 +221,36 @@ namespace {{basePartOfTheNamespace}}.Controllers
             }
 
             return result;
+        }
+
+        private static List<string> GetManyToManyControllerMethods(SoftClass referencedProjectEntityClass, List<SoftClass> referencedProjectEntityClasses, string businessServiceName)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in referencedProjectEntityClass.Properties)
+            {
+                if (property.IsMultiSelectControlType() ||
+                    property.IsMultiAutocompleteControlType())
+                {
+                    result.Add(GetManyToManySelectedEntitiesControllerMethod(property, referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName));
+                }
+            }
+
+            return result;
+        }
+
+        private static string GetManyToManySelectedEntitiesControllerMethod(SoftProperty property, SoftClass entity, List<SoftClass> entities, string businessServiceName)
+        {
+            SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+            return $$"""
+        [HttpGet]
+        [AuthGuard]
+        public async Task<List<NamebookDTO<{{Helper.GetIdType(extractedEntity, entities)}}>>> Get{{property.Name}}NamebookListFor{{entity.Name}}({{Helper.GetIdType(entity, entities)}} id)
+        {
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{property.Name}}NamebookListFor{{entity.Name}}(id, false);
+        }
+""";
         }
 
         private static List<string> GetOrderedOneToManyControllerMethods(SoftClass entity, List<SoftClass> entities, string businessServiceName)

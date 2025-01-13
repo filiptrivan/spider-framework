@@ -38,8 +38,8 @@ namespace Soft.SourceGenerator.NgTable.Angular
             IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
                 new List<NamespaceExtensionCodes>
                 {
-                    //NamespaceExtensionCodes.Entities,
-                    //NamespaceExtensionCodes.DTO,
+                    NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.DTO,
                 });
 
             IncrementalValueProvider<string> callingProjectDirectory = context.GetCallingPath();
@@ -68,7 +68,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\entities\{projectName}-entities.ts
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\entities\{projectName.FromPascalToKebabCase()}-entities.generated.ts");
 
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes, referencedProjectClasses));
 
             StringBuilder sb = new StringBuilder();
             StringBuilder sbImports = new StringBuilder();

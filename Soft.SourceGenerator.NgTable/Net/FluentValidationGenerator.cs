@@ -34,20 +34,30 @@ namespace Soft.SourceGenerator.NgTable.Net
                     NamespaceExtensionCodes.DTO,
                 });
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-                static (spc, source) => Execute(source, spc));
+            IncrementalValueProvider<List<SoftClass>> referencedProjectClasses = Helper.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.DTO,
+                });
+
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
 
-            List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes));
+            List<SoftClass> softClasses = Helper.GetSoftClasses(classes, referencedProjectClasses);
+            List<SoftClass> DTOClasses = Helper.GetDTOClasses(softClasses);
+            List<SoftClass> entities = softClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
 
             StringBuilder sb = new StringBuilder();
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0].Namespace);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entities[0].Namespace);
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
 
@@ -64,23 +74,22 @@ namespace {{basePartOfNamespace}}.ValidationRules
                 List<SoftProperty> DTOProperties = new List<SoftProperty>();
                 List<SoftAttribute> DTOAttributes = new List<SoftAttribute>();
 
-                ClassDeclarationSyntax nonGeneratedDTOClass = classes.Where(x => x.Identifier.Text == DTOClassGroup.Key).SingleOrDefault();
-                List<SoftAttribute> softAttributes = Helper.GetAllAttributesOfTheClass(nonGeneratedDTOClass, classes);
+                SoftClass customDTOClass = DTOClasses.Where(x => x.Name == DTOClassGroup.Key && x.IsGenerated == false).SingleOrDefault();
 
-                if (softAttributes != null)
-                    DTOAttributes.AddRange(softAttributes); // FT: Its okay to add only for non generated because we will not have any attributes on the generated DTOs
+                if (customDTOClass != null)
+                    DTOAttributes.AddRange(customDTOClass.Attributes); // FT: Its okay to add only for non generated because we will not have any attributes on the generated DTOs
 
                 foreach (SoftClass DTOClass in DTOClassGroup)
                     DTOProperties.AddRange(DTOClass.Properties);
 
-                SoftClass entityClass = entityClasses.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Name).SingleOrDefault(); // If it is null then we only made DTO, without entity class
+                SoftClass entityClass = entities.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Name).SingleOrDefault(); // If it is null then we only made DTO, without entity class
 
                 sb.AppendLine($$"""
     public class {{DTOClassGroup.Key}}ValidationRules : AbstractValidator<{{DTOClassGroup.Key}}>
     {
         public {{DTOClassGroup.Key}}ValidationRules()
         {
-            {{string.Join("\n\t\t\t", GetValidationRules(DTOProperties, DTOAttributes, entityClass, entityClasses))}}
+            {{string.Join("\n\t\t\t", GetValidationRules(DTOProperties, DTOAttributes, entityClass, entities))}}
         }
     }
 """);

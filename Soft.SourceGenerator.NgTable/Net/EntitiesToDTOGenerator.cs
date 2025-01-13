@@ -52,7 +52,7 @@ namespace Soft.SourceGenerator.NgTable.Net
             if (classes.Count <= 1) 
                 return;
 
-            List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes);
+            List<SoftClass> entityClasses = Helper.GetSoftEntityClasses(classes, referencedProjectEntityClasses);
             List<SoftClass> allClasses = entityClasses.Concat(referencedProjectEntityClasses).ToList();
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entityClasses[0].Namespace);
@@ -91,6 +91,7 @@ namespace {{basePartOfNamespace}}.DTO
     {
         public {{entity.Name}}DTO {{entity.Name}}DTO { get; set; }
 {{string.Join("\n", GetOrderedOneToManyProperties(entity, entities))}}
+{{string.Join("\n", GetManyToManyMultiControlTypeProperties(entity, entities))}}
     }
 """);
             }
@@ -108,6 +109,26 @@ namespace {{basePartOfNamespace}}.DTO
 
                 result.Add($$"""
         public List<{{extractedEntity.Name}}DTO> {{property.Name}}DTO { get; set; }
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetManyToManyMultiControlTypeProperties(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties
+                .Where(x =>
+                    x.IsMultiSelectControlType() ||
+                    x.IsMultiAutocompleteControlType()))
+                    
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                result.Add($$"""
+        public List<{{Helper.GetIdType(extractedEntity, entities)}}> Selected{{property.Name}}Ids { get; set; }
 """);
             }
 
