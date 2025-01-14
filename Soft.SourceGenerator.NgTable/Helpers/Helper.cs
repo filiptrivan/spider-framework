@@ -784,6 +784,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     .OfType<NamespaceDeclarationSyntax>()
                     .Select(ns => ns.Name.ToString())
                     .Any(ns => ns.EndsWith($".{EntitiesNamespaceEnding}")))
+                .OrderBy(x => x.Identifier.Text)
                 .ToList();
         }
 
@@ -885,6 +886,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         Methods = GetMethodsOfCurrentClass(x)
                     };
                 })
+                .OrderBy(x => x.Name)
                 .ToList();
         }
 

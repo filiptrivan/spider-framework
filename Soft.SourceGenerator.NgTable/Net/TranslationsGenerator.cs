@@ -65,6 +65,8 @@ namespace Soft.SourceGenerators.Net
             if (shouldGenerate == false)
                 return;
 
+            referencedProjectEntityClasses = referencedProjectEntityClasses.OrderBy(x => x.Name).ToList();
+
             Dictionary<string, string> dataEn = referencedProjectEntityClasses
                 .Select(entity => GetTranslationData(entity, LanguageCodes.En))
                 .PrepareForTranslation();

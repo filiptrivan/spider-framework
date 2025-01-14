@@ -68,7 +68,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
 
             StringBuilder sb = new StringBuilder();
 
-            foreach (EnumDeclarationSyntax enume in enums)
+            foreach (EnumDeclarationSyntax enume in enums.OrderBy(x => x.Identifier.Text).ToList())
             {
                 string enumName = enume.Identifier.Text;
                 List<SoftEnum> enumMembers = Helper.GetEnumMembers(enume);

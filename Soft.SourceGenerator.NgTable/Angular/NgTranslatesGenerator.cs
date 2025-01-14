@@ -67,8 +67,12 @@ namespace Soft.SourceGenerator.NgTable.Angular
             StringBuilder sbLabels = new StringBuilder();
             List<SoftProperty> DTOProperties = new List<SoftProperty>();
 
+            referencedClassesDTO = referencedClassesDTO.OrderBy(x => x.Name).ToList();
+
             foreach (SoftClass DTOClass in referencedClassesDTO)
+            {
                 DTOProperties.AddRange(DTOClass.Properties);
+            }
 
             sbClassNames.AppendLine($$"""
 import { Injectable } from '@angular/core';

@@ -61,6 +61,8 @@ namespace Soft.SourceGenerator.NgTable.Angular
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\services\validators
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", @"\Angular\src\app\business\services\validators");
 
+            referencedProjectClasses = referencedProjectClasses.OrderBy(x => x.Name).ToList();
+
             List<SoftClass> entityClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
             List<SoftClass> DTOClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
 
