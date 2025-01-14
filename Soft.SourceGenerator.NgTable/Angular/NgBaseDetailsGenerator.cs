@@ -19,12 +19,12 @@ namespace Soft.SourceGenerators.Angular
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helper.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
@@ -120,7 +120,8 @@ namespace Soft.SourceGenerators.Angular
         SoftControlsModule,
         TranslocoDirective,
         CardSkeletonComponent,
-        IndexCardComponent
+        IndexCardComponent,
+        SoftDataTableComponent,
     ]
 })
 export class {{entity.Name}}BaseComponent {
@@ -139,30 +140,35 @@ export class {{entity.Name}}BaseComponent {
 
 {{string.Join("\n", GetSoftFormControls(entity))}}
 
+{{string.Join("\n", GetSimpleManyToManyTableLazyLoadVariables(entity, entities))}}
+
     constructor(
         private apiService: ApiService,
         private route: ActivatedRoute,
         private baseFormService: BaseFormService,
         private validatorService: ValidatorService,
+        private translocoService: TranslocoService,
     ) {}
 
-    ngOnInit(){
+    async ngOnInit(){
         this.formGroup.initSaveBody = () => { 
             let saveBody = new {{entity.Name}}SaveBody();
             saveBody.{{entity.Name.FirstCharToLower()}}DTO = this.{{entity.Name.FirstCharToLower()}}FormGroup.getRawValue();
 {{string.Join("\n", GetOrderedOneToManySaveBodyAssignements(entity, entities))}}
 {{string.Join("\n", GetManyToManyMultiSelectSaveBodyAssignements(entity))}}
 {{string.Join("\n", GetManyToManyMultiAutocompleteSaveBodyAssignements(entity))}}
+{{string.Join("\n", GetSimpleManyToManyTableLazyLoadSaveBodyAssignements(entity))}}
             return saveBody;
         }
 
         this.formGroup.saveObservableMethod = this.apiService.save{{entity.Name}};
         this.formGroup.mainDTOName = this.{{entity.Name.FirstCharToLower()}}SaveBodyName;
 
-        this.route.params.subscribe((params) => {
+        this.route.params.subscribe(async (params) => {
             this.modelId = params['id'];
 
-{{string.Join("\n\n", GetManyToManyMultiSelectListForDropdownMethods(entity, entities))}}
+{{string.Join("\n", GetManyToManyMultiSelectListForDropdownMethods(entity, entities))}}
+{{string.Join("\n", GetSimpleManyToManyTableLazyLoadColsInitializations(entity, entities, customDTOClasses))}}
 
             if(this.modelId > 0){
                 forkJoin({
@@ -195,6 +201,8 @@ export class {{entity.Name}}BaseComponent {
 
 {{string.Join("\n", GetOrderedOneToManyAddNewItemMethods(entity, entities))}}
 
+{{string.Join("\n", GetSimpleManyToManyMethods(entity, entities))}}
+
 {{string.Join("\n\n", GetAutocompleteSearchMethods(entity.Properties, entity, entities))}}
 
     control(formControlName: string, formGroup: SoftFormGroup){
@@ -206,6 +214,183 @@ export class {{entity.Name}}BaseComponent {
     }
 
 }
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetSimpleManyToManyMethods(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties.Where(x => x.HasSimpleManyToManyTableLazyLoadAttribute()))
+            {
+                result.Add($$"""
+    selected{{property.Name}}LazyLoadMethodFor{{entity.Name}} = (event: TableFilter): Observable<LazyLoadSelectedIdsResult> => {
+        let tableFilter: TableFilter = event;
+        tableFilter.additionalFilterIdLong = this.modelId;
+
+        return this.apiService.lazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(tableFilter);
+    }
+    areAll{{property.Name}}SelectedChangeFor{{entity.Name}}(event: AllClickEvent){
+        this.areAll{{property.Name}}SelectedFor{{entity.Name}} = event.checked;
+    }
+    on{{property.Name}}LazyLoadFor{{entity.Name}}(event: TableFilter){
+        this.last{{property.Name}}LazyLoadTableFilterFor{{entity.Name}} = event;
+    }
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetSimpleManyToManyTableLazyLoadColsInitializations(SoftClass entity, List<SoftClass> entities, List<SoftClass> customDTOClasses)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties.Where(x => x.HasSimpleManyToManyTableLazyLoadAttribute()))
+            {
+                result.Add($$"""
+            this.{{property.Name.FirstCharToLower()}}TableColsFor{{entity.Name}} = [
+{{string.Join(",\n", GetSimpleManyToManyTableLazyLoadCols(property, entity, entities, customDTOClasses))}}
+            ]
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetSimpleManyToManyTableLazyLoadCols(SoftProperty property, SoftClass entity, List<SoftClass> entities, List<SoftClass> customDTOClasses)
+        {
+            List<string> result = new List<string>();
+
+            foreach (UIColumn col in property.GetUIColumns())
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+                SoftProperty extractedEntityProperty = extractedEntity?.Properties?.Where(x => x.Name == col.Field.Replace("DisplayName", "").Replace("CommaSeparated", ""))?.SingleOrDefault();
+
+                SoftClass extractedDTO = customDTOClasses.Where(x => x.Name == $"{Helper.ExtractTypeFromGenericType(property.Type)}DTO").SingleOrDefault();
+                SoftProperty extractedDTOProperty = extractedDTO?.Properties?.Where(x => x.Name == col.Field)?.SingleOrDefault();
+
+                result.Add($$"""
+                {name: this.translocoService.translate('{{col.TranslationKey}}'), filterType: '{{GetTableColFilterType(extractedEntityProperty ?? extractedDTOProperty)}}', field: '{{col.Field.FirstCharToLower()}}' {{GetTableColAdditionalProperties(extractedEntityProperty ?? extractedDTOProperty, entities)}} },
+""");
+            }
+
+            return result;
+        }
+
+        private static string GetTableColAdditionalProperties(SoftProperty property, List<SoftClass> entities)
+        {
+            if (property.IsDropdownControlType())
+                return $", filterField: '{property.Name.FirstCharToLower()}Id', dropdownOrMultiselectValues: await firstValueFrom(this.apiService.getPrimengNamebookListForDropdown(this.apiService.get{property.Type}ListForDropdown))";
+
+            if (property.HasGenerateCommaSeparatedDisplayNameAttribute())
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+                return $", dropdownOrMultiselectValues: await firstValueFrom(this.apiService.getPrimengNamebookListForDropdown(this.apiService.get{extractedEntity.Name}ListForDropdown))";
+            }
+
+            switch (property.Type)
+            {
+                case "DateTime":
+                case "DateTime?":
+                    return ", showMatchModes: true";
+                case "decimal":
+                case "decimal?":
+                case "float":
+                case "float?":
+                case "double":
+                case "double?":
+                case "long":
+                case "long?":
+                case "int":
+                case "int?":
+                case "byte":
+                case "byte?":
+                    return ", showMatchModes: true";
+                default:
+                    break;
+            }
+
+            return null;
+        }
+
+        private static string GetTableColFilterType(SoftProperty property)
+        {
+            if (property.IsDropdownControlType())
+                return "multiselect";
+
+            if (property.HasGenerateCommaSeparatedDisplayNameAttribute())
+                return "multiselect";
+
+            if (property.Type.IsManyToOneType())
+                return "text";
+
+            switch (property.Type)
+            {
+                case "string":
+                    return "text";
+                case "bool":
+                case "bool?":
+                    return "boolean";
+                case "DateTime":
+                case "DateTime?":
+                    return "date";
+                case "decimal":
+                case "decimal?":
+                case "float":
+                case "float?":
+                case "double":
+                case "double?":
+                case "long":
+                case "long?":
+                case "int":
+                case "int?":
+                case "byte":
+                case "byte?":
+                    return "numeric";
+                default:
+                    break;
+            }
+
+            return null;
+        }
+
+        private static List<string> GetSimpleManyToManyTableLazyLoadSaveBodyAssignements(SoftClass entity)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties.Where(x => x.HasSimpleManyToManyTableLazyLoadAttribute()))
+            {
+                result.Add($$"""
+            saveBody.selected{{property.Name}}IdsFor{{entity.Name}} = this.newlySelected{{property.Name}}For{{entity.Name}};
+            saveBody.unselected{{property.Name}}IdsFor{{entity.Name}} = this.unselected{{property.Name}}For{{entity.Name}};
+            saveBody.areAll{{property.Name}}SelectedFor{{entity.Name}} = this.areAll{{property.Name}}SelectedFor{{entity.Name}};
+            saveBody.{{property.Name.FirstCharToLower()}}TableFilterFor{{entity.Name}} = this.last{{property.Name}}LazyLoadTableFilterFor{{entity.Name}};
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetSimpleManyToManyTableLazyLoadVariables(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties.Where(x => x.HasSimpleManyToManyTableLazyLoadAttribute()))
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                result.Add($$"""
+    {{property.Name.FirstCharToLower()}}TableColsFor{{entity.Name}}: Column<{{extractedEntity.Name}}>[];
+    get{{property.Name}}TableDataObservableMethodFor{{entity.Name}} = this.apiService.get{{property.Name}}TableDataFor{{entity.Name}};
+    export{{property.Name}}TableDataToExcelObservableMethodFor{{entity.Name}} = this.apiService.export{{property.Name}}TableDataToExcelFor{{entity.Name}};
+    newlySelected{{property.Name}}For{{entity.Name}}: number[] = [];
+    unselected{{property.Name}}For{{entity.Name}}: number[] = [];
+    areAll{{property.Name}}SelectedFor{{entity.Name}}: boolean = null;
+    last{{property.Name}}LazyLoadTableFilterFor{{entity.Name}}: TableFilter;
 """);
             }
 
@@ -652,7 +837,7 @@ export class {{entity.Name}}BaseComponent {
 
                 result.Add($$"""
                     <div class="{{GetUIColWidth(property)}}">
-                        <{{controlType}} [control]="{{GetControlHtmlAttributeValue(property, entity)}}" {{GetControlAttributes(property, entity)}}></{{controlType}}>
+                        <{{controlType}} {{GetControlAttributes(property, entity)}}></{{controlType}}>
                     </div>
 """);
             }
@@ -660,7 +845,7 @@ export class {{entity.Name}}BaseComponent {
             return result;
         }
 
-        private static object GetControlHtmlAttributeValue(SoftProperty property, SoftClass entity)
+        private static string GetControlHtmlAttributeValue(SoftProperty property, SoftClass entity)
         {
             if (property.IsMultiSelectControlType() ||
                 property.IsMultiAutocompleteControlType())
@@ -683,7 +868,8 @@ export class {{entity.Name}}BaseComponent {
                         x.Type.IsEnumerable() == false ||
                         x.Attributes.Any(x => x.Name == "UIOrderedOneToMany") ||
                         x.IsMultiSelectControlType() ||
-                        x.IsMultiAutocompleteControlType()
+                        x.IsMultiAutocompleteControlType() ||
+                        x.HasSimpleManyToManyTableLazyLoadAttribute()
                     ) &&
                     x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false
                 )
@@ -710,30 +896,48 @@ export class {{entity.Name}}BaseComponent {
 
             if (controlType == UIControlTypeCodes.Decimal)
             {
-                return $"[decimal]=\"true\" [maxFractionDigits]=\"{property.GetDecimalScale()}\"";
+                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [decimal]=\"true\" [maxFractionDigits]=\"{property.GetDecimalScale()}\"";
             }
             else if (controlType == UIControlTypeCodes.File)
             {
-                return $"[fileData]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}Data.getRawValue()\" [objectId]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.id.getRawValue()\"";
+                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [fileData]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}Data.getRawValue()\" [objectId]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.id.getRawValue()\"";
             }
             else if (controlType == UIControlTypeCodes.Dropdown)
             {
-                return $"[options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\"";
+                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\"";
             }
             else if (controlType == UIControlTypeCodes.Autocomplete)
             {
-                return $"[options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" [displayName]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}DisplayName.getRawValue()\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\"";
+                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" [displayName]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}DisplayName.getRawValue()\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\"";
             }
             else if (controlType == UIControlTypeCodes.MultiSelect)
             {
-                return $"[options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" [label]=\"t('{property.Name}')\"";
+                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" [label]=\"t('{property.Name}')\"";
             }
             else if (controlType == UIControlTypeCodes.MultiAutocomplete)
             {
-                return $"[options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\" [label]=\"t('{property.Name}')\"";
+                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\" [label]=\"t('{property.Name}')\"";
+            }
+            else if (controlType == UIControlTypeCodes.Table)
+            {
+                return $$"""
+
+                            [tableTitle]="t('{{property.Name}}For{{entity.Name}}')" 
+                            [cols]="{{property.Name.FirstCharToLower()}}TableColsFor{{entity.Name}}" 
+                            [getTableDataObservableMethod]="get{{property.Name}}TableDataObservableMethodFor{{entity.Name}}" 
+                            [exportTableDataToExcelObservableMethod]="export{{property.Name}}TableDataToExcelObservableMethodFor{{entity.Name}}"
+                            [showAddButton]="false" 
+                            selectionMode="multiple"
+                            [newlySelectedItems]="newlySelected{{property.Name}}For{{entity.Name}}" 
+                            [unselectedItems]="unselected{{property.Name}}For{{entity.Name}}" 
+                            [rows]="5" 
+                            (onLazyLoad)="on{{property.Name}}LazyLoadFor{{entity.Name}}($event)"
+                            [selectedLazyLoadObservableMethod]="selected{{property.Name}}LazyLoadMethodFor{{entity.Name}}" 
+                            (onIsAllSelectedChange)="areAll{{property.Name}}SelectedChangeFor{{entity.Name}}($event)"
+""";
             }
 
-            return null;
+            return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\"";
         }
 
         private static string GetUIColWidth(SoftProperty property)
@@ -748,7 +952,8 @@ export class {{entity.Name}}BaseComponent {
             if (controlType == UIControlTypeCodes.File ||
                 controlType == UIControlTypeCodes.TextArea ||
                 controlType == UIControlTypeCodes.MultiSelect ||
-                controlType == UIControlTypeCodes.MultiAutocomplete)
+                controlType == UIControlTypeCodes.MultiAutocomplete ||
+                controlType == UIControlTypeCodes.Table)
             {
                 return "col-12";
             }
@@ -771,6 +976,9 @@ export class {{entity.Name}}BaseComponent {
 
             if (property.Type.IsManyToOneType())
                 return UIControlTypeCodes.Autocomplete;
+
+            if (property.HasSimpleManyToManyTableLazyLoadAttribute())
+                return UIControlTypeCodes.Table;
 
             switch (property.Type)
             {
@@ -836,6 +1044,8 @@ export class {{entity.Name}}BaseComponent {
                     return "soft-textblock";
                 case UIControlTypeCodes.TextBox:
                     return "soft-textbox";
+                case UIControlTypeCodes.Table:
+                    return "soft-data-table";
                 case UIControlTypeCodes.TODO:
                     return "TODO";
                 default:
@@ -859,20 +1069,23 @@ import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { PrimengModule } from 'src/app/core/modules/primeng.module';
 import { ApiService } from '../../services/api/api.service';
-import { TranslocoDirective } from '@jsverse/transloco';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { SoftControlsModule } from 'src/app/core/controls/soft-controls.module';
 import { SoftFormArray, SoftFormControl, SoftFormGroup } from 'src/app/core/components/soft-form-control/soft-form-control';
 import { PrimengOption } from 'src/app/core/entities/primeng-option';
 import { AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { getControl, nameof } from 'src/app/core/services/helper-functions';
 import { ActivatedRoute } from '@angular/router';
-import { forkJoin, Observable } from 'rxjs';
+import { firstValueFrom, forkJoin, Observable } from 'rxjs';
 import { BaseEntity } from 'src/app/core/entities/base-entity';
 import { CardSkeletonComponent } from "../../../core/components/card-skeleton/card-skeleton.component";
 import { SoftButton } from 'src/app/core/entities/soft-button';
 import { IndexCardComponent } from 'src/app/core/components/index-card/index-card.component';
 import { LastMenuIconIndexClicked } from 'src/app/core/entities/last-menu-icon-index-clicked';
 import { MenuItem } from 'primeng/api';
+import { AllClickEvent, Column, SoftDataTableComponent } from 'src/app/core/components/soft-data-table/soft-data-table.component';
+import { TableFilter } from 'src/app/core/entities/table-filter';
+import { LazyLoadSelectedIdsResult } from 'src/app/core/entities/lazy-load-selected-ids-result';
 import { {{string.Join(", ", imports)}} } from '../../entities/{{projectName.FromPascalToKebabCase()}}-entities.generated';
 """;
         }

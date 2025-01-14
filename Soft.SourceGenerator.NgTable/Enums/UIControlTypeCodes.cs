@@ -21,6 +21,7 @@ namespace Soft.SourceGenerators.Enums
         MultiSelect,
         Password,
         TextBlock,
+        Table, // FT: For: Simple M2M lazy load
         TODO
     }
 }

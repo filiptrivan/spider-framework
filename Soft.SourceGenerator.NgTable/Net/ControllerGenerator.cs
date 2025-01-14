@@ -177,7 +177,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
 
         [HttpGet]
         [AuthGuard]
-        public virtual async Task<{{referencedProjectEntityClass.Name}}DTO> Get{{referencedProjectEntityClass.Name}}(int id)
+        public virtual async Task<{{referencedProjectEntityClass.Name}}DTO> Get{{referencedProjectEntityClass.Name}}({{referencedProjectEntityClassIdType}} id)
         {
             return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}DTOAsync(id, false);
         }

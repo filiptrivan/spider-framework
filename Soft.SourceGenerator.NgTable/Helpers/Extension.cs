@@ -511,6 +511,29 @@ namespace Soft.SourceGenerators.Helpers
             return splitType;
         }
 
+        public static List<UIColumn> GetUIColumns(this SoftProperty property)
+        {
+            List<UIColumn> result = new List<UIColumn>();
+
+            foreach (SoftAttribute attribute in property.Attributes)
+            {
+                if (attribute.Name == "UIColumn")
+                {
+                    List<string> attributeValues = attribute.Value.Split(',').Select(v => v.Trim()).ToList();
+                    string field = attributeValues[0];
+                    string translationKey = attributeValues.Count > 1 ? attributeValues[1] : null;
+
+                    result.Add(new UIColumn
+                    {
+                        Field = field,
+                        TranslationKey = translationKey ?? field.Replace("DisplayName", ""),
+                    });
+                }
+            }
+
+            return result;
+        }
+
         #region Has Attribute
 
         public static bool HasBlobNameAttribute(this List<SoftProperty> properties)
@@ -526,6 +549,16 @@ namespace Soft.SourceGenerators.Helpers
         public static bool HasOrderedOneToManyAttribute(this SoftProperty property)
         {
             return property.Attributes.Any(x => x.Name == "UIOrderedOneToMany");
+        }
+
+        public static bool HasSimpleManyToManyTableLazyLoadAttribute(this SoftProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "SimpleManyToManyTableLazyLoad");
+        }
+
+        public static bool HasGenerateCommaSeparatedDisplayNameAttribute(this SoftProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName");
         }
 
         #endregion
@@ -545,6 +578,16 @@ namespace Soft.SourceGenerators.Helpers
         public static bool IsMultiAutocompleteControlType(this SoftProperty property)
         {
             return property.Attributes.Any(x => x.Name == "UIControlType" && x.Value == UIControlTypeCodes.MultiAutocomplete.ToString());
+        }
+
+        public static bool IsDropdownControlType(this SoftProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "UIControlType" && x.Value == UIControlTypeCodes.Dropdown.ToString());
+        }
+
+        public static bool IsAutocompleteControlType(this SoftProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "UIControlType" && x.Value == UIControlTypeCodes.Autocomplete.ToString());
         }
 
         #endregion
