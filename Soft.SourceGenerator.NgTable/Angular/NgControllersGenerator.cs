@@ -182,6 +182,9 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
             if (Helper.GetAngularType(controllerMethod.ReturnType) == "string")
                 return Settings.HttpOptionsText;
 
+            if (controllerMethod.ReturnType.Contains("IActionResult"))
+                return Settings.HttpOptionsBlob;
+
             bool skipSpinner = controllerMethod.Attributes.Any(attr => attr.Name == "SkipSpinner");
 
             if (skipSpinner || 
@@ -286,8 +289,6 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
         #region Many To Many
 
-        #region Multi Control Types
-
         private static List<string> GetBaseManyToManyAngularControllerMethods(SoftClass entity, List<SoftClass> entities, HashSet<string> alreadyAddedMethods)
         {
             List<string> result = new List<string>();
@@ -297,14 +298,64 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
                 if (property.IsMultiSelectControlType() ||
                     property.IsMultiAutocompleteControlType())
                 {
-                    result.Add(GetBaseManyToManyAngularControllerMethod(property, entity, alreadyAddedMethods));
+                    result.Add(GetBaseManyToManyMultiControlTypesAngularControllerMethod(property, entity, alreadyAddedMethods));
+                }
+                else if (property.HasSimpleManyToManyTableLazyLoadAttribute())
+                {
+                    result.Add(GetBaseSimpleManyToManyTableDataAngularControllerMethod(property, entity, entities, alreadyAddedMethods));
+                    result.Add(GetBaseSimpleManyToManyTableDataExportAngularControllerMethod(property, entity, alreadyAddedMethods));
+                    result.Add(GetBaseSimpleManyToManyTableLazyLoadAngularControllerMethod(property, entity, alreadyAddedMethods));
                 }
             }
 
             return result;
         }
 
-        private static string GetBaseManyToManyAngularControllerMethod(SoftProperty property, SoftClass entity, HashSet<string> alreadyAddedMethods)
+        #region Simple Many To Many Table Lazy Load
+
+        private static string GetBaseSimpleManyToManyTableLazyLoadAngularControllerMethod(SoftProperty property, SoftClass entity, HashSet<string> alreadyAddedMethods)
+        {
+            string methodName = $"LazyLoadSelected{property.Name}IdsFor{entity.Name}";
+
+            if (alreadyAddedMethods.Contains(methodName))
+                return null;
+
+            Dictionary<string, string> postAndPutParameter = new Dictionary<string, string> { { "tableFilterDTO", "TableFilter" } };
+
+            return GetAngularControllerMethod(methodName, postAndPutParameter, "LazyLoadSelectedIdsResult", HttpTypeCodes.Post, entity.ControllerName, Settings.HttpOptionsSkipSpinner);
+        }
+
+        private static string GetBaseSimpleManyToManyTableDataAngularControllerMethod(SoftProperty property, SoftClass entity, List<SoftClass> entities, HashSet<string> alreadyAddedMethods)
+        {
+            string methodName = $"Get{property.Name}TableDataFor{entity.Name}";
+
+            if (alreadyAddedMethods.Contains(methodName))
+                return null;
+
+            Dictionary<string, string> postAndPutParameter = new Dictionary<string, string> { { "tableFilterDTO", "TableFilter" } };
+
+            SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+            return GetAngularControllerMethod(methodName, postAndPutParameter, $"TableResponse<{extractedEntity.Name}>", HttpTypeCodes.Post, entity.ControllerName, Settings.HttpOptionsSkipSpinner);
+        }
+
+        private static string GetBaseSimpleManyToManyTableDataExportAngularControllerMethod(SoftProperty property, SoftClass entity, HashSet<string> alreadyAddedMethods)
+        {
+            string methodName = $"Export{property.Name}TableDataToExcelFor{entity.Name}";
+
+            if (alreadyAddedMethods.Contains(methodName))
+                return null;
+
+            Dictionary<string, string> postAndPutParameter = new Dictionary<string, string> { { "tableFilterDTO", "TableFilter" } };
+
+            return GetAngularControllerMethod(methodName, postAndPutParameter, "any", HttpTypeCodes.Post, entity.ControllerName, Settings.HttpOptionsBlob);
+        }
+
+        #endregion
+
+        #region Multi Control Types
+
+        private static string GetBaseManyToManyMultiControlTypesAngularControllerMethod(SoftProperty property, SoftClass entity, HashSet<string> alreadyAddedMethods)
         {
             string methodName = $"Get{property.Name}NamebookListFor{entity.Name}";
 
@@ -431,7 +482,7 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
             Dictionary<string, string> postAndPutParameter = new Dictionary<string, string> { { "tableFilterDTO", "TableFilter" } };
 
-            return GetAngularControllerMethod(methodName, postAndPutParameter, "any", HttpTypeCodes.Post, entity.ControllerName, Settings.HttpOptionsBase);
+            return GetAngularControllerMethod(methodName, postAndPutParameter, "any", HttpTypeCodes.Post, entity.ControllerName, Settings.HttpOptionsBlob);
         }
 
         private static string GetBaseTableDataAngularControllerMethod(SoftClass entity, HashSet<string> alreadyAddedMethods)
@@ -443,7 +494,7 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
             Dictionary<string, string> postAndPutParameter = new Dictionary<string, string> { { "tableFilterDTO", "TableFilter" } };
 
-            return GetAngularControllerMethod(methodName, postAndPutParameter, "TableResponse<Segmentation>", HttpTypeCodes.Post, entity.ControllerName, Settings.HttpOptionsSkipSpinner);
+            return GetAngularControllerMethod(methodName, postAndPutParameter, $"TableResponse<{entity.Name}>", HttpTypeCodes.Post, entity.ControllerName, Settings.HttpOptionsSkipSpinner);
         }
 
         #endregion
@@ -477,6 +528,9 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
         private static string GetReturnTypeAfterHttpType(string returnType)
         {
             if (returnType == "string")
+                return null;
+
+            if (returnType == "any")
                 return null;
 
             return $"<{returnType}>";

@@ -850,6 +850,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             foreach (SoftProperty property in entity.Properties)
             {
                 SoftClass extractedEntity = entities.Where(x => x.Name == ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+                string extractedEntityIdType = GetIdType(entity, entities);
 
                 if (property.HasOrderedOneToManyAttribute())
                 {
@@ -859,9 +860,14 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     property.IsMultiSelectControlType() ||
                     property.IsMultiAutocompleteControlType())
                 {
-                    string extractedEntityIdType = GetIdType(entity, entities);
-
                     result.Add(new SoftProperty { Name = $"Selected{property.Name}Ids", Type = $"List<{extractedEntityIdType}>" });
+                }
+                else if (property.HasSimpleManyToManyTableLazyLoadAttribute())
+                {
+                    result.Add(new SoftProperty { Name = $"Selected{property.Name}Ids", Type = $"List<{extractedEntityIdType}>" });
+                    result.Add(new SoftProperty { Name = $"Unselected{property.Name}Ids", Type = $"List<{extractedEntityIdType}>" });
+                    result.Add(new SoftProperty { Name = $"AreAll{property.Name}Selected", Type = "bool?" });
+                    result.Add(new SoftProperty { Name = $"{property.Name}TableFilter", Type = "TableFilterDTO" });
                 }
             }
 
@@ -1337,7 +1343,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     new SoftProperty { Type = $"TableFilterDTO", Name = "TableFilter" },
                     new SoftProperty { Type = $"List<{idType}>", Name = "SelectedIds" },
                     new SoftProperty { Type = $"List<{idType}>", Name = "UnselectedIds" },
-                    new SoftProperty { Type = "bool?", Name = "IsAllSelected" },
+                    new SoftProperty { Type = "bool?", Name = "AreAllSelected" },
                 };
             }
             else

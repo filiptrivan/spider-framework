@@ -212,7 +212,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
 
         #region Delete
 
-{{GetDeleteControllerMethods(referencedProjectEntityClass, businessServiceName)}}
+{{GetDeleteControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName)}}
 
         #endregion
 
@@ -234,9 +234,43 @@ namespace {{basePartOfTheNamespace}}.Controllers
                 {
                     result.Add(GetManyToManySelectedEntitiesControllerMethod(property, referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName));
                 }
+                else if (property.HasSimpleManyToManyTableLazyLoadAttribute())
+                {
+                    result.Add(GetSimpleManyToManyTableLazyLoadControllerMethod(property, referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName));
+                }
             }
 
             return result;
+        }
+
+        private static string GetSimpleManyToManyTableLazyLoadControllerMethod(SoftProperty property, SoftClass entity, List<SoftClass> entities, string businessServiceName)
+        {
+            SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+            string extractedEntityIdType = Helper.GetIdType(entity, entities);
+
+            return $$"""
+        [HttpPost]
+        [AuthGuard]
+        public virtual async Task<TableResponseDTO<{{extractedEntity.Name}}DTO>> Get{{property.Name}}TableDataFor{{entity.Name}}(TableFilterDTO tableFilterDTO)
+        {
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{extractedEntity.Name}}TableData(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>().OrderBy(x => x.Id), false);
+        }
+
+        [HttpPost]
+        [AuthGuard]
+        public virtual async Task<IActionResult> Export{{property.Name}}TableDataToExcelFor{{entity.Name}}(TableFilterDTO tableFilterDTO)
+        {
+            byte[] fileContent = await _{{businessServiceName.FirstCharToLower()}}.Export{{extractedEntity.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>(), false);
+            return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"{TermsGenerated.{{extractedEntity.Name}}ExcelExportName}.xlsx"));
+        }
+
+        [HttpPost]
+        [AuthGuard]
+        public virtual async Task<LazyLoadSelectedIdsResultDTO<{{extractedEntityIdType}}>> LazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(TableFilterDTO tableFilterDTO)
+        {
+            return await _{{businessServiceName.FirstCharToLower()}}.LazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>().OrderBy(x => x.Id));
+        }
+""";
         }
 
         private static string GetManyToManySelectedEntitiesControllerMethod(SoftProperty property, SoftClass entity, List<SoftClass> entities, string businessServiceName)
@@ -264,7 +298,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
                 result.Add($$"""
         [HttpGet]
         [AuthGuard]
-        public async Task<List<{{Helper.ExtractTypeFromGenericType(property.Type)}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}(int id)
+        public async Task<List<{{Helper.ExtractTypeFromGenericType(property.Type)}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}({{Helper.GetIdType(entity, entities)}} id)
         {
             return await _{{businessServiceName.FirstCharToLower()}}.GetOrdered{{property.Name}}For{{entity.Name}}(id, false);
         }
@@ -274,7 +308,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return result;
         }
 
-        private static string GetDeleteControllerMethods(SoftClass entity, string businessServiceName)
+        private static string GetDeleteControllerMethods(SoftClass entity, List<SoftClass> entities, string businessServiceName)
         {
             if (entity.IsReadonlyObject())
                 return null;
@@ -282,7 +316,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return $$"""
         [HttpDelete]
         [AuthGuard]
-        public virtual async Task Delete{{entity.Name}}(int id)
+        public virtual async Task Delete{{entity.Name}}({{Helper.GetIdType(entity, entities)}} id)
         {
             await _{{businessServiceName.FirstCharToLower()}}.Delete{{entity.Name}}Async(id, false);
         }

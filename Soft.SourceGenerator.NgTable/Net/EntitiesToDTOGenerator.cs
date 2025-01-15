@@ -92,7 +92,28 @@ namespace {{basePartOfNamespace}}.DTO
         public {{entity.Name}}DTO {{entity.Name}}DTO { get; set; }
 {{string.Join("\n", GetOrderedOneToManyProperties(entity, entities))}}
 {{string.Join("\n", GetManyToManyMultiControlTypeProperties(entity, entities))}}
+{{string.Join("\n", GetSimpleManyToManyTableLazyLoadProperties(entity, entities))}}
     }
+""");
+            }
+
+            return result;
+        }
+
+        private static List<string> GetSimpleManyToManyTableLazyLoadProperties(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties.Where(x => x.HasSimpleManyToManyTableLazyLoadAttribute()))
+            {
+                SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+                string extractedEntityIdType = Helper.GetIdType(entity, entities);
+
+                result.Add($$"""
+        public List<{{extractedEntityIdType}}> Selected{{property.Name}}Ids { get; set; }
+        public List<{{extractedEntityIdType}}> Unselected{{property.Name}}Ids { get; set; }
+        public bool? AreAll{{property.Name}}Selected { get; set; }
+        public TableFilterDTO {{property.Name}}TableFilter { get; set; }
 """);
             }
 

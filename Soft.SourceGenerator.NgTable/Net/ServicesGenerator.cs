@@ -436,6 +436,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 var saved{{entity.Name}}DTO = await Save{{entity.Name}}AndReturnDTOAsync(saveBodyDTO.{{entity.Name}}DTO, authorizeUpdate, authorizeInsert);
 {{string.Join("\n", GetOrderedOneToManyUpdateVariables(entity, entities))}}
 {{string.Join("\n", GetManyToManyMultiControlTypesUpdateMethods(entity, entities))}}
+{{string.Join("\n", GetSimpleManyToManyTableLazyLoad(entity, entities))}}
 
                 var result = new {{entity.Name}}SaveBodyDTO
                 {
@@ -447,7 +448,9 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 
-{{string.Join("\n\n", GetOrderedOneToManyUpdateMethods(entity, entities))}}
+{{string.Join("\n", GetOrderedOneToManyUpdateMethods(entity, entities))}}
+
+{{string.Join("\n", GetSimpleManyToManyTableLazyLoadGetAllQueryHook(entity, entities))}}
 
         protected virtual async Task OnBeforeSave{{entity.Name}}AndReturnSaveBodyDTO({{entity.Name}}SaveBodyDTO {{entity.Name.FirstCharToLower()}}SaveBodyDTO) { }
 """;
@@ -553,6 +556,49 @@ namespace {{basePartOfTheNamespace}}.Services
                 {
                     result.Add($$"""
                 await Update{{property.Name}}For{{entity.Name}}(saved{{entity.Name}}DTO.Id, saveBodyDTO.Selected{{property.Name}}Ids);
+""");
+                }
+            }
+
+            return result;
+        }
+
+        private static List<string> GetSimpleManyToManyTableLazyLoad(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties)
+            {
+                if (property.HasSimpleManyToManyTableLazyLoadAttribute())
+                {
+                    SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                    result.Add($$"""
+                var all{{property.Name}}Query = await GetAll{{property.Name}}QueryFor{{entity.Name}}(_context.DbSet<{{extractedEntity.Name}}>());
+                var {{property.Name.FirstCharToLower()}}PaginationResult = await Get{{extractedEntity.Name}}ListForPagination(saveBodyDTO.{{property.Name}}TableFilter, all{{property.Name}}Query);
+                await Update{{property.Name}}WithLazyTableSelectionFor{{entity.Name}}({{property.Name.FirstCharToLower()}}PaginationResult.Query, saved{{entity.Name}}DTO.Id, saveBodyDTO);
+""");
+                }
+            }
+
+            return result;
+        }
+
+        private static List<string> GetSimpleManyToManyTableLazyLoadGetAllQueryHook(SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in entity.Properties)
+            {
+                if (property.HasSimpleManyToManyTableLazyLoadAttribute())
+                {
+                    SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+
+                    result.Add($$"""
+        protected virtual async Task<IQueryable<{{extractedEntity.Name}}>> GetAll{{property.Name}}QueryFor{{entity.Name}}(IQueryable<{{extractedEntity.Name}}> query)
+        {
+            return query;
+        }
 """);
                 }
             }
@@ -988,38 +1034,7 @@ namespace {{basePartOfTheNamespace}}.Services
             return lazyLoadSelectedIdsResultDTO;
         }
 
-        public async Task Update{{property.Name}}For{{entity.Name}}WithLazyTableSelection(IQueryable<{{extractedPropertyType}}> query, {{entityIdType}} id, ILazyTableSelectionDTO<{{extractedPropertyEntityIdType}}> lazyTableSelectionDTO)
-        {
-            await _context.WithTransactionAsync(async () =>
-            {
-                List<{{extractedPropertyEntityIdType}}> listToInsert = null;
-
-                if (lazyTableSelectionDTO.IsAllSelected == true)
-                {
-                    listToInsert = await query.Where(x => lazyTableSelectionDTO.UnselectedIds.Contains(x.Id) == false).Select(x => x.Id).ToListAsync();
-                }
-                else if (lazyTableSelectionDTO.IsAllSelected == false)
-                {
-                    listToInsert = await query.Where(x => lazyTableSelectionDTO.SelectedIds.Contains(x.Id) == true).Select(x => x.Id).ToListAsync();
-                }
-                else if (lazyTableSelectionDTO.IsAllSelected == null)
-                {
-                    {{((entity.IsBusinessObject() || entity.IsReadonlyObject() == false)
-                    ? $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id, null); // FT: Version will always be checked before or after this method"
-                    : $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id);"
-                    )}}
-
-                    var alreadySelected = entity.{{property.Name}} == null ? new List<{{extractedPropertyEntityIdType}}>() : entity.{{property.Name}}.Select(x => x.Id).ToList();
-
-                    listToInsert = alreadySelected
-                        .Union(lazyTableSelectionDTO.SelectedIds)
-                        .Except(lazyTableSelectionDTO.UnselectedIds)
-                        .ToList();
-                }
-
-                await Update{{property.Name}}For{{entity.Name}}(id, listToInsert);
-            });
-        }
+{{GetSimpleManyToManyUpdateWithLazyTableSelectionMethod(property, entity, entities)}}
 """);
                 }
                 else if (extractedPropertyEntity == null)
@@ -1030,6 +1045,53 @@ namespace {{basePartOfTheNamespace}}.Services
             }
 
             return result;
+        }
+
+        private static string GetSimpleManyToManyUpdateWithLazyTableSelectionMethod(SoftProperty property, SoftClass entity, List<SoftClass> entities)
+        {
+            if (property.HasSimpleManyToManyTableLazyLoadAttribute() == false)
+                return null;
+
+            string entityIdType = Helper.GetIdType(entity, entities);
+            string extractedPropertyType = Helper.ExtractTypeFromGenericType(property.Type); // Role
+            SoftClass extractedPropertyEntity = entities.Where(x => x.Name == extractedPropertyType).Single(); // Role
+
+            string extractedPropertyEntityIdType = Helper.GetIdType(extractedPropertyEntity, entities); // int
+
+            return $$"""
+        public async Task Update{{property.Name}}WithLazyTableSelectionFor{{entity.Name}}(IQueryable<{{extractedPropertyType}}> query, {{entityIdType}} id, {{entity.Name}}SaveBodyDTO saveBodyDTO)
+        {
+            await _context.WithTransactionAsync(async () =>
+            {
+                List<{{extractedPropertyEntityIdType}}> listToInsert = null;
+
+                if (saveBodyDTO.AreAll{{property.Name}}Selected == true)
+                {
+                    listToInsert = await query.Where(x => saveBodyDTO.Unselected{{property.Name}}Ids.Contains(x.Id) == false).Select(x => x.Id).ToListAsync();
+                }
+                else if (saveBodyDTO.AreAll{{property.Name}}Selected == false)
+                {
+                    listToInsert = await query.Where(x => saveBodyDTO.Selected{{property.Name}}Ids.Contains(x.Id) == true).Select(x => x.Id).ToListAsync();
+                }
+                else if (saveBodyDTO.AreAll{{property.Name}}Selected == null)
+                {
+                    {{((entity.IsBusinessObject() || entity.IsReadonlyObject() == false)
+                    ? $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id, null); // FT: Version will always be checked before or after this method"
+                    : $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id);"
+                    )}}
+
+                    var alreadySelected = entity.{{property.Name}} == null ? new List<{{extractedPropertyEntityIdType}}>() : entity.{{property.Name}}.Select(x => x.Id).ToList();
+
+                    listToInsert = alreadySelected
+                        .Union(saveBodyDTO.Selected{{property.Name}}Ids)
+                        .Except(saveBodyDTO.Unselected{{property.Name}}Ids)
+                        .ToList();
+                }
+
+                await Update{{property.Name}}For{{entity.Name}}(id, listToInsert);
+            });
+        }
+""";
         }
 
         private static string GetOrderedOneToManyMethod(SoftProperty property, SoftClass entity, List<SoftClass> entities)

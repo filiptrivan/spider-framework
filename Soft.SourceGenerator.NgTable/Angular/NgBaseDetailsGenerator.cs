@@ -93,11 +93,11 @@ namespace Soft.SourceGenerators.Angular
     selector: '{{entity.Name.FromPascalToKebabCase()}}-base-details',
     template:`
 <ng-container *transloco="let t">
-    <soft-panel>
+    <soft-panel [isFirstMultiplePanel]="isFirstMultiplePanel" [isMiddleMultiplePanel]="isMiddleMultiplePanel" [isLastMultiplePanel]="isLastMultiplePanel">
         <panel-header></panel-header>
 
         <panel-body>
-            @defer (when {{entity.Name.FirstCharToLower()}}FormGroup != null) {
+            @defer (when loading === false) {
                 <form class="grid">
 {{string.Join("\n", GetPropertyBlocks(entity.Properties, entity, entities, customDTOClasses))}}
                 </form>
@@ -107,7 +107,10 @@ namespace Soft.SourceGenerators.Angular
         </panel-body>
 
         <panel-footer>
-            <p-button (onClick)="onSave()" [label]="t('Save')" icon="pi pi-save"></p-button>
+            <p-button (onClick)="save()" [label]="t('Save')" icon="pi pi-save"></p-button>
+            @for (button of additionalButtons; track button.label) {
+                <p-button (onClick)="button.onClick()" [label]="button.label" [icon]="button.icon"></p-button>
+            }
             <soft-return-button></soft-return-button>
         </panel-footer>
     </soft-panel>
@@ -125,12 +128,16 @@ namespace Soft.SourceGenerators.Angular
     ]
 })
 export class {{entity.Name}}BaseComponent {
-    @Input() onSave: (reroute?: boolean) => void;
+    @Output() onSave = new EventEmitter<void>();
     @Input() getCrudMenuForOrderedData: (formArray: SoftFormArray, modelConstructor: BaseEntity, lastMenuIconIndexClicked: LastMenuIconIndexClicked, adjustFormArrayManually: boolean) => MenuItem[];
     @Input() formGroup: SoftFormGroup;
     @Input() {{entity.Name.FirstCharToLower()}}FormGroup: SoftFormGroup<{{entity.Name}}>;
     @Input() additionalButtons: SoftButton[] = [];
+    @Input() isFirstMultiplePanel: boolean = false;
+    @Input() isMiddleMultiplePanel: boolean = false;
+    @Input() isLastMultiplePanel: boolean = false;
     modelId: number;
+    loading: boolean = true;
 
     {{entity.Name.FirstCharToLower()}}SaveBodyName: string = nameof<{{entity.Name}}SaveBody>('{{entity.Name.FirstCharToLower()}}DTO');
 
@@ -150,7 +157,7 @@ export class {{entity.Name}}BaseComponent {
         private translocoService: TranslocoService,
     ) {}
 
-    async ngOnInit(){
+    ngOnInit(){
         this.formGroup.initSaveBody = () => { 
             let saveBody = new {{entity.Name}}SaveBody();
             saveBody.{{entity.Name.FirstCharToLower()}}DTO = this.{{entity.Name.FirstCharToLower()}}FormGroup.getRawValue();
@@ -191,10 +198,11 @@ export class {{entity.Name}}BaseComponent {
     }
 
     init{{entity.Name}}FormGroup({{entity.Name.FirstCharToLower()}}: {{entity.Name}}) {
-        this.{{entity.Name.FirstCharToLower()}}FormGroup = this.baseFormService.initFormGroup<{{entity.Name}}>(
-            this.formGroup, {{entity.Name.FirstCharToLower()}}, this.{{entity.Name.FirstCharToLower()}}SaveBodyName, [{{string.Join(", ", GetCustomOnChangeProperties(entity))}}]
+        this.baseFormService.initFormGroup<{{entity.Name}}>(
+            this.{{entity.Name.FirstCharToLower()}}FormGroup, this.formGroup, {{entity.Name.FirstCharToLower()}}, this.{{entity.Name.FirstCharToLower()}}SaveBodyName, [{{string.Join(", ", GetCustomOnChangeProperties(entity))}}]
         );
         this.{{entity.Name.FirstCharToLower()}}FormGroup.mainDTOName = this.{{entity.Name.FirstCharToLower()}}SaveBodyName;
+        this.loading = false;
     }
 
 {{string.Join("\n", GetOrderedOneToManyInitFormArrayMethods(entity, entities))}}
@@ -211,6 +219,10 @@ export class {{entity.Name}}BaseComponent {
 
     getFormArrayGroups<T>(formArray: SoftFormArray): SoftFormGroup<T>[]{
         return this.baseFormService.getFormArrayGroups<T>(formArray);
+    }
+
+    save(){
+        this.onSave.next();
     }
 
 }
@@ -254,7 +266,7 @@ export class {{entity.Name}}BaseComponent {
                 result.Add($$"""
             this.{{property.Name.FirstCharToLower()}}TableColsFor{{entity.Name}} = [
 {{string.Join(",\n", GetSimpleManyToManyTableLazyLoadCols(property, entity, entities, customDTOClasses))}}
-            ]
+            ];
 """);
             }
 
@@ -274,7 +286,7 @@ export class {{entity.Name}}BaseComponent {
                 SoftProperty extractedDTOProperty = extractedDTO?.Properties?.Where(x => x.Name == col.Field)?.SingleOrDefault();
 
                 result.Add($$"""
-                {name: this.translocoService.translate('{{col.TranslationKey}}'), filterType: '{{GetTableColFilterType(extractedEntityProperty ?? extractedDTOProperty)}}', field: '{{col.Field.FirstCharToLower()}}' {{GetTableColAdditionalProperties(extractedEntityProperty ?? extractedDTOProperty, entities)}} },
+                {name: this.translocoService.translate('{{col.TranslationKey}}'), filterType: '{{GetTableColFilterType(extractedEntityProperty ?? extractedDTOProperty)}}', field: '{{col.Field.FirstCharToLower()}}' {{GetTableColAdditionalProperties(extractedEntityProperty ?? extractedDTOProperty, entities)}} }
 """);
             }
 
@@ -365,10 +377,10 @@ export class {{entity.Name}}BaseComponent {
             foreach (SoftProperty property in entity.Properties.Where(x => x.HasSimpleManyToManyTableLazyLoadAttribute()))
             {
                 result.Add($$"""
-            saveBody.selected{{property.Name}}IdsFor{{entity.Name}} = this.newlySelected{{property.Name}}For{{entity.Name}};
-            saveBody.unselected{{property.Name}}IdsFor{{entity.Name}} = this.unselected{{property.Name}}For{{entity.Name}};
-            saveBody.areAll{{property.Name}}SelectedFor{{entity.Name}} = this.areAll{{property.Name}}SelectedFor{{entity.Name}};
-            saveBody.{{property.Name.FirstCharToLower()}}TableFilterFor{{entity.Name}} = this.last{{property.Name}}LazyLoadTableFilterFor{{entity.Name}};
+            saveBody.selected{{property.Name}}Ids = this.newlySelected{{property.Name}}IdsFor{{entity.Name}};
+            saveBody.unselected{{property.Name}}Ids = this.unselected{{property.Name}}IdsFor{{entity.Name}};
+            saveBody.areAll{{property.Name}}Selected = this.areAll{{property.Name}}SelectedFor{{entity.Name}};
+            saveBody.{{property.Name.FirstCharToLower()}}TableFilter = this.last{{property.Name}}LazyLoadTableFilterFor{{entity.Name}};
 """);
             }
 
@@ -387,8 +399,8 @@ export class {{entity.Name}}BaseComponent {
     {{property.Name.FirstCharToLower()}}TableColsFor{{entity.Name}}: Column<{{extractedEntity.Name}}>[];
     get{{property.Name}}TableDataObservableMethodFor{{entity.Name}} = this.apiService.get{{property.Name}}TableDataFor{{entity.Name}};
     export{{property.Name}}TableDataToExcelObservableMethodFor{{entity.Name}} = this.apiService.export{{property.Name}}TableDataToExcelFor{{entity.Name}};
-    newlySelected{{property.Name}}For{{entity.Name}}: number[] = [];
-    unselected{{property.Name}}For{{entity.Name}}: number[] = [];
+    newlySelected{{property.Name}}IdsFor{{entity.Name}}: number[] = [];
+    unselected{{property.Name}}IdsFor{{entity.Name}}: number[] = [];
     areAll{{property.Name}}SelectedFor{{entity.Name}}: boolean = null;
     last{{property.Name}}LazyLoadTableFilterFor{{entity.Name}}: TableFilter;
 """);
@@ -875,8 +887,11 @@ export class {{entity.Name}}BaseComponent {
                 )
                 .OrderBy(x =>
                     x.Attributes.Any(attr => attr.Name == "BlobName") ? 0 :
-                    x.Attributes.Any(attr => attr.Value == "TextArea") ? 2 :
-                    x.Attributes.Any(attr => attr.Name == "UIOrderedOneToMany") ? 3 : 1)
+                    x.Attributes.Any(attr => attr.Value == UIControlTypeCodes.TextArea.ToString()) ? 2 :
+                    x.Attributes.Any(attr => attr.Value == UIControlTypeCodes.Editor.ToString()) ? 3 :
+                    x.Attributes.Any(attr => attr.Name == "UIOrderedOneToMany") ? 4 :
+                    x.Attributes.Any(attr => attr.Name == "SimpleManyToManyTableLazyLoad") ? 5
+                    : 1)
                 .ToList();
 
             return orderedProperties;
@@ -928,8 +943,8 @@ export class {{entity.Name}}BaseComponent {
                             [exportTableDataToExcelObservableMethod]="export{{property.Name}}TableDataToExcelObservableMethodFor{{entity.Name}}"
                             [showAddButton]="false" 
                             selectionMode="multiple"
-                            [newlySelectedItems]="newlySelected{{property.Name}}For{{entity.Name}}" 
-                            [unselectedItems]="unselected{{property.Name}}For{{entity.Name}}" 
+                            [newlySelectedItems]="newlySelected{{property.Name}}IdsFor{{entity.Name}}" 
+                            [unselectedItems]="unselected{{property.Name}}IdsFor{{entity.Name}}" 
                             [rows]="5" 
                             (onLazyLoad)="on{{property.Name}}LazyLoadFor{{entity.Name}}($event)"
                             [selectedLazyLoadObservableMethod]="selected{{property.Name}}LazyLoadMethodFor{{entity.Name}}" 
@@ -953,7 +968,8 @@ export class {{entity.Name}}BaseComponent {
                 controlType == UIControlTypeCodes.TextArea ||
                 controlType == UIControlTypeCodes.MultiSelect ||
                 controlType == UIControlTypeCodes.MultiAutocomplete ||
-                controlType == UIControlTypeCodes.Table)
+                controlType == UIControlTypeCodes.Table ||
+                controlType == UIControlTypeCodes.Editor)
             {
                 return "col-12";
             }
@@ -1066,7 +1082,7 @@ export class {{entity.Name}}BaseComponent {
 import { ValidatorService } from 'src/app/business/services/validators/validation-rules';
 import { BaseFormService } from './../../../core/services/base-form.service';
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { PrimengModule } from 'src/app/core/modules/primeng.module';
 import { ApiService } from '../../services/api/api.service';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';

@@ -10,6 +10,7 @@ namespace Soft.SourceGenerators
 
         public static string HttpOptionsBase = ", environment.httpOptions";
         public static string HttpOptionsSkipSpinner = ", environment.httpSkipSpinnerOptions";
-        public static string HttpOptionsText = ", {...environment.httpOptions, responseType: 'text'}";
+        public static string HttpOptionsText = ", { ...environment.httpOptions, responseType: 'text' }";
+        public static string HttpOptionsBlob = ", { observe: 'response', responseType: 'blob' }";
     }
 }
