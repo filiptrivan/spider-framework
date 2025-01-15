@@ -77,7 +77,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
                 string nameOfTheEntityClass = entityClass.Identifier.Text;
                 string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
-                string idTypeOfTheEntityClass = Helper.GetGenericIdType(entityClass, entityClasses);
+                string idTypeOfTheEntityClass = Helper.GetIdType(entityClass, entityClasses);
 
                 sb.AppendLine($$"""
         #region {{nameOfTheEntityClass}}

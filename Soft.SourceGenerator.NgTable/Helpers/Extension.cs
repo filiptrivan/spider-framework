@@ -707,6 +707,30 @@ namespace Soft.SourceGenerators.Helpers
             return entity.Properties.Where(x => x.Attributes.Any(x => x.Name == "UIOrderedOneToMany")).ToList();
         }
 
+        public static string GetIdType(this SoftClass c, List<SoftClass> classes)
+        {
+            if (c == null)
+                return "GetIdType.TheClassDoesNotExist";
+
+            string baseType = c.BaseType; //BaseClass<long>
+
+            while (baseType != null && baseType.Contains("<") == false)
+            {
+                SoftClass baseClass = classes.Where(x => x.Name == baseType).SingleOrDefault();
+
+                if (baseClass == null)
+                    return null;
+
+                baseType = baseClass.BaseType; //BaseClass<long>
+            }
+
+            if (baseType != null && baseType.Contains("<"))
+                return baseType.Split('<')[1].Replace(">", ""); // long
+            else
+                return null; // FT: It doesn't, many to many doesn't
+                             //return "Every entity class needs to have the base class";
+        }
+
         #endregion
 
         #region Helpers

@@ -146,7 +146,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
                 if (referencedProjectEntityClass.IsManyToMany()) // TODO FT: Do something with M2M entities
                     continue;
 
-                string referencedProjectEntityClassIdType = Helper.GetIdType(referencedProjectEntityClass, referencedProjectEntityClasses);
+                string referencedProjectEntityClassIdType = referencedProjectEntityClass.GetIdType(referencedProjectEntityClasses);
 
                 result.Add($$"""
         #region {{referencedProjectEntityClass.Name}}
@@ -246,7 +246,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
         private static string GetSimpleManyToManyTableLazyLoadControllerMethod(SoftProperty property, SoftClass entity, List<SoftClass> entities, string businessServiceName)
         {
             SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
-            string extractedEntityIdType = Helper.GetIdType(entity, entities);
+            string extractedEntityIdType = entity.GetIdType(entities);
 
             return $$"""
         [HttpPost]
@@ -280,7 +280,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return $$"""
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<{{Helper.GetIdType(extractedEntity, entities)}}>>> Get{{property.Name}}NamebookListFor{{entity.Name}}({{Helper.GetIdType(entity, entities)}} id)
+        public async Task<List<NamebookDTO<{{extractedEntity.GetIdType(entities)}}>>> Get{{property.Name}}NamebookListFor{{entity.Name}}({{entity.GetIdType(entities)}} id)
         {
             return await _{{businessServiceName.FirstCharToLower()}}.Get{{property.Name}}NamebookListFor{{entity.Name}}(id, false);
         }
@@ -298,7 +298,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
                 result.Add($$"""
         [HttpGet]
         [AuthGuard]
-        public async Task<List<{{Helper.ExtractTypeFromGenericType(property.Type)}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}({{Helper.GetIdType(entity, entities)}} id)
+        public async Task<List<{{Helper.ExtractTypeFromGenericType(property.Type)}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}({{entity.GetIdType(entities)}} id)
         {
             return await _{{businessServiceName.FirstCharToLower()}}.GetOrdered{{property.Name}}For{{entity.Name}}(id, false);
         }
@@ -316,7 +316,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return $$"""
         [HttpDelete]
         [AuthGuard]
-        public virtual async Task Delete{{entity.Name}}({{Helper.GetIdType(entity, entities)}} id)
+        public virtual async Task Delete{{entity.Name}}({{entity.GetIdType(entities)}} id)
         {
             await _{{businessServiceName.FirstCharToLower()}}.Delete{{entity.Name}}Async(id, false);
         }

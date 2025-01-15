@@ -79,17 +79,17 @@ namespace {{basePartOfNamespace}}.TableFiltering
     public static class TableFilterQueryable
     {
 """);
-            foreach (SoftClass entityClass in entities)
+            foreach (SoftClass entity in entities)
             {
-                string baseType = entityClass.BaseType;
+                string baseType = entity.BaseType;
 
                 if (baseType == null)
                     continue;
 
                 sb.AppendLine($$"""
-        public static async Task<PaginationResult<{{entityClass.Name}}>> Build(IQueryable<{{entityClass.Name}}> query, TableFilterDTO tableFilterPayload)
+        public static async Task<PaginationResult<{{entity.Name}}>> Build(IQueryable<{{entity.Name}}> query, TableFilterDTO tableFilterPayload)
         {
-            Expression<Func<{{entityClass.Name}}, bool>> predicate = PredicateBuilder.New<{{entityClass.Name}}>(true);
+            Expression<Func<{{entity.Name}}, bool>> predicate = PredicateBuilder.New<{{entity.Name}}>(true);
 
             foreach (KeyValuePair<string, List<TableFilterContext>> item in tableFilterPayload.Filters)
             {
@@ -97,14 +97,14 @@ namespace {{basePartOfNamespace}}.TableFiltering
                 {
                     if (filter.Value != null)
                     {
-                        Expression<Func<{{entityClass.Name}}, bool>> condition;
+                        Expression<Func<{{entity.Name}}, bool>> condition;
 
                         switch (item.Key)
                         {
 """);
                 // FT: idem po svim DTO propertijima, ako naletim na neki koji ne postoji u ef klasi, trazim resenje u maperima, ako ne postoji upisujem odgovarajucu gresku
-                List<SoftClass> pairDTOClasses = DTOClasses.Where(x => x.Name == $"{entityClass.Name}DTO").ToList(); // FT: Getting the pair DTO classes of entity class
-                List<SoftProperty> efClassProps = entityClass.Properties;
+                List<SoftClass> pairDTOClasses = DTOClasses.Where(x => x.Name == $"{entity.Name}DTO").ToList(); // FT: Getting the pair DTO classes of entity class
+                List<SoftProperty> efClassProps = entity.Properties;
 
                 foreach (SoftClass pairDTOClass in pairDTOClasses)
                 {
@@ -118,20 +118,19 @@ namespace {{basePartOfNamespace}}.TableFiltering
                             if (entityDotNotation.EndsWith("CommaSeparated") && pairDTOClass.IsGenerated == true)
                             {
                                 string entityPropName = entityDotNotation.Replace("CommaSeparated", ""); // "SegmentationItems"
-                                string idType = Helper.GetIdType(entityClass, entities); // FT: Id type of SegmentationItem class
 
-                                sb.AppendLine(GetCaseForEnumerable(DTOprop.Name, entityPropName, idType));
+                                sb.AppendLine(GetCaseForEnumerable(DTOprop.Name, entityPropName, entity.GetIdType(entities)));
 
                                 continue;
                             }
                             else
                             {
-                                entityDotNotation = GetDotNotatioOfEntityFromMappers(allEntityClasses, entityClass, pairDTOClass, entityDotNotation); // "Role.Id"
+                                entityDotNotation = GetDotNotatioOfEntityFromMappers(allEntityClasses, entity, pairDTOClass, entityDotNotation); // "Role.Id"
 
                                 if (entityDotNotation == null)
                                     continue;
 
-                                DTOpropType = GetPropTypeOfEntityDotNotationProperty(entityDotNotation, entityClass, allEntityClasses);
+                                DTOpropType = GetPropTypeOfEntityDotNotationProperty(entityDotNotation, entity, allEntityClasses);
                             }
                         }
 
@@ -181,7 +180,7 @@ namespace {{basePartOfNamespace}}.TableFiltering
 
             query = query.Where(predicate);
 
-            return new PaginationResult<{{entityClass.Name}}>()
+            return new PaginationResult<{{entity.Name}}>()
             {
                 TotalRecords = await query.CountAsync(),
                 Query = query

@@ -107,7 +107,7 @@ namespace {{basePartOfNamespace}}.DTO
             foreach (SoftProperty property in entity.Properties.Where(x => x.HasSimpleManyToManyTableLazyLoadAttribute()))
             {
                 SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
-                string extractedEntityIdType = Helper.GetIdType(entity, entities);
+                string extractedEntityIdType = entity.GetIdType(entities);
 
                 result.Add($$"""
         public List<{{extractedEntityIdType}}> Selected{{property.Name}}Ids { get; set; }
@@ -149,7 +149,7 @@ namespace {{basePartOfNamespace}}.DTO
                 SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
 
                 result.Add($$"""
-        public List<{{Helper.GetIdType(extractedEntity, entities)}}> Selected{{property.Name}}Ids { get; set; }
+        public List<{{extractedEntity.GetIdType(entities)}}> Selected{{property.Name}}Ids { get; set; }
 """);
             }
 
@@ -180,7 +180,7 @@ namespace {{basePartOfNamespace}}.DTO
 """);
                     SoftClass manyToOneClass = allClasses.Where(x => x.Name == propType).Single();
                     DTOproperties.Add($$"""
-        public {{Helper.GetIdType(manyToOneClass, allClasses)}}? {{propName}}Id { get; set; }
+        public {{manyToOneClass.GetIdType(allClasses)}}? {{propName}}Id { get; set; }
 """);
                     continue;
                 }

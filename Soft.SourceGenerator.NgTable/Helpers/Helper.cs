@@ -172,15 +172,15 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return classes.Where(x => x.Identifier.Text == type).SingleOrDefault();
         }
 
-        public static string GetGenericIdType(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
+        public static string GetIdType(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
         {
+            if (c == null)
+                return "GetIdType.TheClassDoesNotExist";
+
             TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
 
             while (baseType is not GenericNameSyntax && baseType != null)
             {
-                if (baseType.ToString() == "Role")
-                    return "int";
-
                 ClassDeclarationSyntax baseClass = classes.Where(x => x.Identifier.Text == baseType.ToString()).SingleOrDefault();
 
                 if (baseClass == null)
@@ -191,43 +191,6 @@ namespace Soft.SourceGenerator.NgTable.Helpers
 
             if (baseType != null && baseType is GenericNameSyntax genericNameSyntax)
                 return genericNameSyntax.TypeArgumentList.Arguments.FirstOrDefault().ToString(); // long
-            else
-                return null; // FT: It doesn't, many to many doesn't
-                             //return "Every entity class needs to have the base class";
-        }
-
-        public static string GetIdType(SoftClass c, List<SoftClass> classes)
-        {
-            if (c == null)
-                return "GetIdType.TheClassDoesNotExist";
-
-            string baseType = c.BaseType; //BaseClass<long>
-
-            while (baseType != null && baseType.Contains("<") == false)
-            {
-                if (baseType.ToString() == "Role")
-                    return "int";
-
-                SoftClass baseClass = classes.Where(x => x.Name == baseType).SingleOrDefault();
-
-                if (baseClass == null)
-                    return null;
-
-                baseType = baseClass.BaseType; //BaseClass<long>
-            }
-
-            if (baseType != null && baseType.Contains("<"))
-                return baseType.Split('<')[1].Replace(">", ""); // long
-            else
-                return null; // FT: It doesn't, many to many doesn't
-                             //return "Every entity class needs to have the base class";
-        }
-
-        public static string GetGenericBaseType(ClassDeclarationSyntax c)
-        {
-            TypeSyntax baseType = c.BaseList?.Types.Where(x => x.Type is GenericNameSyntax).FirstOrDefault()?.Type; //BaseClass<long>
-            if (baseType != null)
-                return baseType.ToString();
             else
                 return null; // FT: It doesn't, many to many doesn't
                              //return "Every entity class needs to have the base class";
@@ -850,7 +813,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             foreach (SoftProperty property in entity.Properties)
             {
                 SoftClass extractedEntity = entities.Where(x => x.Name == ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
-                string extractedEntityIdType = GetIdType(entity, entities);
+                string extractedEntityIdType = entity.GetIdType(entities);
 
                 if (property.HasOrderedOneToManyAttribute())
                 {
@@ -889,7 +852,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                         IsAbstract = x.IsAbstract(),
                         Properties = GetAllPropertiesOfTheClass(x, currentProjectClasses, referencedProjectsClasses),
                         Attributes = GetAllAttributesOfTheClass(x, currentProjectClasses, referencedProjectsClasses),
-                        Methods = GetMethodsOfCurrentClass(x)
+                        Methods = GetMethodsOfCurrentClass(x),
                     };
                 })
                 .OrderBy(x => x.Name)
@@ -919,7 +882,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 {
                     props.Add(new SoftProperty { Name = $"{propName}DisplayName", Type = "string" });
                     SoftClass manyToOneClass = entityClasses.Where(x => x.Name == propType).SingleOrDefault();
-                    props.Add(new SoftProperty { Name = $"{propName}Id", Type = $"{GetIdType(manyToOneClass, entityClasses)}?" });
+                    props.Add(new SoftProperty { Name = $"{propName}Id", Type = $"{manyToOneClass.GetIdType(entityClasses)}?" });
                     continue;
                 }
                 else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
