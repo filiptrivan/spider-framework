@@ -89,7 +89,7 @@ export class ValidatorServiceGenerated {
     ) {
     }
 
-    getValidator(formControl: SoftFormControl, className: string): SoftValidatorFn {
+    setValidator(formControl: SoftFormControl, className: string): SoftValidatorFn {
         switch(formControl.label + className){
 """);
             foreach (SoftClass DTOClass in DTOClasses) // Grouping because UserDTO.generated and UserDTO
@@ -153,22 +153,46 @@ export class ValidatorServiceGenerated {
 
             string allRules = string.Join(" && ", ruleNames);
 
-            string result = $@"
-    {validationRulePropNameFirstLower}{classNameForValidation}Validator(control: SoftFormControl): SoftValidatorFn {{
-        const validator: SoftValidatorFn = (): ValidationErrors | null => {{
+            string result = $$"""
+    {{validationRulePropNameFirstLower}}{{classNameForValidation}}Validator(control: SoftFormControl): SoftValidatorFn {
+        const validator: SoftValidatorFn = (): ValidationErrors | null => {
             const value = control.value;
 
-    {string.Join("\n", ruleStatements)}
+{{string.Join("\n", ruleStatements)}}
 
-            const {validationRulePropNameFirstLower}Valid = {allRules};
+            const {{validationRulePropNameFirstLower}}Valid = {{allRules}};
 
-            return {validationRulePropNameFirstLower}Valid ? null : {{ _ : this.translocoService.translate('{string.Join("", translationTags)}', {{{string.Join(", ", translocoVariables)}}}) }};
-        }};
-        {(ruleNames.Any(x => x == "notEmptyRule") ? "validator.hasNotEmptyRule = true;" : "")}
+            return {{validationRulePropNameFirstLower}}Valid ? null : { _ : this.translocoService.translate('{{string.Join("", translationTags)}}', {{{string.Join(", ", translocoVariables)}}}) };
+        };
+{{GetNonEmptyControlData(ruleNames)}}
+        control.validator = validator;
+{{GetUpdateValidationAndValidityData()}}
         return validator;
-    }}";
+    }
+""";
 
             return result;
+        }
+
+        private static string GetUpdateValidationAndValidityData()
+        {
+            return $$"""
+        // TODO FT: When you improve generated code, and could realize on the backend is this property of the Date type, generate this line only for Date form controls.
+        control.updateValueAndValidity(); // FT: It's necessary for Date angular type
+""";
+        }
+
+        private static string GetNonEmptyControlData(List<string> ruleNames)
+        {
+            if (ruleNames.Any(x => x == "notEmptyRule"))
+            {
+                return $$"""
+        validator.hasNotEmptyRule = true;
+        control.required = true;
+""";
+            }
+
+            return null;
         }
 
         public static void PopulateListOfStrings(string rules, List<SoftProperty> DTOProperties, string validationRulePropName, List<string> ruleStatements, List<string> validationMessages, List<string> translocoVariables, List<string> ruleNames, List<string> translationTags)

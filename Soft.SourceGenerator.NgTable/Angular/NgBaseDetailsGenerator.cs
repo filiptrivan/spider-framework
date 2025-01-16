@@ -129,6 +129,7 @@ namespace Soft.SourceGenerators.Angular
 })
 export class {{entity.Name}}BaseComponent {
     @Output() onSave = new EventEmitter<void>();
+    @Output() on{{entity.Name}}FormGroupInitFinish = new EventEmitter<void>();
     @Input() getCrudMenuForOrderedData: (formArray: SoftFormArray, modelConstructor: BaseEntity, lastMenuIconIndexClicked: LastMenuIconIndexClicked, adjustFormArrayManually: boolean) => MenuItem[];
     @Input() formGroup: SoftFormGroup;
     @Input() {{entity.Name.FirstCharToLower()}}FormGroup: SoftFormGroup<{{entity.Name}}>;
@@ -203,6 +204,7 @@ export class {{entity.Name}}BaseComponent {
         );
         this.{{entity.Name.FirstCharToLower()}}FormGroup.mainDTOName = this.{{entity.Name.FirstCharToLower()}}SaveBodyName;
         this.loading = false;
+        this.on{{entity.Name}}FormGroupInitFinish.next();
     }
 
 {{string.Join("\n", GetOrderedOneToManyInitFormArrayMethods(entity, entities))}}
