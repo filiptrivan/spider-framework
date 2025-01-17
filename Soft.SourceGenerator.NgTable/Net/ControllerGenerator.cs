@@ -280,7 +280,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
             return $$"""
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<{{extractedEntity.GetIdType(entities)}}>>> Get{{property.Name}}NamebookListFor{{entity.Name}}({{entity.GetIdType(entities)}} id)
+        public virtual async Task<List<NamebookDTO<{{extractedEntity.GetIdType(entities)}}>>> Get{{property.Name}}NamebookListFor{{entity.Name}}({{entity.GetIdType(entities)}} id)
         {
             return await _{{businessServiceName.FirstCharToLower()}}.Get{{property.Name}}NamebookListFor{{entity.Name}}(id, false);
         }
@@ -298,7 +298,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
                 result.Add($$"""
         [HttpGet]
         [AuthGuard]
-        public async Task<List<{{Helper.ExtractTypeFromGenericType(property.Type)}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}({{entity.GetIdType(entities)}} id)
+        public virtual async Task<List<{{Helper.ExtractTypeFromGenericType(property.Type)}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}({{entity.GetIdType(entities)}} id)
         {
             return await _{{businessServiceName.FirstCharToLower()}}.GetOrdered{{property.Name}}For{{entity.Name}}(id, false);
         }
@@ -350,7 +350,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
         // FT: You can't upload and delete on every request because you can delete the old image for the user when he refreshes the page
         [HttpPost]
         [AuthGuard]
-        public async Task<string> Upload{{property.Name}}For{{entity.Name}}([FromForm] IFormFile file) // FT: It doesn't work without interface
+        public virtual async Task<string> Upload{{property.Name}}For{{entity.Name}}([FromForm] IFormFile file) // FT: It doesn't work without interface
         {
             return await _{{businessServiceName.FirstCharToLower()}}.Upload{{property.Name}}For{{entity.Name}}Async(file); // TODO: Make authorization in business service with override
         }

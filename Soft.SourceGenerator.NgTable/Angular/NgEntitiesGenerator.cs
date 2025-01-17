@@ -59,7 +59,7 @@ namespace Soft.SourceGenerator.NgTable.Angular
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, List<SoftClass> referencedProjectClasses, string callingProjectDirectory, SourceProductionContext context)
         {
-            if (classes.Count <= 1) 
+            if (classes.Count <= 1)
                 return; // FT: one because of config settings
 
             string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(classes[0]);
@@ -159,15 +159,12 @@ export class {{angularClassIdentifier}} extends BaseEntity
                 foreach (SoftClass DTOClass in DTOClassGroup) // It can only be 2 here
                     DTOProperties.AddRange(DTOClass.Properties);
 
-                foreach (SoftProperty property in DTOProperties)
+                foreach (SoftProperty property in DTOProperties.Where(x => x.Type.IsEnum()))
                 {
-                    if (property.Type.IsEnum() == false)
-                        continue;
-
                     if (result.Contains(property.Name) == false)
                     {
                         result.Add($$"""
-import { {{property.Name}} } from "../../enums/generated/{{projectName.FromPascalToKebabCase()}}-enums.generated";
+import { {{property.Type}} } from "../enums/{{projectName.FromPascalToKebabCase()}}-enums.generated";
 """);
                     }
                 }
