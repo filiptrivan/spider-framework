@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Resources.NetStandard;
 using System.Runtime.Serialization.Json;
 using System.Text;
@@ -226,13 +227,16 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     Name = method.Identifier.Text,
                     ReturnType = method.ReturnType.ToString(),
                     Body = method.Body?.ToString(), // FT: CreateHostBuilder method inside Program.cs has no body
-                    Parameters = method.ParameterList.Parameters.Select(x => new SoftParameter { Name = x.Identifier.Text, Type = x.Type.ToString() }).ToList(),
+                    Parameters = method.ParameterList.Parameters
+                        .Select(parameter => new SoftParameter
+                        {
+                            Name = parameter.Identifier.Text,
+                            Type = parameter.Type.ToString(),
+                            Attributes = parameter.AttributeLists.SelectMany(x => x.Attributes).Select(x => GetSoftAttribute(x)).ToList()
+                        })
+                        .ToList(),
                     DescendantNodes = method.DescendantNodes(),
-                    Attributes = method.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
-                    {
-                        return GetSoftAttribute(x);
-                    })
-                    .ToList()
+                    Attributes = method.AttributeLists.SelectMany(x => x.Attributes).Select(x => GetSoftAttribute(x)).ToList()
                 })
                 .ToList();
 
@@ -813,7 +817,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             foreach (SoftProperty property in entity.Properties)
             {
                 SoftClass extractedEntity = entities.Where(x => x.Name == ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
-                string extractedEntityIdType = entity.GetIdType(entities);
+                string extractedEntityIdType = extractedEntity.GetIdType(entities);
 
                 if (property.HasOrderedOneToManyAttribute())
                 {

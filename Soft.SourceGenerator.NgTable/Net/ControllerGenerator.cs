@@ -246,7 +246,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
         private static string GetSimpleManyToManyTableLazyLoadControllerMethod(SoftProperty property, SoftClass entity, List<SoftClass> entities, string businessServiceName)
         {
             SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
-            string extractedEntityIdType = entity.GetIdType(entities);
+            string extractedEntityIdType = extractedEntity.GetIdType(entities);
 
             return $$"""
         [HttpPost]

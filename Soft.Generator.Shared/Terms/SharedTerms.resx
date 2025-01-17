@@ -177,4 +177,8 @@
     <value>Account verification</value>
     <comment>Verifikacija naloga</comment>
   </data>
+  <data name="And" xml:space="preserve">
+    <value>And</value>
+    <comment>I</comment>
+  </data>
 </root>

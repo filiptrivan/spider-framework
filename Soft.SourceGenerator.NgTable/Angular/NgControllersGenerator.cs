@@ -88,7 +88,7 @@ export class ApiGeneratedService extends ApiSecurityService {
         super(http);
     }
 
-{{string.Join("\n\n", GetAngularHttpMethods(controllerClasses, referencedEntityClasses))}}
+{{string.Join("\n\n", GetAngularHttpMethods(controllerClasses, referencedEntityClasses, referencedDTOClasses))}}
 
 }
 """;
@@ -96,7 +96,7 @@ export class ApiGeneratedService extends ApiSecurityService {
             Helper.WriteToTheFile(result, outputPath);
         }
 
-        private static List<string> GetAngularHttpMethods(List<SoftClass> controllerClasses, List<SoftClass> entities)
+        private static List<string> GetAngularHttpMethods(List<SoftClass> controllerClasses, List<SoftClass> entities, List<SoftClass> referencedDTOClasses)
         {
             List<string> result = new List<string>();
             HashSet<string> alreadyAddedMethods = new HashSet<string>();
@@ -113,7 +113,14 @@ export class ApiGeneratedService extends ApiSecurityService {
                 {
                     alreadyAddedMethods.Add(controllerMethod.Name);
 
-                    result.Add(GetCustomAngularControllerMethod(controllerMethod, controllerName));
+                    if (controllerMethod.Parameters.Any(x => x.HasFromFormAttribute()) && controllerMethod.Parameters.Any(x => x.Type == "IFormFile") == false)
+                    {
+                        result.Add(GetCustomFromFormControllerMethod(controllerMethod, controllerName, referencedDTOClasses));
+                    }
+                    else
+                    {
+                        result.Add(GetCustomAngularControllerMethod(controllerMethod, controllerName));
+                    }
                 }
             }
 
@@ -249,6 +256,44 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 {{GetBaseDeleteAngularControllerMethods(entity, alreadyAddedMethods)}}
 
 """;
+        }
+
+        private static string GetCustomFromFormControllerMethod(SoftMethod controllerMethod, string controllerName, List<SoftClass> DTOList)
+        {
+            SoftParameter parameter = controllerMethod.Parameters.Single();
+            SoftClass parameterType = DTOList.Where(x => x.Name == parameter.Type).SingleOrDefault();
+
+            return $$"""
+    excelManualUpdatePoints = (dto: {{parameter.Type.Replace("DTO", "")}}): Observable<any> => { 
+        let formData = new FormData();
+{{string.Join("\n", GetFormDataAppends(parameterType))}}
+        return this.http.post(`${environment.apiUrl}/{{controllerName}}/ExcelManualUpdatePoints`, formData, environment.httpOptions);
+    }
+""";
+        }
+
+        private static List<string> GetFormDataAppends(SoftClass dto)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in dto.Properties)
+            {
+                
+                    result.Add($$"""
+        formData.append('{{property.Name}}', dto.{{GetFormDataAppendedValue(property)}});
+""");
+                
+            }
+
+            return result;
+        }
+
+        private static string GetFormDataAppendedValue(SoftProperty property)
+        {
+            if (property.Type == "IFormFile")
+                return property.Name.FirstCharToLower();
+            else
+                return $"{property.Name.FirstCharToLower()}.toString()";
         }
 
         #endregion

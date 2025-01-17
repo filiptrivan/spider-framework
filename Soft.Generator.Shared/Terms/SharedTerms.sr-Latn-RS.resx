@@ -177,4 +177,7 @@
   <data name="EmailAccountVerificationTitle" xml:space="preserve">
     <value>Verifikacija naloga</value>
   </data>
+  <data name="And" xml:space="preserve">
+    <value>I</value>
+  </data>
 </root>

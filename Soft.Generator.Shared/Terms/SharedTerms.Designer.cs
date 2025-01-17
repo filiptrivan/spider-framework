@@ -61,6 +61,15 @@ namespace Soft.Generator.Shared.Terms {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to And.
+        /// </summary>
+        public static string And {
+            get {
+                return ResourceManager.GetString("And", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to An account with the entered email address does not exist. Please check the email address or create a new account..
         /// </summary>
         public static string AuthenticationEmailDoesNotExistException {

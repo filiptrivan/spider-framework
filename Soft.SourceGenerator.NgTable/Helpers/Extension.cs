@@ -561,6 +561,11 @@ namespace Soft.SourceGenerators.Helpers
             return property.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName");
         }
 
+        public static bool HasFromFormAttribute(this SoftParameter parameter)
+        {
+            return parameter.Attributes.Any(x => x.Name == "FromForm");
+        }
+        
         #endregion
 
         #region IsControlType

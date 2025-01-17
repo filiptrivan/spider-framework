@@ -31,7 +31,7 @@ namespace Soft.Generator.Shared.Extensions
             List<string> stringList = input.Select(item => item?.ToString() ?? string.Empty).ToList();
 
             if (stringList.Count > 1)
-                return $"{string.Join(", ", stringList.Take(stringList.Count - 1))} and {stringList.Last()}"; // TODO FT: Add to the resources
+                return $"{string.Join(", ", stringList.Take(stringList.Count - 1))} {Terms.SharedTerms.And.FirstCharToLower()} {stringList.Last()}"; // TODO FT: Add to the resources
             else
                 return stringList.FirstOrDefault();
         }

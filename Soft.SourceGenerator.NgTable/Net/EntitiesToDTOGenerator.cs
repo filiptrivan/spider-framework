@@ -107,7 +107,7 @@ namespace {{basePartOfNamespace}}.DTO
             foreach (SoftProperty property in entity.Properties.Where(x => x.HasSimpleManyToManyTableLazyLoadAttribute()))
             {
                 SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
-                string extractedEntityIdType = entity.GetIdType(entities);
+                string extractedEntityIdType = extractedEntity.GetIdType(entities);
 
                 result.Add($$"""
         public List<{{extractedEntityIdType}}> Selected{{property.Name}}Ids { get; set; }

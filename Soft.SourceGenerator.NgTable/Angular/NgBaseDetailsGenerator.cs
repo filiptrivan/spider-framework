@@ -213,7 +213,9 @@ export class {{entity.Name}}BaseComponent {
 
 {{string.Join("\n", GetSimpleManyToManyMethods(entity, entities))}}
 
-{{string.Join("\n\n", GetAutocompleteSearchMethods(entity.Properties, entity, entities))}}
+{{string.Join("\n", GetAutocompleteSearchMethods(entity.Properties, entity, entities))}}
+
+{{string.Join("\n", GetUploadImageMethods(entity.Properties, entity, entities))}}
 
     control(formControlName: string, formGroup: SoftFormGroup){
         return getControl(formControlName, formGroup);
@@ -801,6 +803,46 @@ export class {{entity.Name}}BaseComponent {
             return result;
         }
 
+        private static List<string> GetUploadImageMethods(List<SoftProperty> properties, SoftClass entity, List<SoftClass> entities)
+        {
+            List<string> result = new List<string>();
+
+            foreach (SoftProperty property in properties.Where(x => x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false))
+            {
+                if (property.Attributes.Any(x => x.Name == "UIOrderedOneToMany"))
+                {
+                    SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+                    List<SoftProperty> extractedProperties = extractedEntity.Properties
+                        .Where(x =>
+                            x.WithMany() != property.Name &&
+                            x.Type.IsEnumerable() == false
+                        )
+                        .ToList();
+
+                    GetUploadImageMethods(extractedProperties, extractedEntity, entities);
+
+                    continue;
+                }
+
+                UIControlTypeCodes controlType = GetUIControlType(property);
+
+                if (controlType == UIControlTypeCodes.File)
+                {
+                    result.Add($$"""
+    upload{{property.Name}}For{{entity.Name}}(softFileSelectEvent: SoftFileSelectEvent){
+        this.apiService.upload{{property.Name}}For{{entity.Name}}(softFileSelectEvent.formData).subscribe((completeFileName: string) => {
+            this.{{entity.Name.FirstCharToLower()}}FormGroup.controls.{{property.Name.FirstCharToLower()}}.setValue(completeFileName);
+        });
+    }
+""");
+
+                }
+
+            }
+
+            return result;
+        }
+
         private static List<string> GetForkJoinParameterNames(SoftClass entity)
         {
             List<string> result = new List<string>();
@@ -917,7 +959,7 @@ export class {{entity.Name}}BaseComponent {
             }
             else if (controlType == UIControlTypeCodes.File)
             {
-                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [fileData]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}Data.getRawValue()\" [objectId]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.id.getRawValue()\"";
+                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [fileData]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}Data.getRawValue()\" [objectId]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.id.getRawValue()\" (onSelectedFile)=\"upload{property.Name}For{entity.Name}($event)\"";
             }
             else if (controlType == UIControlTypeCodes.Dropdown)
             {
@@ -1104,6 +1146,7 @@ import { MenuItem } from 'primeng/api';
 import { AllClickEvent, Column, SoftDataTableComponent } from 'src/app/core/components/soft-data-table/soft-data-table.component';
 import { TableFilter } from 'src/app/core/entities/table-filter';
 import { LazyLoadSelectedIdsResult } from 'src/app/core/entities/lazy-load-selected-ids-result';
+import { SoftFileSelectEvent } from 'src/app/core/controls/soft-file/soft-file.component';
 import { {{string.Join(", ", imports)}} } from '../../entities/{{projectName.FromPascalToKebabCase()}}-entities.generated';
 """;
         }

@@ -14,7 +14,7 @@ export class ValidatorServiceGenerated {
     ) {
     }
 
-    getValidator(formControl: SoftFormControl, className: string): SoftValidatorFn {
+    setValidator(formControl: SoftFormControl, className: string): SoftValidatorFn {
         switch(formControl.label + className){
 
 
