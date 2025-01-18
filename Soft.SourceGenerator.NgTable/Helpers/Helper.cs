@@ -762,9 +762,9 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 .ToList();
         }
 
-        public static List<SoftClass> GetDTOClasses(List<SoftClass> classes)
+        public static List<SoftClass> GetDTOClasses(List<SoftClass> currentProjectClasses, List<SoftClass> allClasses)
         {
-            return classes
+            return currentProjectClasses
                 .Where(x => x.Namespace.EndsWith($".{EntitiesNamespaceEnding}") || x.Namespace.EndsWith($".{DTONamespaceEnding}"))
                 .SelectMany(x =>
                 {
@@ -792,14 +792,14 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                             new SoftClass
                             {
                                 Name = $"{x.Name}DTO",
-                                Properties = GetDTOSoftProps(x, classes),
+                                Properties = GetDTOSoftProps(x, allClasses),
                                 Namespace = x.Namespace.Replace(".Entities", ".DTO"),
                                 IsGenerated = true
                             },
                             new SoftClass
                             {
                                 Name = $"{x.Name}SaveBodyDTO",
-                                Properties = GetSaveBodyDTOProperties(x, classes),
+                                Properties = GetSaveBodyDTOProperties(x, allClasses),
                                 Namespace = x.Namespace.Replace(".Entities", ".DTO"),
                                 IsGenerated = true
                             },

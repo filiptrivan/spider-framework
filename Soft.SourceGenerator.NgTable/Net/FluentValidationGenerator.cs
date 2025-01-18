@@ -52,7 +52,9 @@ namespace Soft.SourceGenerator.NgTable.Net
             if (classes.Count <= 1) return;
 
             List<SoftClass> softClasses = Helper.GetSoftClasses(classes, referencedProjectClasses);
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(softClasses);
+            List<SoftClass> allClasses = softClasses.Concat(referencedProjectClasses).ToList();
+
+            List<SoftClass> currentProjectDTOClasses = Helper.GetDTOClasses(softClasses, allClasses);
             List<SoftClass> entities = softClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
 
             StringBuilder sb = new StringBuilder();
@@ -69,12 +71,12 @@ using Soft.Generator.Shared.SoftFluentValidation;
 namespace {{basePartOfNamespace}}.ValidationRules
 {
 """);
-            foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
+            foreach (IGrouping<string, SoftClass> DTOClassGroup in currentProjectDTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
             {
                 List<SoftProperty> DTOProperties = new List<SoftProperty>();
                 List<SoftAttribute> DTOAttributes = new List<SoftAttribute>();
 
-                SoftClass customDTOClass = DTOClasses.Where(x => x.Name == DTOClassGroup.Key && x.IsGenerated == false).SingleOrDefault();
+                SoftClass customDTOClass = currentProjectDTOClasses.Where(x => x.Name == DTOClassGroup.Key && x.IsGenerated == false).SingleOrDefault();
 
                 if (customDTOClass != null)
                     DTOAttributes.AddRange(customDTOClass.Attributes); // FT: Its okay to add only for non generated because we will not have any attributes on the generated DTOs

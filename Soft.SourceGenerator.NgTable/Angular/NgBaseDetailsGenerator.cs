@@ -19,12 +19,12 @@ namespace Soft.SourceGenerators.Angular
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//#if DEBUG
-//            if (!Debugger.IsAttached)
-//            {
-//                Debugger.Launch();
-//            }
-//#endif
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helper.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
@@ -66,22 +66,24 @@ namespace Soft.SourceGenerators.Angular
 
             List<SoftClass> softClasses = Helper.GetSoftClasses(classes, referencedProjectClasses);
             List<SoftClass> customDTOClasses = softClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
-            List<SoftClass> entities = softClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SoftClass> currentProjectEntities = softClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SoftClass> referencedProjectEntityClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SoftClass> allEntities = currentProjectEntities.Concat(referencedProjectEntityClasses).ToList();
 
             string result = $$"""
-{{GetImports(customDTOClasses, entities, projectName)}}
+{{GetImports(customDTOClasses, allEntities)}}
 
-{{string.Join("\n\n", GetAngularBaseDetailsComponents(customDTOClasses, entities))}}
+{{string.Join("\n\n", GetAngularBaseDetailsComponents(customDTOClasses, currentProjectEntities, allEntities))}}
 """;
 
             Helper.WriteToTheFile(result, outputPath);
         }
 
-        private static List<string> GetAngularBaseDetailsComponents(List<SoftClass> customDTOClasses, List<SoftClass> entities)
+        private static List<string> GetAngularBaseDetailsComponents(List<SoftClass> customDTOClasses, List<SoftClass> currentProjectEntities, List<SoftClass> allEntities)
         {
             List<string> result = new List<string>();
 
-            foreach (SoftClass entity in entities
+            foreach (SoftClass entity in currentProjectEntities
                 .Where(x => x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false)
             )
             {
@@ -99,7 +101,7 @@ namespace Soft.SourceGenerators.Angular
         <panel-body>
             @defer (when loading === false) {
                 <form class="grid">
-{{string.Join("\n", GetPropertyBlocks(entity.Properties, entity, entities, customDTOClasses))}}
+{{string.Join("\n", GetPropertyBlocks(entity.Properties, entity, allEntities, customDTOClasses))}}
                 </form>
             } @placeholder {
                 <card-skeleton [height]="502"></card-skeleton>
@@ -127,7 +129,7 @@ namespace Soft.SourceGenerators.Angular
         SoftDataTableComponent,
     ]
 })
-export class {{entity.Name}}BaseComponent {
+export class {{entity.Name}}BaseDetailsComponent {
     @Output() onSave = new EventEmitter<void>();
     @Output() on{{entity.Name}}FormGroupInitFinish = new EventEmitter<void>();
     @Input() getCrudMenuForOrderedData: (formArray: SoftFormArray, modelConstructor: BaseEntity, lastMenuIconIndexClicked: LastMenuIconIndexClicked, adjustFormArrayManually: boolean) => MenuItem[];
@@ -142,13 +144,13 @@ export class {{entity.Name}}BaseComponent {
 
     {{entity.Name.FirstCharToLower()}}SaveBodyName: string = nameof<{{entity.Name}}SaveBody>('{{entity.Name.FirstCharToLower()}}DTO');
 
-{{string.Join("\n\n", GetOrderedOneToManyVariables(entity, entities))}}
+{{string.Join("\n\n", GetOrderedOneToManyVariables(entity, allEntities))}}
 
-{{string.Join("\n", GetPrimengOptionVariables(entity.Properties, entity, entities))}}
+{{string.Join("\n", GetPrimengOptionVariables(entity.Properties, entity, allEntities))}}
 
 {{string.Join("\n", GetSoftFormControls(entity))}}
 
-{{string.Join("\n", GetSimpleManyToManyTableLazyLoadVariables(entity, entities))}}
+{{string.Join("\n", GetSimpleManyToManyTableLazyLoadVariables(entity, allEntities))}}
 
     constructor(
         private apiService: ApiService,
@@ -162,7 +164,7 @@ export class {{entity.Name}}BaseComponent {
         this.formGroup.initSaveBody = () => { 
             let saveBody = new {{entity.Name}}SaveBody();
             saveBody.{{entity.Name.FirstCharToLower()}}DTO = this.{{entity.Name.FirstCharToLower()}}FormGroup.getRawValue();
-{{string.Join("\n", GetOrderedOneToManySaveBodyAssignements(entity, entities))}}
+{{string.Join("\n", GetOrderedOneToManySaveBodyAssignements(entity, allEntities))}}
 {{string.Join("\n", GetManyToManyMultiSelectSaveBodyAssignements(entity))}}
 {{string.Join("\n", GetManyToManyMultiAutocompleteSaveBodyAssignements(entity))}}
 {{string.Join("\n", GetSimpleManyToManyTableLazyLoadSaveBodyAssignements(entity))}}
@@ -175,8 +177,8 @@ export class {{entity.Name}}BaseComponent {
         this.route.params.subscribe(async (params) => {
             this.modelId = params['id'];
 
-{{string.Join("\n", GetManyToManyMultiSelectListForDropdownMethods(entity, entities))}}
-{{string.Join("\n", GetSimpleManyToManyTableLazyLoadColsInitializations(entity, entities, customDTOClasses))}}
+{{string.Join("\n", GetManyToManyMultiSelectListForDropdownMethods(entity, allEntities))}}
+{{string.Join("\n", GetSimpleManyToManyTableLazyLoadColsInitializations(entity, allEntities, customDTOClasses))}}
 
             if(this.modelId > 0){
                 forkJoin({
@@ -207,15 +209,15 @@ export class {{entity.Name}}BaseComponent {
         this.on{{entity.Name}}FormGroupInitFinish.next();
     }
 
-{{string.Join("\n", GetOrderedOneToManyInitFormArrayMethods(entity, entities))}}
+{{string.Join("\n", GetOrderedOneToManyInitFormArrayMethods(entity, allEntities))}}
 
-{{string.Join("\n", GetOrderedOneToManyAddNewItemMethods(entity, entities))}}
+{{string.Join("\n", GetOrderedOneToManyAddNewItemMethods(entity, allEntities))}}
 
-{{string.Join("\n", GetSimpleManyToManyMethods(entity, entities))}}
+{{string.Join("\n", GetSimpleManyToManyMethods(entity, allEntities))}}
 
-{{string.Join("\n", GetAutocompleteSearchMethods(entity.Properties, entity, entities))}}
+{{string.Join("\n", GetAutocompleteSearchMethods(entity.Properties, entity, allEntities))}}
 
-{{string.Join("\n", GetUploadImageMethods(entity.Properties, entity, entities))}}
+{{string.Join("\n", GetUploadImageMethods(entity.Properties, entity, allEntities))}}
 
     control(formControlName: string, formGroup: SoftFormGroup){
         return getControl(formControlName, formGroup);
@@ -477,7 +479,12 @@ export class {{entity.Name}}BaseComponent {
         {
             List<string> result = new List<string>();
 
-            foreach (SoftProperty property in entity.Properties.Where(x => x.IsMultiSelectControlType()))
+            foreach (SoftProperty property in entity.Properties
+                .Where(x =>
+                    x.IsMultiSelectControlType() ||
+                    x.IsDropdownControlType()
+                )
+            )
             {
                 SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
 
@@ -496,7 +503,7 @@ export class {{entity.Name}}BaseComponent {
             List<string> result = new List<string>();
 
             foreach (SoftProperty property in entity.Properties
-                .Where(x => 
+                .Where(x =>
                     x.IsMultiSelectControlType() ||
                     x.IsMultiAutocompleteControlType()))
             {
@@ -668,12 +675,12 @@ export class {{entity.Name}}BaseComponent {
         /// <summary>
         /// </summary>
         /// <param name="property">eg. List<SegmentationItem> SegmentationItems</param>
-        /// <param name="entities"></param>
+        /// <param name="allEntities"></param>
         /// <param name="customDTOClasses"></param>
         /// <returns></returns>
-        private static string GetOrderedOneToManyBlock(SoftProperty property, List<SoftClass> entities, List<SoftClass> customDTOClasses)
+        private static string GetOrderedOneToManyBlock(SoftProperty property, List<SoftClass> allEntities, List<SoftClass> customDTOClasses)
         {
-            SoftClass entity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault(); // eg. SegmentationItem
+            SoftClass entity = allEntities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault(); // eg. SegmentationItem
 
             // Every property of SegmentationItem without the many to one reference (Segmentation) and enumerable properties
             List<SoftProperty> propertyBlocks = entity.Properties
@@ -691,7 +698,7 @@ export class {{entity.Name}}BaseComponent {
                             @for ({{entity.Name.FirstCharToLower()}}FormGroup of getFormArrayGroups({{property.Name.FirstCharToLower()}}FormArray); track {{entity.Name.FirstCharToLower()}}FormGroup; let index = $index; let last = $last) {
                                 <index-card [index]="index" [last]="false" [crudMenu]="{{property.Name.FirstCharToLower()}}CrudMenu" (onMenuIconClick)="{{property.Name.FirstCharToLower()}}LastIndexClicked.index = $event">
                                     <form [formGroup]="{{entity.Name.FirstCharToLower()}}FormGroup" class="grid">
-{{string.Join("\n", GetPropertyBlocks(propertyBlocks, entity, entities, customDTOClasses))}}
+{{string.Join("\n", GetPropertyBlocks(propertyBlocks, entity, allEntities, customDTOClasses))}}
                                     </form>
                                 </index-card>
                             }
@@ -785,7 +792,6 @@ export class {{entity.Name}}BaseComponent {
                 UIControlTypeCodes controlType = GetUIControlType(property);
 
                 if (controlType == UIControlTypeCodes.Autocomplete ||
-                    controlType == UIControlTypeCodes.Dropdown ||
                     controlType == UIControlTypeCodes.MultiAutocomplete)
                 {
                     result.Add($$"""
@@ -865,7 +871,7 @@ export class {{entity.Name}}BaseComponent {
         private static List<string> GetPropertyBlocks(
             List<SoftProperty> properties,
             SoftClass entity,
-            List<SoftClass> entities,
+            List<SoftClass> allEntities,
             List<SoftClass> customDTOClasses
         )
         {
@@ -884,7 +890,7 @@ export class {{entity.Name}}BaseComponent {
             {
                 if (property.Attributes.Any(x => x.Name == "UIOrderedOneToMany"))
                 {
-                    result.Add(GetOrderedOneToManyBlock(property, entities, customDTOClasses));
+                    result.Add(GetOrderedOneToManyBlock(property, allEntities, customDTOClasses));
 
                     continue;
                 }
@@ -1114,13 +1120,33 @@ export class {{entity.Name}}BaseComponent {
             }
         }
 
-        private static string GetImports(List<SoftClass> customDTOClasses, List<SoftClass> entities, string projectName)
+        private static string GetImports(List<SoftClass> customDTOClasses, List<SoftClass> entities)
         {
-            List<string> customDTOImports = customDTOClasses.Select(x => x.Name.Replace("DTO", "")).Distinct().ToList();
-            List<string> entityImports = entities.Select(x => x.Name).ToList();
-            List<string> saveBodyImports = entities.Select(x => $"{x.Name}SaveBody").ToList();
+            List<AngularImport> customDTOImports = customDTOClasses
+                .Select(x => new AngularImport
+                {
+                    Namespace = x.Namespace.Replace(".DTO", ""),
+                    Name = x.Name.Replace("DTO", "")
+                })
+                .ToList();
 
-            List<string> imports = customDTOImports.Concat(entityImports).Concat(saveBodyImports).Distinct().ToList();
+            List<AngularImport> entityImports = entities
+                .Select(x => new AngularImport
+                {
+                    Namespace = x.Namespace.Replace(".Entities", ""),
+                    Name = x.Name
+                })
+                .ToList();
+
+            List<AngularImport> saveBodyImports = entities
+                .Select(x => new AngularImport
+                {
+                    Namespace = x.Namespace.Replace(".Entities", ""),
+                    Name = $"{x.Name}SaveBody"
+                })
+                .ToList();
+
+            List<AngularImport> imports = customDTOImports.Concat(entityImports).Concat(saveBodyImports).ToList();
 
             return $$"""
 import { ValidatorService } from 'src/app/business/services/validators/validation-rules';
@@ -1147,9 +1173,31 @@ import { AllClickEvent, Column, SoftDataTableComponent } from 'src/app/core/comp
 import { TableFilter } from 'src/app/core/entities/table-filter';
 import { LazyLoadSelectedIdsResult } from 'src/app/core/entities/lazy-load-selected-ids-result';
 import { SoftFileSelectEvent } from 'src/app/core/controls/soft-file/soft-file.component';
-import { {{string.Join(", ", imports)}} } from '../../entities/{{projectName.FromPascalToKebabCase()}}-entities.generated';
+{{string.Join("\n", GetDynamicNgImports(imports))}}
 """;
         }
 
+        /// <summary>
+        /// Key - Namespace
+        /// Value - Name of the class to import in Angular
+        /// </summary>
+        private static List<string> GetDynamicNgImports(List<AngularImport> imports)
+        {
+            List<string> result = new List<string>();
+
+            foreach (var projectImports in imports.GroupBy(x => x.Namespace))
+            {
+                string projectName = projectImports.Key.Split('.').Last(); // eg. Security
+
+                if (projectName == "Shared")
+                    continue;
+
+                result.Add($$"""
+import { {{string.Join(", ", projectImports.DistinctBy(x => x.Name).Select(x => x.Name))}} } from '../../entities/{{projectName.FromPascalToKebabCase()}}-entities.generated';
+""");
+            }
+
+            return result;
+        }
     }
 }

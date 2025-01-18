@@ -78,12 +78,13 @@ using Azure.Storage.Blobs;
 using System.Data;
 using Soft.Generator.Infrastructure;
 using Soft.Generator.Shared.Helpers;
-using Soft.Generator.Shared.DTO;
 using Soft.Generator.Shared.Attributes;
 using Soft.Generator.Shared.Interfaces;
 using {{projectName}}.Shared.Terms;
-{{string.Join("\n", Helper.GetEntityClassesUsings(referencedProjectEntityClasses))}}
-{{string.Join("\n", Helper.GetDTOClassesUsings(referencedProjectEntityClasses))}}
+using {{projectName}}.Business.Entities;
+using {{projectName}}.Business.DTO;
+{{string.Join("\n", Helper.GetEntityClassesUsings(allEntityClasses))}}
+{{string.Join("\n", Helper.GetDTOClassesUsings(allEntityClasses))}}
 
 namespace {{basePartOfTheNamespace}}.Controllers
 {

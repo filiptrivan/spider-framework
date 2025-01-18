@@ -90,9 +90,9 @@ namespace {{basePartOfNamespace}}.DTO
     public partial class {{entity.Name}}SaveBodyDTO
     {
         public {{entity.Name}}DTO {{entity.Name}}DTO { get; set; }
-{{string.Join("\n", GetOrderedOneToManyProperties(entity, entities))}}
-{{string.Join("\n", GetManyToManyMultiControlTypeProperties(entity, entities))}}
-{{string.Join("\n", GetSimpleManyToManyTableLazyLoadProperties(entity, entities))}}
+{{string.Join("\n", GetOrderedOneToManyProperties(entity, allClasses))}}
+{{string.Join("\n", GetManyToManyMultiControlTypeProperties(entity, allClasses))}}
+{{string.Join("\n", GetSimpleManyToManyTableLazyLoadProperties(entity, allClasses))}}
     }
 """);
             }
@@ -144,7 +144,6 @@ namespace {{basePartOfNamespace}}.DTO
                 .Where(x =>
                     x.IsMultiSelectControlType() ||
                     x.IsMultiAutocompleteControlType()))
-                    
             {
                 SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
 

@@ -68,7 +68,9 @@ namespace Soft.SourceGenerator.NgTable.Angular
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\entities\{projectName}-entities.ts
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\entities\{projectName.FromPascalToKebabCase()}-entities.generated.ts");
 
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes, referencedProjectClasses));
+            List<SoftClass> currentProjectClasses = Helper.GetSoftClasses(classes, referencedProjectClasses);
+            List<SoftClass> allClasses = currentProjectClasses.Concat(referencedProjectClasses).ToList();
+            List<SoftClass> currentProjectDTOClasses = Helper.GetDTOClasses(currentProjectClasses, allClasses);
 
             StringBuilder sb = new StringBuilder();
             StringBuilder sbImports = new StringBuilder();
@@ -78,11 +80,11 @@ import { TableFilter } from "src/app/core/entities/table-filter";
 import { TableFilterContext } from "src/app/core/entities/table-filter-context";
 import { TableFilterSortMeta } from "src/app/core/entities/table-filter-sort-meta";
 import { MimeTypes } from "src/app/core/entities/mime-type";
-{{string.Join("\n", GetEnumPropertyImports(DTOClasses, projectName))}}
+{{string.Join("\n", GetEnumPropertyImports(currentProjectDTOClasses, projectName))}}
 
 """);
 
-            foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
+            foreach (IGrouping<string, SoftClass> DTOClassGroup in currentProjectDTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
             {
                 List<SoftProperty> DTOProperties = new List<SoftProperty>();
 

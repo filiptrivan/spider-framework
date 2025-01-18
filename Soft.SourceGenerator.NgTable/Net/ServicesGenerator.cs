@@ -21,12 +21,12 @@ namespace Soft.SourceGenerator.NgTable.Net
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helper.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
@@ -433,14 +433,16 @@ namespace {{basePartOfTheNamespace}}.Services
             return await _context.WithTransactionAsync(async () =>
             {
                 await OnBeforeSave{{entity.Name}}AndReturnSaveBodyDTO(saveBodyDTO);
-                var saved{{entity.Name}}DTO = await Save{{entity.Name}}AndReturnDTOAsync(saveBodyDTO.{{entity.Name}}DTO, authorizeUpdate, authorizeInsert);
+                var savedDTO = await Save{{entity.Name}}AndReturnDTOAsync(saveBodyDTO.{{entity.Name}}DTO, authorizeUpdate, authorizeInsert);
+                await OnAfterSave{{entity.Name}}AndReturnSaveBodyDTO(savedDTO);
+
 {{string.Join("\n", GetOrderedOneToManyUpdateVariables(entity, entities))}}
 {{string.Join("\n", GetManyToManyMultiControlTypesUpdateMethods(entity, entities))}}
 {{string.Join("\n", GetSimpleManyToManyTableLazyLoad(entity, entities))}}
 
                 var result = new {{entity.Name}}SaveBodyDTO
                 {
-                    {{entity.Name}}DTO = saved{{entity.Name}}DTO,
+                    {{entity.Name}}DTO = savedDTO,
 {{string.Join(",\n", GetOrderedOneToManySaveBodyDTOVariables(entity, entities))}}
                 };
 
@@ -449,10 +451,11 @@ namespace {{basePartOfTheNamespace}}.Services
         }
 
 {{string.Join("\n", GetOrderedOneToManyUpdateMethods(entity, entities))}}
-
 {{string.Join("\n", GetSimpleManyToManyTableLazyLoadGetAllQueryHook(entity, entities))}}
 
-        protected virtual async Task OnBeforeSave{{entity.Name}}AndReturnSaveBodyDTO({{entity.Name}}SaveBodyDTO {{entity.Name.FirstCharToLower()}}SaveBodyDTO) { }
+        protected virtual async Task OnBeforeSave{{entity.Name}}AndReturnSaveBodyDTO({{entity.Name}}SaveBodyDTO saveBodyDTO) { }
+
+        protected virtual async Task OnAfterSave{{entity.Name}}AndReturnSaveBodyDTO({{entity.Name}}DTO savedDTO) { }
 """;
         }
 
@@ -467,7 +470,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 SoftClass extractedEntity = entities.Where(x => x.Name == Helper.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
 
                 result.Add($$"""
-                var saved{{property.Name}}DTO = await UpdateOrdered{{property.Name}}For{{entity.Name}}(saved{{entity.Name}}DTO.Id, saveBodyDTO.{{property.Name}}DTO);
+                var saved{{property.Name}}DTO = await UpdateOrdered{{property.Name}}For{{entity.Name}}(savedDTO.Id, saveBodyDTO.{{property.Name}}DTO);
 """);
             }
 
@@ -549,13 +552,13 @@ namespace {{basePartOfTheNamespace}}.Services
         {
             List<string> result = new List<string>();
 
-            foreach (SoftProperty property in entity.Properties)
+            foreach (SoftProperty property in entity.Properties.Where(x => x.HasBusinessServiceDoNotGenerateAttribute() == false))
             {
                 if (property.IsMultiSelectControlType() ||
                     property.IsMultiAutocompleteControlType())
                 {
                     result.Add($$"""
-                await Update{{property.Name}}For{{entity.Name}}(saved{{entity.Name}}DTO.Id, saveBodyDTO.Selected{{property.Name}}Ids);
+                await Update{{property.Name}}For{{entity.Name}}(savedDTO.Id, saveBodyDTO.Selected{{property.Name}}Ids);
 """);
                 }
             }
@@ -576,7 +579,7 @@ namespace {{basePartOfTheNamespace}}.Services
                     result.Add($$"""
                 var all{{property.Name}}Query = await GetAll{{property.Name}}QueryFor{{entity.Name}}(_context.DbSet<{{extractedEntity.Name}}>());
                 var {{property.Name.FirstCharToLower()}}PaginationResult = await Get{{extractedEntity.Name}}ListForPagination(saveBodyDTO.{{property.Name}}TableFilter, all{{property.Name}}Query);
-                await Update{{property.Name}}WithLazyTableSelectionFor{{entity.Name}}({{property.Name.FirstCharToLower()}}PaginationResult.Query, saved{{entity.Name}}DTO.Id, saveBodyDTO);
+                await Update{{property.Name}}WithLazyTableSelectionFor{{entity.Name}}({{property.Name.FirstCharToLower()}}PaginationResult.Query, savedDTO.Id, saveBodyDTO);
 """);
                 }
             }

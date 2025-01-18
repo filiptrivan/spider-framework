@@ -70,19 +70,6 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         #endregion
 
-
-        #region User
-
-        [HttpGet]
-        [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> GetRoleNamebookListForUserExtended(long userId)
-        {
-            return await _securityBusinessService.GetRoleNamebookListForUserExtended(userId);
-        }
-
-        #endregion
-
-
         #region Role
 
         [HttpPost]
@@ -104,7 +91,7 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
         [AuthGuard]
         public async Task DeleteRole(int id)
         {
-            await _securityBusinessService.DeleteEntityAsync<Role, int>(id);
+            await _securityBusinessService.DeleteRoleAsync(id, true);
         }
 
         [HttpGet]
@@ -123,9 +110,9 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<long>>> GetUserListForRole(int roleId)
+        public async Task<List<NamebookDTO<long>>> GetUsersNamebookListForRole(int roleId)
         {
-            return await _securityBusinessService.GetUserExtendedNamebookListForRole(roleId);
+            return await _securityBusinessService.GetUsersNamebookListForRole(roleId);
         }
 
         [HttpGet]
@@ -144,7 +131,6 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         #endregion
 
-
         #region Permission
 
         [HttpGet]
@@ -156,13 +142,12 @@ namespace Soft.Generator.Security.SecurityControllers // Needs to be other names
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> GetPermissionListForRole(int roleId)
+        public async Task<List<NamebookDTO<int>>> GetPermissionsNamebookListForRole(int roleId)
         {
             return await _securityBusinessService.GetPermissionsNamebookListForRole(roleId);
         }
 
         #endregion
-
 
     }
 }

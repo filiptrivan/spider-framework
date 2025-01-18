@@ -296,7 +296,7 @@ namespace Soft.Generator.Security.Services
 
         #region User
 
-        public async Task<List<NamebookDTO<int>>> GetRoleNamebookListForUserExtended(long userId)
+        public async Task<List<NamebookDTO<int>>> GetRolesNamebookListForUserExtended(long userId)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -374,7 +374,7 @@ namespace Soft.Generator.Security.Services
             });
         }
 
-        public async Task<List<NamebookDTO<long>>> GetUserExtendedNamebookListForRole(long roleId)
+        public async Task<List<NamebookDTO<long>>> GetUsersNamebookListForRole(long roleId)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -388,6 +388,27 @@ namespace Soft.Generator.Security.Services
                         Id = x.Id,
                         DisplayName = x.Email,
                     })
+                    .ToListAsync();
+            });
+        }
+
+        public async Task<List<NamebookDTO<int>>> GetRolesNamebookListForUserExtended(long userExtendedId, bool authorize)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    await _authorizationService.AuthorizeAndThrowAsync<TUser>(PermissionCodes.ReadRole);
+                }
+
+                return await _context.DbSet<TUser>()
+                    .AsNoTracking()
+                    .Where(x => x.Id == userExtendedId)
+                    .SelectMany(x => x.Roles.Select(role => new NamebookDTO<int>
+                    {
+                        Id = role.Id,
+                        DisplayName = role.Name
+                    }))
                     .ToListAsync();
             });
         }

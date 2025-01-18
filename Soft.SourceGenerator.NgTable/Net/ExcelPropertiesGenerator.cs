@@ -49,7 +49,9 @@ namespace Soft.SourceGenerator.NgTable.Net
         {
             if (classes.Count <= 1) return;
 
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(Helper.GetSoftClasses(classes, referencedProjectClasses));
+            List<SoftClass> currentProjectClasses = Helper.GetSoftClasses(classes, referencedProjectClasses);
+            List<SoftClass> allClasses = currentProjectClasses.Concat(referencedProjectClasses).ToList();
+            List<SoftClass> currentProjectDTOClasses = Helper.GetDTOClasses(currentProjectClasses, allClasses);
 
             ClassDeclarationSyntax mapperClass = Helper.GetManualyWrittenMapperClass(classes);
 
@@ -69,7 +71,7 @@ namespace {{basePartOfNamespace}}.ExcelProperties
     public static class ExcelPropertiesToExclude
     {
 """);
-            foreach (IGrouping<string, SoftClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name))
+            foreach (IGrouping<string, SoftClass> DTOClassGroup in currentProjectDTOClasses.GroupBy(x => x.Name))
             {
                 sb.AppendLine($$"""
         public static string[] GetHeadersToExclude({{DTOClassGroup.Key}} _)
@@ -77,7 +79,7 @@ namespace {{basePartOfNamespace}}.ExcelProperties
 """);
                 IList<string> propertyNames = new List<string>();
 
-                foreach (SoftProperty prop in Helper.GetPropsToExcludeFromExcelExport(DTOClassGroup.Key, DTOClasses, mapperClass))
+                foreach (SoftProperty prop in Helper.GetPropsToExcludeFromExcelExport(DTOClassGroup.Key, currentProjectDTOClasses, mapperClass))
                 {
                     propertyNames.Add($"\"{prop.Name}\"");
                 }

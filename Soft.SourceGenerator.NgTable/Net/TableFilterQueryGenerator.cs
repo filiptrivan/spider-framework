@@ -52,16 +52,17 @@ namespace Soft.SourceGenerator.NgTable.NgTable
             if (classes.Count <= 1) return;
 
             List<SoftClass> softClasses = Helper.GetSoftClasses(classes, referencedProjectClasses);
-            List<SoftClass> DTOClasses = Helper.GetDTOClasses(softClasses);
-            List<SoftClass> entities = softClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
-            List<SoftClass> referencedProjectEntities = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
-            List<SoftClass> allEntityClasses = entities.Concat(referencedProjectEntities).ToList();
+            List<SoftClass> allClasses = softClasses.Concat(referencedProjectClasses).ToList();
+
+            List<SoftClass> currentProjectDTOClasses = Helper.GetDTOClasses(softClasses, allClasses);
+            List<SoftClass> currentProjectEntities = softClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SoftClass> allEntityClasses = allClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
 
             StringBuilder sb = new StringBuilder();
             List<string> usings = new List<string>();
             StringBuilder sbUsings = new StringBuilder();
 
-            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(entities[0].Namespace);
+            string[] namespacePartsWithoutLastElement = Helper.GetNamespacePartsWithoutLastElement(currentProjectEntities[0].Namespace);
 
             string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Soft.Generator.Security
             string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
@@ -79,7 +80,7 @@ namespace {{basePartOfNamespace}}.TableFiltering
     public static class TableFilterQueryable
     {
 """);
-            foreach (SoftClass entity in entities)
+            foreach (SoftClass entity in currentProjectEntities)
             {
                 string baseType = entity.BaseType;
 
@@ -103,7 +104,7 @@ namespace {{basePartOfNamespace}}.TableFiltering
                         {
 """);
                 // FT: idem po svim DTO propertijima, ako naletim na neki koji ne postoji u ef klasi, trazim resenje u maperima, ako ne postoji upisujem odgovarajucu gresku
-                List<SoftClass> pairDTOClasses = DTOClasses.Where(x => x.Name == $"{entity.Name}DTO").ToList(); // FT: Getting the pair DTO classes of entity class
+                List<SoftClass> pairDTOClasses = currentProjectDTOClasses.Where(x => x.Name == $"{entity.Name}DTO").ToList(); // FT: Getting the pair DTO classes of entity class
                 List<SoftProperty> efClassProps = entity.Properties;
 
                 foreach (SoftClass pairDTOClass in pairDTOClasses)
@@ -119,7 +120,7 @@ namespace {{basePartOfNamespace}}.TableFiltering
                             {
                                 string entityPropName = entityDotNotation.Replace("CommaSeparated", ""); // "SegmentationItems"
 
-                                sb.AppendLine(GetCaseForEnumerable(DTOprop.Name, entityPropName, entity.GetIdType(entities)));
+                                sb.AppendLine(GetCaseForEnumerable(DTOprop.Name, entityPropName, entity.GetIdType(currentProjectEntities)));
 
                                 continue;
                             }
