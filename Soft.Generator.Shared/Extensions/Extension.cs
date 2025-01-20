@@ -48,5 +48,11 @@ namespace Soft.Generator.Shared.Extensions
 
             return kebabCaseString;
         }
+
+        public static List<T> StructToList<T>(this T structValue)
+            where T : struct
+        {
+            return new List<T> { structValue };
+        }
     }
 }

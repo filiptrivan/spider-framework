@@ -15,8 +15,12 @@ export class TranslateClassNamesGeneratedService {
     {
         switch(name) 
         {
+            case 'BusinessObjectCodebook':
+                return this.translocoService.translate('BusinessObjectCodebook');
             case 'BusinessObject':
                 return this.translocoService.translate('BusinessObject');
+            case 'BusinessObjectNamebook':
+                return this.translocoService.translate('BusinessObjectNamebook');
             case 'Codebook':
                 return this.translocoService.translate('Codebook');
             case 'ExcelReportOptions':

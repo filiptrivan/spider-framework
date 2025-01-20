@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace Soft.SourceGenerators.Helpers
 {
@@ -569,6 +570,16 @@ namespace Soft.SourceGenerators.Helpers
         public static bool HasFromFormAttribute(this SoftParameter parameter)
         {
             return parameter.Attributes.Any(x => x.Name == "FromForm");
+        }
+
+        public static bool HasM2MMaintanceEntityAttribute(this SoftProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "M2MMaintanceEntity");
+        }
+
+        public static bool HasM2MExtendEntityAttribute(this SoftProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "M2MExtendEntity");
         }
 
         #endregion

@@ -126,7 +126,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Delete
 
-{{GetDeletingData(entity, allEntityClasses)}}
+{{string.Join("\n\n", GetDeletingData(entity, allEntityClasses))}}
 
         #endregion
 
@@ -726,100 +726,80 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Delete
 
-        private static string GetDeletingData(SoftClass entity, List<SoftClass> allEntityClasses)
+        private static List<string> GetDeletingData(SoftClass entity, List<SoftClass> allEntities)
         {
             if (entity.IsAbstract || entity.IsReadonlyObject())
-                return null;
+                return new List<string>();
 
-            string entityIdType = entity.GetIdType(allEntityClasses);
+            List<string> result = new List<string>();
 
-            return $$"""
-        public virtual async Task OnBefore{{entity.Name}}AsyncDelete({{entityIdType}} {{entity.Name.FirstCharToLower()}}Id) { }
+            result.Add(GetDeleteEntityData(entity, allEntities));
 
-        public async Task Delete{{entity.Name}}Async({{entityIdType}} {{entity.Name.FirstCharToLower()}}Id, bool authorize = true)
-        {
-            await _context.WithTransactionAsync(async () =>
-            {
-                if (authorize)
-                {
-                    await _authorizationService.{{entity.Name}}DeleteAuthorize({{entity.Name.FirstCharToLower()}}Id);
-                }
+            result.Add(GetDeleteEntityListData(entity, allEntities));
 
-                await OnBefore{{entity.Name}}AsyncDelete({{entity.Name.FirstCharToLower()}}Id);
-
-{{string.Join("\n", GetManyToOneDeleteQueries(entity, allEntityClasses, null, 0))}}
-
-                await DeleteEntityAsync<{{entity.Name}}, {{entityIdType}}>({{entity.Name.FirstCharToLower()}}Id);
-            });
+            return result;
         }
 
-        public virtual async Task OnBefore{{entity.Name}}ListAsyncDelete(List<{{entityIdType}}> {{entity.Name.FirstCharToLower()}}ListToDelete) { }
+        private static string GetDeleteEntityData(SoftClass entity, List<SoftClass> allEntities)
+        {
+            string entityIdType = entity.GetIdType(allEntities);
+            int deleteIterator = 1;
 
-        public async Task Delete{{entity.Name}}ListAsync(List<{{entityIdType}}> {{entity.Name.FirstCharToLower()}}ListToDelete, bool authorize = true)
+            return $$"""
+        public virtual async Task OnBefore{{entity.Name}}AsyncDelete({{entityIdType}} id) { }
+
+        public async Task Delete{{entity.Name}}Async({{entityIdType}} id, bool authorize = true)
         {
             await _context.WithTransactionAsync(async () =>
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}ListDeleteAuthorize({{entity.Name.FirstCharToLower()}}ListToDelete);
+                    await _authorizationService.{{entity.Name}}DeleteAuthorize(id);
                 }
 
-                await OnBefore{{entity.Name}}ListAsyncDelete({{entity.Name.FirstCharToLower()}}ListToDelete);
+                await OnBefore{{entity.Name}}AsyncDelete(id);
 
-{{string.Join("\n", GetManyToOneDeleteQueriesForList(entity, allEntityClasses, null, 0))}}
+                List<{{entityIdType}}> listForDelete_{{deleteIterator}} = id.StructToList();
 
-                await DeleteEntitiesAsync<{{entity.Name}}, {{entityIdType}}>({{entity.Name.FirstCharToLower()}}ListToDelete);
+{{string.Join("\n\n", GetManyToOneDeleteQueries(entity, allEntities, "listForDelete", deleteIterator))}}
+
+                await DeleteEntityAsync<{{entity.Name}}, {{entityIdType}}>(id);
             });
         }
 """;
         }
 
-        private static List<string> GetManyToOneDeleteQueriesForList(SoftClass entity, List<SoftClass> allEntities, string parentNameOfTheEntityClass, int recursiveIteration)
+        private static string GetDeleteEntityListData(SoftClass entity, List<SoftClass> allEntities)
         {
-            if (recursiveIteration > 5000)
+            string entityIdType = entity.GetIdType(allEntities);
+            int deleteIterator = 1;
+
+            return $$"""
+        public virtual async Task OnBefore{{entity.Name}}ListAsyncDelete(List<{{entityIdType}}> listForDelete) { }
+
+        public async Task Delete{{entity.Name}}ListAsync(List<{{entityIdType}}> listForDelete_{{deleteIterator}}, bool authorize = true)
+        {
+            await _context.WithTransactionAsync(async () =>
             {
-                GetManyToOneDeleteQueries(null, null, null, int.MaxValue);
-                return new List<string> { "You made cascade delete infinite loop." };
-            }
-
-            List<string> result = new List<string>();
-
-            List<SoftProperty> manyToOneRequiredProperties = Helper.GetManyToOneRequiredProperties(entity.Name, allEntities);
-
-            foreach (SoftProperty property in manyToOneRequiredProperties)
-            {
-                SoftClass nestedEntity = allEntities.Where(x => x.Name == property.EntityName).SingleOrDefault();
-
-                if (recursiveIteration == 0)
+                if (authorize)
                 {
-                    result.Add($$"""
-                var {{entity.Name.FirstCharToLower()}}{{nestedEntity.Name}}ListToDelete = await _context.DbSet<{{nestedEntity.Name}}>().Where(x => {{entity.Name.FirstCharToLower()}}ListToDelete.Contains(x.{{property.Name}}.Id)).Select(x => x.Id).ToListAsync();
-""");
-                }
-                else
-                {
-                    result.Add($$"""
-                var {{entity.Name.FirstCharToLower()}}{{nestedEntity.Name}}ListToDelete = await _context.DbSet<{{nestedEntity.Name}}>().Where(x => {{parentNameOfTheEntityClass.FirstCharToLower()}}{{entity.Name}}ListToDelete.Contains(x.{{property.Name}}.Id)).Select(x => x.Id).ToListAsync();
-""");
+                    await _authorizationService.{{entity.Name}}ListDeleteAuthorize(listForDelete_{{deleteIterator}});
                 }
 
-                result.AddRange(GetManyToOneDeleteQueries(nestedEntity, allEntities, entity.Name, recursiveIteration + 1));
+                await OnBefore{{entity.Name}}ListAsyncDelete(listForDelete_{{deleteIterator}});
 
-                result.Add($$"""
-                await _context.DbSet<{{nestedEntity.Name}}>().Where(x => {{entity.Name.FirstCharToLower()}}{{nestedEntity.Name}}ListToDelete.Contains(x.Id)).ExecuteDeleteAsync();
-""");
-            }
+{{string.Join("\n\n", GetManyToOneDeleteQueries(entity, allEntities, "listForDelete", deleteIterator))}}
 
-            return result;
+                await DeleteEntitiesAsync<{{entity.Name}}, {{entityIdType}}>(listForDelete_{{deleteIterator}});
+            });
+        }
+"""; 
         }
 
-        private static List<string> GetManyToOneDeleteQueries(SoftClass entity, List<SoftClass> allEntities, string parentNameOfTheEntityClass, int recursiveIteration)
+        private static List<string> GetManyToOneDeleteQueries(SoftClass entity, List<SoftClass> allEntities, string listForDeleteVariableName, int deleteIterator)
         {
-            if (recursiveIteration > 5000)
-            {
-                GetManyToOneDeleteQueries(null, null, null, int.MaxValue);
+            if (deleteIterator > 5000)
                 return new List<string> { "You made cascade delete infinite loop." };
-            }
 
             List<string> result = new List<string>();
 
@@ -827,26 +807,34 @@ namespace {{basePartOfTheNamespace}}.Services
 
             foreach (SoftProperty property in manyToOneRequiredProperties)
             {
-                SoftClass nestedEntityClass = allEntities.Where(x => x.Name == property.EntityName).SingleOrDefault();
-                string nestedEntityClassName = nestedEntityClass.Name;
+                SoftClass parentEntity = allEntities.Where(x => x.Name == property.EntityName).SingleOrDefault();
 
-                if (recursiveIteration == 0)
+                if (parentEntity.IsManyToMany())
                 {
                     result.Add($$"""
-                var {{entity.Name.FirstCharToLower()}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => x.{{property.Name}}.Id == {{entity.Name.FirstCharToLower()}}Id).Select(x => x.Id).ToListAsync();
+                await _context.DbSet<{{parentEntity.Name}}>()
+                    .Where(x => {{listForDeleteVariableName}}_{{deleteIterator}}.Contains(x.{{property.Name}}.Id))
+                    .ExecuteDeleteAsync();
 """);
+
+                    continue; // FT: Continue because M2M could never be required
                 }
                 else
                 {
                     result.Add($$"""
-                var {{entity.Name.FirstCharToLower()}}{{nestedEntityClassName}}ListToDelete = await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{parentNameOfTheEntityClass.FirstCharToLower()}}{{entity.Name}}ListToDelete.Contains(x.{{property.Name}}.Id)).Select(x => x.Id).ToListAsync();
+                var {{parentEntity.Name.FirstCharToLower()}}ListForDeleteBecause{{property.Name}}_{{deleteIterator + 1}} = await _context.DbSet<{{parentEntity.Name}}>()
+                    .Where(x => {{listForDeleteVariableName}}_{{deleteIterator}}.Contains(x.{{property.Name}}.Id))
+                    .Select(x => x.Id).ToListAsync();
 """);
+
                 }
 
-                result.AddRange(GetManyToOneDeleteQueries(nestedEntityClass, allEntities, entity.Name, recursiveIteration + 1));
+                result.AddRange(GetManyToOneDeleteQueries(parentEntity, allEntities, $"{parentEntity.Name.FirstCharToLower()}ListForDeleteBecause{property.Name}", deleteIterator + 1));
 
                 result.Add($$"""
-                await _context.DbSet<{{nestedEntityClassName}}>().Where(x => {{entity.Name.FirstCharToLower()}}{{nestedEntityClassName}}ListToDelete.Contains(x.Id)).ExecuteDeleteAsync();
+                await _context.DbSet<{{parentEntity.Name}}>()
+                    .Where(x => {{parentEntity.Name.FirstCharToLower()}}ListForDeleteBecause{{property.Name}}_{{deleteIterator + 1}}.Contains(x.Id))
+                    .ExecuteDeleteAsync();
 """);
             }
 
@@ -874,7 +862,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
                 string extractedPropertyEntityDisplayName = Helper.GetDisplayNameProperty(extractedPropertyEntity); // Name
 
-                SoftProperty manyToManyPropFromTheListProperties = extractedPropertyEntity.Properties.Where(x => x.Type.IsEnumerable() && Helper.ExtractTypeFromGenericType(x.Type) == entity.Name).SingleOrDefault(); // List<User> Users
+                SoftProperty extractedEntityManyToManyProperty = Helper.GetOppositeManyToManyProperty(oneToManyProperty, extractedPropertyEntity, entity, entities);
                 SoftProperty manyToOneProperty = extractedPropertyEntity.GetManyToOnePropertyWithManyAttribute(entity.Name, oneToManyProperty.Name);
 
                 if (manyToOneProperty != null)
@@ -887,7 +875,7 @@ namespace {{basePartOfTheNamespace}}.Services
 {{GetOrderedOneToManyMethod(oneToManyProperty, entity, entities)}}
 """);
                 }
-                else if (manyToManyPropFromTheListProperties != null)
+                else if (extractedEntityManyToManyProperty != null)
                 {
                     result.Add($$"""
         public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{oneToManyProperty.Name}}NamebookListFor{{entity.Name}}({{entityIdType}} id, bool authorize = true)
@@ -901,7 +889,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
                 return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
                     .AsNoTracking()
-                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}.Any(x => x.Id == id))
+                    .Where(x => x.{{extractedEntityManyToManyProperty.Name}}.Any(x => x.Id == id))
                     .Select(x => new NamebookDTO<{{extractedPropertyEntityIdType}}>
                     {
                         Id = x.Id,
@@ -921,7 +909,7 @@ namespace {{basePartOfTheNamespace}}.Services
                 }
 
                 return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
-                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}.Any(x => x.Id == id))
+                    .Where(x => x.{{extractedEntityManyToManyProperty.Name}}.Any(x => x.Id == id))
                     .ToListAsync();
             });
         }
@@ -967,7 +955,7 @@ namespace {{basePartOfTheNamespace}}.Services
             query = query
                 .Skip(tableFilterDTO.First)
                 .Take(tableFilterDTO.Rows)
-                .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}
+                .Where(x => x.{{extractedEntityManyToManyProperty.Name}}
                     .Any(x => x.Id == tableFilterDTO.{{extractedPropertyEntityIdType.GetTableFilterAdditionalFilterPropertyName()}}));
 
             await _context.WithTransactionAsync(async () =>
@@ -979,7 +967,7 @@ namespace {{basePartOfTheNamespace}}.Services
                     .ToListAsync();
 
                 int count = await _context.DbSet<{{extractedPropertyEntity.Name}}>()
-                    .Where(x => x.{{manyToManyPropFromTheListProperties.Name}}
+                    .Where(x => x.{{extractedEntityManyToManyProperty.Name}}
                         .Any(x => x.Id == tableFilterDTO.{{extractedPropertyEntityIdType.GetTableFilterAdditionalFilterPropertyName()}}))
                     .CountAsync();
 

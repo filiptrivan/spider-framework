@@ -53,6 +53,8 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             "TableFilterContext",
             "TableFilterSortMeta",
             "LazyLoadSelectedIdsResult",
+            "BusinessObjectCodebook", // Nucleus
+            "BusinessObjectNamebook", // Nucleus
         };
 
         #region Source Generator
@@ -129,7 +131,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                     return GetSoftAttribute(x);
                 })
                 .ToList());
-                
+
                 cHelper = currentProjectClasses.Where(x => x.Identifier.Text == baseType?.ToString()).SingleOrDefault();
 
                 if (baseType != null && cHelper == null)
@@ -338,13 +340,13 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             return DTOClassProperties;
         }
 
-        public static List<SoftProperty> GetManyToOneRequiredProperties(string nameOfTheEntityClass, List<SoftClass> softEntityClasses)
+        public static List<SoftProperty> GetManyToOneRequiredProperties(string entityName, List<SoftClass> entities)
         {
-            return softEntityClasses
+            return entities
                 .SelectMany(x => x.Properties)
                 .Where(prop => prop.Type.IsManyToOneType() &&
                                prop.Attributes.Any(x => x.Name == "ManyToOneRequired") &&
-                               prop.Type == nameOfTheEntityClass)
+                               prop.Type == entityName)
                 .ToList();
         }
 
@@ -399,6 +401,53 @@ namespace Soft.SourceGenerator.NgTable.Helpers
             }
 
             return newProp;
+        }
+
+        /// <summary>
+        /// </summary>
+        /// <param name="entity">Main entity from which we get one to many property</param>
+        public static SoftClass GetManyToManyEntityWithAttributeValue(string attributeValue, SoftClass entity, List<SoftClass> entities)
+        {
+            return entities
+                .Where(x => x.BaseType == null && x.Properties
+                    .Any(x => x.Type == entity.Name && x.Attributes
+                        .Any(x => (x.Name == "M2MExtendEntity" || x.Name == "M2MMaintanceEntity") && x.Value == attributeValue)))
+                .SingleOrDefault();
+        }
+
+        public static SoftProperty GetManyToManyPropertyWithAttributeValue(SoftClass manyToManyEntity, string attributeValue)
+        {
+            if (manyToManyEntity == null)
+                return null;
+
+            return manyToManyEntity.Properties
+                .Where(x => x.Attributes
+                    .Any(x => (x.Name == "M2MExtendEntity" || x.Name == "M2MMaintanceEntity") && x.Value == attributeValue))
+                .SingleOrDefault();
+        }
+
+        public static SoftProperty GetOppositeManyToManyProperty(SoftProperty oneToManyProperty, SoftClass extractedPropertyEntity, SoftClass entity, List<SoftClass> entities)
+        {
+            SoftClass manyToManyEntity = GetManyToManyEntityWithAttributeValue(oneToManyProperty.Name, entity, entities);
+
+            if (manyToManyEntity == null)
+                return null;
+
+            SoftProperty manyToManyProperty = GetManyToManyPropertyWithAttributeValue(manyToManyEntity, oneToManyProperty.Name);
+            SoftProperty oppositeManyToManyProperty = null;
+
+            if (manyToManyProperty.HasM2MMaintanceEntityAttribute())
+            {
+                oppositeManyToManyProperty = manyToManyEntity.Properties.Where(x => x.HasM2MExtendEntityAttribute()).Single();
+            }
+            else if (manyToManyProperty.HasM2MExtendEntityAttribute())
+            {
+                oppositeManyToManyProperty = manyToManyEntity.Properties.Where(x => x.HasM2MMaintanceEntityAttribute()).Single();
+            }
+
+            string propertyName = oppositeManyToManyProperty.Attributes.Where(x => x.Name == "M2MMaintanceEntity" || x.Name == "M2MExtendEntity").Select(x => x.Value).SingleOrDefault();
+
+            return extractedPropertyEntity.Properties.Where(x => x.Name == propertyName).SingleOrDefault();
         }
 
         #endregion
@@ -504,8 +553,7 @@ namespace Soft.SourceGenerator.NgTable.Helpers
                 {
                     List<SoftClass> classes = new List<SoftClass>();
 
-                    foreach (IAssemblySymbol referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols
-                             .Where(a => a.Name.Contains("Soft") || a.Name.Contains("Playerty")))
+                    foreach (IAssemblySymbol referencedAssembly in compilation.SourceModule.ReferencedAssemblySymbols)
                     {
                         classes.AddRange(GetClassesFromReferencedAssemblies(referencedAssembly.GlobalNamespace, namespaceExtensions));
                     }

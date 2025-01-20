@@ -15,6 +15,10 @@ export class TranslateLabelsGeneratedService {
     {
         switch(name) 
         {
+            case 'code':
+                return this.translocoService.translate('Code');
+            case 'name':
+                return this.translocoService.translate('Name');
             case 'id':
                 return this.translocoService.translate('Id');
             case 'version':
@@ -23,10 +27,10 @@ export class TranslateLabelsGeneratedService {
                 return this.translocoService.translate('CreatedAt');
             case 'modifiedAt':
                 return this.translocoService.translate('ModifiedAt');
-            case 'code':
-                return this.translocoService.translate('Code');
             case 'displayName':
                 return this.translocoService.translate('DisplayName');
+            case 'isLeaf':
+                return this.translocoService.translate('IsLeaf');
             case 'additionalColumnHeaders':
                 return this.translocoService.translate('AdditionalColumnHeaders');
             case 'additionalDataStartColumn':
