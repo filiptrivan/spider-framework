@@ -134,7 +134,7 @@ export class TranslateLabelsGeneratedService {
         {
             List<string> result = new List<string>();
             
-            foreach (SoftProperty DTOProperty in DTOProperties.DistinctBy(x => x.Name))
+            foreach (SoftProperty DTOProperty in DTOProperties)
             {
                 string propName = DTOProperty.Name;
 
@@ -147,10 +147,13 @@ export class TranslateLabelsGeneratedService {
                 if (propName.EndsWith("CommaSeparated") && propName != "CommaSeparated")
                     propName = propName.Replace("CommaSeparated", "");
 
-                result.Add($$""""
+                string singleCase = $$"""
             case '{{propName.FirstCharToLower()}}':
                 return this.translocoService.translate('{{propName}}');
-"""");
+""";
+
+                if (result.Contains(singleCase) == false)
+                    result.Add(singleCase);
             }
 
             return result;
