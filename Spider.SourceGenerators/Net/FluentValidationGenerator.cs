@@ -1,0 +1,424 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
+using Spider.SourceGenerators.Shared;
+using Spider.SourceGenerators.Enums;
+using Spider.SourceGenerators.Models;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+
+namespace Spider.SourceGenerators.Net
+{
+    [Generator]
+    public class FluentValidationGenerator : IIncrementalGenerator
+    {
+        public void Initialize(IncrementalGeneratorInitializationContext context)
+        {
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.DTO,
+                });
+
+            IncrementalValueProvider<List<SpiderClass>> referencedProjectClasses = Helpers.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.DTO,
+                });
+
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
+        }
+
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectClasses, SourceProductionContext context)
+        {
+            if (classes.Count <= 1) return;
+
+            List<SpiderClass> spiderClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
+            List<SpiderClass> allClasses = spiderClasses.Concat(referencedProjectClasses).ToList();
+
+            List<SpiderClass> currentProjectDTOClasses = Helpers.GetDTOClasses(spiderClasses, allClasses);
+            List<SpiderClass> entities = spiderClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+
+            StringBuilder sb = new StringBuilder();
+
+            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(entities[0].Namespace);
+            string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Spider.Security
+            string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
+
+            sb.AppendLine($$"""
+using FluentValidation;
+using {{basePartOfNamespace}}.DTO;
+using Spider.Shared.FluentValidation;
+
+namespace {{basePartOfNamespace}}.ValidationRules
+{
+""");
+            foreach (IGrouping<string, SpiderClass> DTOClassGroup in currentProjectDTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
+            {
+                List<SpiderProperty> DTOProperties = new List<SpiderProperty>();
+                List<SpiderAttribute> DTOAttributes = new List<SpiderAttribute>();
+
+                SpiderClass customDTOClass = currentProjectDTOClasses.Where(x => x.Name == DTOClassGroup.Key && x.IsGenerated == false).SingleOrDefault();
+
+                if (customDTOClass != null)
+                    DTOAttributes.AddRange(customDTOClass.Attributes); // FT: Its okay to add only for non generated because we will not have any attributes on the generated DTOs
+
+                foreach (SpiderClass DTOClass in DTOClassGroup)
+                    DTOProperties.AddRange(DTOClass.Properties);
+
+                SpiderClass entityClass = entities.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Name).SingleOrDefault(); // If it is null then we only made DTO, without entity class
+
+                sb.AppendLine($$"""
+    public class {{DTOClassGroup.Key}}ValidationRules : AbstractValidator<{{DTOClassGroup.Key}}>
+    {
+        public {{DTOClassGroup.Key}}ValidationRules()
+        {
+            {{string.Join("\n\t\t\t", GetValidationRules(DTOProperties, DTOAttributes, entityClass, entities))}}
+        }
+    }
+""");
+            }
+
+            sb.AppendLine($$"""
+}
+""");
+
+            context.AddSource($"{projectName}ValidationRules.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
+        }
+
+        /// <summary>
+        /// Getting the validation rules for the single object (DTO + Entity)
+        /// </summary>
+        /// <param name="DTOProperties">Including the attributes</param>
+        /// <param name="entityClass">User</param>
+        /// <returns>List of rules: eg. [RuleFor(x => x.Username).Length(0, 70), RuleFor(x => x.Email).Length(0, 70)]</returns>
+        public static List<string> GetValidationRules(List<SpiderProperty> DTOProperties, List<SpiderAttribute> DTOAttributes, SpiderClass entityClass, List<SpiderClass> entityClasses)
+        {
+            // [RuleFor(x => x.Username).Length(0, 70);, RuleFor(x => x.Email).Length(0, 70);]
+            List<string> validationRulesOnDTO = new List<string>(); // priority - 1.
+            //List<string> validationRulesOnDTOProperties = new List<string>(); // priority - 2.
+            List<string> validationRulesOnEntity = new List<string>(); // priority - 3.
+            List<string> validationRulesOnEntityProperties = new List<string>(); // priority - 4.
+
+            foreach (SpiderAttribute attribute in DTOAttributes)
+            {
+                if (attribute.Name == "CustomValidator")
+                    validationRulesOnDTO.Add(attribute.Value);
+            }
+
+            //foreach (Prop prop in DTOProperties) // FT: Add if you would need to specify rules on the property level of DTO
+            //{
+            //    string rule = GetRuleForProp(prop);
+            //    if (rule != null)
+            //        validationRulesOnDTOProperties.Add(rule);
+            //}
+
+            if (entityClass != null) // If it is null then we only made DTO, without entity class
+            {
+                validationRulesOnEntity.AddRange(GetRulesOnEntity(entityClass, entityClasses));
+
+                List<SpiderProperty> entityProperties = entityClass.Properties;
+                foreach (SpiderProperty prop in entityProperties)
+                {
+                    string rule = GetRuleForProp(prop);
+
+                    if (rule != null)
+                        validationRulesOnEntityProperties.Add(rule);
+                }
+            }
+
+            List<string> mergedValidationRules = GetMergedValidationRules(validationRulesOnDTO, validationRulesOnEntity, validationRulesOnEntityProperties);
+
+            return mergedValidationRules;
+        }
+
+        static string GetRuleForProp(SpiderProperty prop)
+        {
+            List<string> singleRulesOnProperty = GetSingleRulesForProp(prop); // NotEmpty(), Length(0, 70);
+            string propName = GetPropNameForRule(prop, singleRulesOnProperty);
+
+            if (propName == null || singleRulesOnProperty.Count == 0 || prop.Type.IsEnumerable())
+                return null;
+
+            // FT: If there is no Required nor ManyToOneRequired attribute, we should let user save null to database
+            if (prop.Attributes.Any(x => x.Name == "Required" || x.Name == "ManyToOneRequired") == false)
+            {
+                if (prop.Type == "string")
+                {
+                    singleRulesOnProperty.Add($"Unless(i => string.IsNullOrEmpty(i.{propName}))");
+                }
+                else
+                {
+                    singleRulesOnProperty.Add($"Unless(i => i.{propName} == null)");
+                }
+            }
+
+            return $"RuleFor(x => x.{propName}).{string.Join(".", singleRulesOnProperty)};";
+        }
+
+        static List<string> GetSingleRulesForProp(SpiderProperty prop)
+        {
+            List<string> singleRules = new List<string>();
+
+            foreach (SpiderAttribute attribute in prop.Attributes)
+            {
+                string attributeName = attribute.Name;
+                if (attributeName == null)
+                    continue;
+
+                switch (attributeName)
+                {
+                    case "Required":
+                        singleRules.Add("NotEmpty()");
+                        break;
+                    case "ManyToOneRequired":
+                        singleRules.Add("NotEmpty()");
+                        break;
+                    case "Column":
+                        if (attribute.Value.Contains("VARCHAR"))
+                            singleRules.Add($"Length(0, {FindNumberBetweenVarcharParentheses(attribute.Value)})");
+                        break;
+                    case "StringLength":
+                        string minValue = FindMinValueForStringLength(attribute.Value);
+                        if (minValue == null)
+                            singleRules.Add($"Length({FindMaxValueForStringLength(attribute.Value)})");
+                        else
+                            singleRules.Add($"Length({minValue}, {FindMaxValueForStringLength(attribute.Value)})");
+                        break;
+                    case "Precision":
+                        singleRules.Add($"PrecisionScale({attribute.Value}, false)"); // FT: only here the attribute.Value should be two values eg. 6, 7
+                        break;
+                    case "Range":
+                        singleRules.Add($"GreaterThanOrEqualTo({attribute.Value.Split(',')[0].Trim()})");
+                        singleRules.Add($"LessThanOrEqualTo({attribute.Value.Split(',')[1].Trim()})");
+                        break;
+                    case "GreaterThanOrEqualTo":
+                        singleRules.Add($"GreaterThanOrEqualTo({attribute.Value})");
+                        break;
+                    case "CustomValidator":
+                        singleRules.Add(attribute.Value);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return singleRules;
+        }
+
+        private static string GetPropNameForRule(SpiderProperty prop, List<string> singleRulesOnProperty)
+        {
+            string propName = prop.Name;
+
+            if (prop.Type.IsManyToOneType())  // FT: if it is not base type and not enumerable than it's many to one for sure, and the validation can only be for id to be required
+            {
+                propName = $"{prop.Name}Id";
+
+                if (singleRulesOnProperty.Count > 1)
+                    propName = "YOU CAN'T DEFINE ANYTHING THEN Required/ManyToOneRequired VALIDATION FOR MANY TO ONE PROPERTY";
+            }
+
+            return propName;
+        }
+
+        /// <summary>
+        /// Looking for attributes on the class not on the properties
+        /// </summary>
+        /// <param name="entityClass"></param>
+        /// <returns></returns>
+        static List<string> GetRulesOnEntity(SpiderClass entityClass, List<SpiderClass> entityClasses)
+        {
+            List<string> ruleFors = new List<string>();
+            List<SpiderAttribute> entityAttributes = entityClass.Attributes;
+
+            foreach (SpiderAttribute attribute in entityAttributes)
+            {
+                string attributeName = attribute.Name;
+                if (attributeName == null)
+                    continue;
+
+                string attributeValue = attribute.Value;
+
+                switch (attributeName)
+                {
+                    case "CustomValidator":
+                        ruleFors.Add(attributeValue);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return ruleFors;
+        }
+
+        static string FindNumberBetweenVarcharParentheses(string input)
+        {
+            int startIndex = input.IndexOf('(');
+            int endIndex = input.IndexOf(')');
+
+            if (startIndex != -1 && endIndex != -1)
+            {
+                string numberStr = input.Substring(startIndex + 1, endIndex - startIndex - 1);
+
+                return numberStr;
+            }
+            else
+            {
+                return "0";
+            }
+        }
+
+        /// <summary>
+        /// </summary>
+        /// <param name="input">"70, MinimumLength = 5"</param>
+        /// <returns></returns>
+        static string FindMinValueForStringLength(string input)
+        {
+            string pattern = @"MinimumLength\s*=\s*(\d+)";
+
+            Match match = Regex.Match(input, pattern);
+
+            if (match.Success)
+                return match.Groups[1].Value;
+            else
+                return null;
+        }
+
+        /// <summary>
+        /// </summary>
+        /// <param name="input">"70, MinimumLength = 5"</param>
+        /// <returns></returns>
+        static string FindMaxValueForStringLength(string input)
+        {
+            return input.Split(',').First().Replace(" ", "");
+        }
+
+        /// <summary>
+        /// Getting merged validation rules for the single object (DTO + Entity)
+        /// </summary>
+        /// <returns></returns>
+        private static List<string> GetMergedValidationRules(List<string> validationRulesOnDTOProperties, List<string> validationRulesOnEntity, List<string> validationRulesOnEntityProperties)
+        {
+            List<string> mergedValidationRules = new List<string>();
+
+            foreach (string ruleOnDTOProperties in validationRulesOnDTOProperties) // RuleFor(x => x.Username).Length(0, 70).Required();
+            {
+                mergedValidationRules.Add(ruleOnDTOProperties);
+                string identifierPart = ruleOnDTOProperties.Split(')').First(); // RuleFor(x => x.Username
+
+                validationRulesOnEntity.RemoveAll(x => x.Split(')').First() == identifierPart);
+                validationRulesOnEntityProperties.RemoveAll(x => x.Split(')').First() == identifierPart);
+            }
+            foreach (string ruleOnEntity in validationRulesOnEntity) // RuleFor(x => x.Name).Required();
+            {
+                mergedValidationRules.Add(ruleOnEntity);
+                string identifierPart = ruleOnEntity.Split(')').First(); // RuleFor(x => x.Name
+
+                validationRulesOnEntityProperties.RemoveAll(x => x.Split(')').First() == identifierPart);
+            }
+            foreach (string ruleOnEntityProperties in validationRulesOnEntityProperties) // RuleFor(x => x.Password).Length(0, 20);
+            {
+                mergedValidationRules.Add(ruleOnEntityProperties);
+            }
+
+            return mergedValidationRules;
+        }
+
+        /// <summary>
+        /// Getting merged validation rules for the single object (DTO + Entity)
+        /// </summary>
+        /// <returns></returns>
+        private static List<string> GetMergedValidationRulesObsolete(List<string> validationRulesOnDTOProperties, List<string> validationRulesOnEntity, List<string> validationRulesOnEntityProperties)
+        {
+            List<string> mergedValidationRules = new List<string>();
+
+            foreach (string ruleOnDTOProperties in validationRulesOnDTOProperties) // RuleFor(x => x.Username).Length(0, 70).Required();
+            {
+                List<string> mergedSingleRules = new List<string>();
+
+                List<string> sr1 = GetSingleRulesWithValues(ruleOnDTOProperties); // .Length(0, 70), .Required()
+                string identifierPart = ruleOnDTOProperties.Split(')').First(); // RuleFor(x => x.Username
+                mergedSingleRules = sr1;
+
+                string ruleOnEntity = validationRulesOnEntity.Select(x => x.Split(')').First()).Where(x => x == identifierPart).FirstOrDefault(); // RuleFor(x => x.Username).Length(0, 20).Other();
+                List<string> sr2 = GetSingleRulesWithValues(ruleOnEntity); // .Length(0, 20), .Other()
+                List<string> sr22 = sr2.Select(x => x.Split('(').First()).ToList(); // .Length, .Other
+
+                string ruleOnEntityProperties = validationRulesOnEntityProperties.Select(x => x.Split(')').First()).Where(x => x == identifierPart).FirstOrDefault(); // RuleFor(x => x.Username).Length(0, 20).OtherOther(0, 20);
+                List<string> sr3 = GetSingleRulesWithValues(ruleOnEntityProperties); // .Length(0, 20), .OtherOther()
+                List<string> sr33 = sr2.Select(x => x.Split('(').First()).ToList(); // .Length, .OtherOther
+
+                foreach (string singleRule in sr1) // .Length(0, 70), .Required()
+                {
+                    mergedSingleRules.Add(singleRule);
+                    string singleRuleIdentifierPart = singleRule.Split('(').First(); // .Length from .Length(0, 70)
+
+                    if (sr22.Contains(singleRuleIdentifierPart) == true)
+                    {
+                        sr2.RemoveAt(sr2.FindIndex(x => x.StartsWith(singleRuleIdentifierPart)));
+                        sr22.RemoveAt(sr2.FindIndex(x => x == singleRuleIdentifierPart));
+                    }
+
+                    if (sr33.Contains(singleRuleIdentifierPart) == true)
+                    {
+                        sr3.RemoveAt(sr3.FindIndex(x => x.StartsWith(singleRuleIdentifierPart)));
+                        sr33.RemoveAt(sr3.FindIndex(x => x == singleRuleIdentifierPart));
+                    }
+                }
+
+                foreach (string singleRule2 in sr2)
+                {
+                    string singleRule2IdentifierPart = singleRule2.Split('(').First(); // .Length from .Length(0, 20)
+
+                    if (sr33.Contains(singleRule2IdentifierPart) == true)
+                    {
+                        sr3.RemoveAt(sr3.FindIndex(x => x.StartsWith(singleRule2IdentifierPart)));
+                        sr33.RemoveAt(sr3.FindIndex(x => x == singleRule2IdentifierPart));
+                    }
+                }
+
+                mergedSingleRules.AddRange(sr2);
+                mergedSingleRules.AddRange(sr3);
+                // mergedSingleRules - .Length(0, 70), .Required(), Other(), OtherOther()
+                mergedValidationRules.Add($"{identifierPart}){string.Join("", mergedSingleRules)};");
+            }
+
+            return mergedValidationRules;
+        }
+
+        ///// <summary>
+        ///// </summary>
+        ///// <param name="rule">RuleFor(x => x.Username).Length(0, 70).Required();</param>
+        ///// <returns>.Length, .Required</returns>
+        //private static List<string> GetSingleRulesWithoutValues(string rule)
+        //{
+        //    List<string> helper = rule.Split('(').ToList(); // "x => x.Username).Length", "0, 70).Required"
+        //    List<string> singleRulesWithoutValues = helper.Select(x => x.Substring(0, x.LastIndexOf(')')+1)).ToList(); // .Length, .Required
+        //    return singleRulesWithoutValues;
+        //}
+
+        /// <summary>
+        /// </summary>
+        /// <param name="rule">RuleFor(x => x.Username).Length(0, 70).Required();</param>
+        /// <returns>.Length(0, 70), .Required()</returns>
+        private static List<string> GetSingleRulesWithValues(string rule)
+        {
+            List<string> helper = rule.Split(')').Skip(1).Select(x => $"{x})").ToList(); // ".Length(0, 70)", ".Required()"
+            return helper;
+        }
+
+    }
+}

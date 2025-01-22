@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+		<PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
+		<PackageReference Include="LinqKit.Core" Version="1.2.5" />
+		<PackageReference Include="Mapster" Version="7.4.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.2" />
+		<PackageReference Include="Riok.Mapperly" Version="3.5.1" />
+		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.3.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Spider.Shared\Spider.Shared.csproj" />
+		<ProjectReference Include="..\Spider.NgTable\Spider.NgTable.csproj" />
+		<ProjectReference Include="..\Spider.SourceGenerators\Spider.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="DTO\Entities\" />
+	  <Folder Include="ValidationRules\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.IO.FileSystem.Primitives" Version="4.3.0" />
+		<PackageReference Include="System.IO.FileSystem" Version="4.3.0" />
+		<PackageReference Include="System.Runtime.Handles" Version="4.3.0" />
+		<PackageReference Include="System.Diagnostics.Debug" Version="4.3.0" />
+		<PackageReference Include="System.Runtime.Extensions" Version="4.3.0" />
+		<PackageReference Include="Microsoft.Win32.Primitives" Version="4.3.0" />
+		<PackageReference Include="System.Diagnostics.Tracing" Version="4.3.0" />
+		<PackageReference Include="System.Net.Primitives" Version="4.3.0" />
+	</ItemGroup>
+
+</Project>
