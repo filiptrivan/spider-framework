@@ -662,7 +662,7 @@ export class {{entity.Name}}BaseDetailsComponent {
     {{property.Name.FirstCharToLower()}}Model: {{extractedEntity.Name}} = new {{extractedEntity.Name}}();
     {{property.Name.FirstCharToLower()}}SaveBodyName: string = nameof<{{extractedEntity.Name}}SaveBody>('{{extractedEntity.Name.FirstCharToLower()}}DTO');
     {{property.Name.FirstCharToLower()}}TranslationKey: string = new {{extractedEntity.Name}}().typeName;
-    {{property.Name.FirstCharToLower()}}FormArray: SoftFormArray<{{extractedEntity.Name}}[]>;
+    {{property.Name.FirstCharToLower()}}FormArray: SoftFormArray<{{extractedEntity.Name}}>;
     {{property.Name.FirstCharToLower()}}LastIndexClicked: LastMenuIconIndexClicked = new LastMenuIconIndexClicked();
     {{property.Name.FirstCharToLower()}}CrudMenu: MenuItem[] = [];
 """);
