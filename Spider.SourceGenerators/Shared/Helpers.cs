@@ -92,10 +92,10 @@ namespace Spider.SourceGenerators.Shared
                     }
                     else
                     {
-                        SpiderClass softBaseClass = referencedProjectsClasses.Where(x => x.Name == c.Identifier.Text).SingleOrDefault();
+                        SpiderClass spiderBaseClass = referencedProjectsClasses.Where(x => x.Name == c.Identifier.Text).SingleOrDefault();
 
-                        if (softBaseClass != null)
-                            properties.AddRange(softBaseClass.Properties);
+                        if (spiderBaseClass != null)
+                            properties.AddRange(spiderBaseClass.Properties);
                     }
 
                     break;
@@ -536,7 +536,7 @@ namespace Spider.SourceGenerators.Shared
             {
                 List<SpiderAttribute> attributes = GetAttributesFromReferencedAssemblies(type);
 
-                SpiderClass softClass = new SpiderClass
+                SpiderClass spiderClass = new SpiderClass
                 {
                     Name = type.Name,
                     Namespace = GetFullNamespace(type),
@@ -548,7 +548,7 @@ namespace Spider.SourceGenerators.Shared
                     Methods = GetMethodsOfCurrentClassFromReferencedAssemblies(type),
                 };
 
-                classes.Add(softClass);
+                classes.Add(spiderClass);
             }
 
             // Recursively gather classes from nested namespaces
@@ -582,17 +582,17 @@ namespace Spider.SourceGenerators.Shared
             {
                 foreach (ISymbol member in type.GetMembers())
                 {
-                    if (member is IPropertySymbol property)
+                    if (member is IPropertySymbol propertySymbol)
                     {
-                        SpiderProperty softProperty = new SpiderProperty
+                        SpiderProperty property = new SpiderProperty
                         {
                             Name = member.Name,
                             EntityName = type.Name,
-                            Type = property.Type.TypeToDisplayString(),
+                            Type = propertySymbol.Type.TypeToDisplayString(),
                             Attributes = GetAttributesFromReferencedAssemblies(member)
                         };
 
-                        properties.Add(softProperty);
+                        properties.Add(property);
                     }
                 }
 
@@ -651,13 +651,13 @@ namespace Spider.SourceGenerators.Shared
 
                 argumentValue = GetFormatedAttributeValue(argumentValue);
 
-                SpiderAttribute softAttribute = new SpiderAttribute
+                SpiderAttribute spiderAttribute = new SpiderAttribute
                 {
                     Name = attributeName,
                     Value = argumentValue
                 };
 
-                attributes.Add(softAttribute);
+                attributes.Add(spiderAttribute);
             }
 
             return attributes;
@@ -672,16 +672,16 @@ namespace Spider.SourceGenerators.Shared
 
             foreach (ISymbol member in type.GetMembers())
             {
-                if (member is IMethodSymbol method)
+                if (member is IMethodSymbol methodSymbol)
                 {
-                    SpiderMethod softMethod = new SpiderMethod
+                    SpiderMethod method = new SpiderMethod
                     {
                         Name = member.Name,
-                        ReturnType = method.ReturnType.ToString(),
+                        ReturnType = methodSymbol.ReturnType.ToString(),
                         Attributes = GetAttributesFromReferencedAssemblies(member),
                     };
 
-                    methods.Add(softMethod);
+                    methods.Add(method);
                 }
             }
 
@@ -1237,13 +1237,13 @@ namespace Spider.SourceGenerators.Shared
 
         private static List<SpiderAttribute> GetAllAttributesOfTheMember(MemberDeclarationSyntax prop)
         {
-            List<SpiderAttribute> softAttributes = new List<SpiderAttribute>();
-            softAttributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
+            List<SpiderAttribute> attributes = new List<SpiderAttribute>();
+            attributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
             {
                 return GetSpiderAttribute(x);
             })
             .ToList();
-            return softAttributes;
+            return attributes;
         }
 
         // FT: Maybe ill need it in the future, for now im using only for the current class

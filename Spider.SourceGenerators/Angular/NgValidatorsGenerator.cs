@@ -88,7 +88,7 @@ export class ValidatorServiceGenerated {
     ) {
     }
 
-    setValidator(formControl: SpiderFormControl, className: string): SpiderValidatorFn {
+    setValidator = (formControl: SpiderFormControl, className: string): SpiderValidatorFn => {
         switch(formControl.label + className){
 """);
             foreach (SpiderClass DTOClass in DTOClasses) // Grouping because UserDTO.generated and UserDTO
@@ -111,7 +111,7 @@ export class ValidatorServiceGenerated {
 """);
             //sb.AppendLine(sbMethods.ToString());
 
-            Helpers.WriteToTheFile(sb.ToString(), Path.Combine(outputPath, "validation-rules.generated.ts"));
+            Helpers.WriteToTheFile(sb.ToString(), Path.Combine(outputPath, "validators.generated.ts"));
         }
 
         public static string GenerateAngularValidationMethods(string DTOClassName, string validationClassConstructorBody, List<SpiderProperty> DTOProperties)
@@ -153,7 +153,7 @@ export class ValidatorServiceGenerated {
             string allRules = string.Join(" && ", ruleNames);
 
             string result = $$"""
-    {{validationRulePropNameFirstLower}}{{classNameForValidation}}Validator(control: SpiderFormControl): SpiderValidatorFn {
+    {{validationRulePropNameFirstLower}}{{classNameForValidation}}Validator = (control: SpiderFormControl): SpiderValidatorFn => {
         const validator: SpiderValidatorFn = (): ValidationErrors | null => {
             const value = control.value;
 

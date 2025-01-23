@@ -63,9 +63,9 @@ namespace Spider.SourceGenerators.Angular
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\components\base-details\{projectName}.ts
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\components\base-details\{projectName.FromPascalToKebabCase()}-base-details.generated.ts");
 
-            List<SpiderClass> softClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
-            List<SpiderClass> customDTOClasses = softClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
-            List<SpiderClass> currentProjectEntities = softClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SpiderClass> spiderClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
+            List<SpiderClass> customDTOClasses = spiderClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
+            List<SpiderClass> currentProjectEntities = spiderClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
             List<SpiderClass> referencedProjectEntityClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
             List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntityClasses).ToList();
 
@@ -156,6 +156,7 @@ export class {{entity.Name}}BaseDetailsComponent {
         private route: ActivatedRoute,
         private baseFormService: BaseFormService,
         private validatorService: ValidatorService,
+        private translateLabelsService: TranslateLabelsService,
         private translocoService: TranslocoService,
     ) {}
 
@@ -201,7 +202,11 @@ export class {{entity.Name}}BaseDetailsComponent {
 
     init{{entity.Name}}FormGroup({{entity.Name.FirstCharToLower()}}: {{entity.Name}}) {
         this.baseFormService.initFormGroup<{{entity.Name}}>(
-            this.{{entity.Name.FirstCharToLower()}}FormGroup, this.formGroup, {{entity.Name.FirstCharToLower()}}, this.{{entity.Name.FirstCharToLower()}}SaveBodyName, [{{string.Join(", ", GetCustomOnChangeProperties(entity))}}]
+            this.{{entity.Name.FirstCharToLower()}}FormGroup, 
+            this.formGroup, 
+            {{entity.Name.FirstCharToLower()}}, 
+            this.{{entity.Name.FirstCharToLower()}}SaveBodyName,
+            [{{string.Join(", ", GetCustomOnChangeProperties(entity))}}]
         );
         this.{{entity.Name.FirstCharToLower()}}FormGroup.mainDTOName = this.{{entity.Name.FirstCharToLower()}}SaveBodyName;
         this.loading = false;
@@ -549,7 +554,11 @@ export class {{entity.Name}}BaseDetailsComponent {
 
                 result.Add($$"""
     addNewItemTo{{property.Name}}(index: number){ 
-        this.baseFormService.addNewFormGroupToFormArray(this.{{property.Name.FirstCharToLower()}}FormArray, new {{extractedEntity.Name}}({id: 0}), index);
+        this.baseFormService.addNewFormGroupToFormArray(
+            this.{{property.Name.FirstCharToLower()}}FormArray, 
+            new {{extractedEntity.Name}}({id: 0}), 
+            index
+        );
     }
 """);
             }
@@ -568,7 +577,12 @@ export class {{entity.Name}}BaseDetailsComponent {
                 result.Add($$"""
     init{{property.Name}}FormArray({{property.Name.FirstCharToLower()}}: {{extractedEntity.Name}}[]){
         this.{{property.Name.FirstCharToLower()}}FormArray = this.baseFormService.initFormArray(
-            this.formGroup, {{property.Name.FirstCharToLower()}}, this.{{property.Name.FirstCharToLower()}}Model, this.{{property.Name.FirstCharToLower()}}SaveBodyName, this.{{property.Name.FirstCharToLower()}}TranslationKey, true
+            this.formGroup, 
+            {{property.Name.FirstCharToLower()}}, 
+            this.{{property.Name.FirstCharToLower()}}Model, 
+            this.{{property.Name.FirstCharToLower()}}SaveBodyName, 
+            this.{{property.Name.FirstCharToLower()}}TranslationKey, 
+            true
         );
         this.{{property.Name.FirstCharToLower()}}CrudMenu = this.getCrudMenuForOrderedData(this.{{property.Name.FirstCharToLower()}}FormArray, new {{extractedEntity.Name}}({id: 0}), this.{{property.Name.FirstCharToLower()}}LastIndexClicked, false);
 {{GetFormArrayEmptyValidator(property)}}
@@ -691,7 +705,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
             return $$"""
                  <div class="col-12">
-                    <soft-panel>
+                    <spider-panel>
                         <panel-header [title]="t('{{property.Name}}')" icon="pi pi-list"></panel-header>
                         <panel-body [normalBottomPadding]="true">
                             @for ({{entity.Name.FirstCharToLower()}}FormGroup of getFormArrayGroups({{property.Name.FirstCharToLower()}}FormArray); track {{entity.Name.FirstCharToLower()}}FormGroup; let index = $index; let last = $last) {
@@ -707,7 +721,7 @@ export class {{entity.Name}}BaseDetailsComponent {
                             </div>
 
                         </panel-body>
-                    </soft-panel>
+                    </spider-panel>
                 </div>       
 """;
         }
@@ -1081,36 +1095,36 @@ export class {{entity.Name}}BaseDetailsComponent {
             switch (controlType)
             {
                 case UIControlTypeCodes.Autocomplete:
-                    return "soft-autocomplete";
+                    return "spider-autocomplete";
                 case UIControlTypeCodes.Calendar:
-                    return "soft-calendar";
+                    return "spider-calendar";
                 case UIControlTypeCodes.CheckBox:
-                    return "soft-checkbox";
+                    return "spider-checkbox";
                 case UIControlTypeCodes.ColorPick:
-                    return "soft-colorpick";
+                    return "spider-colorpick";
                 case UIControlTypeCodes.Dropdown:
-                    return "soft-dropdown";
+                    return "spider-dropdown";
                 case UIControlTypeCodes.Editor:
-                    return "soft-editor";
+                    return "spider-editor";
                 case UIControlTypeCodes.File:
-                    return "soft-file";
+                    return "spider-file";
                 case UIControlTypeCodes.MultiAutocomplete:
-                    return "soft-multiautocomplete";
+                    return "spider-multiautocomplete";
                 case UIControlTypeCodes.MultiSelect:
-                    return "soft-multiselect";
+                    return "spider-multiselect";
                 case UIControlTypeCodes.Integer:
                 case UIControlTypeCodes.Decimal:
-                    return "soft-number";
+                    return "spider-number";
                 case UIControlTypeCodes.Password:
-                    return "soft-password";
+                    return "spider-password";
                 case UIControlTypeCodes.TextArea:
-                    return "soft-textarea";
+                    return "spider-textarea";
                 case UIControlTypeCodes.TextBlock:
-                    return "soft-textblock";
+                    return "spider-textblock";
                 case UIControlTypeCodes.TextBox:
-                    return "soft-textbox";
+                    return "spider-textbox";
                 case UIControlTypeCodes.Table:
-                    return "soft-data-table";
+                    return "spider-data-table";
                 case UIControlTypeCodes.TODO:
                     return "TODO";
                 default:
@@ -1149,6 +1163,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
             return $$"""
 import { ValidatorService } from 'src/app/business/services/validators/validation-rules';
+import { TranslateLabelsService } from '../../services/translates/merge-labels';
 import { BaseFormService } from './../../../core/services/base-form.service';
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
@@ -1171,7 +1186,7 @@ import { MenuItem } from 'primeng/api';
 import { AllClickEvent, Column, SpiderDataTableComponent } from 'src/app/core/components/spider-data-table/spider-data-table.component';
 import { TableFilter } from 'src/app/core/entities/table-filter';
 import { LazyLoadSelectedIdsResult } from 'src/app/core/entities/lazy-load-selected-ids-result';
-import { SpiderFileSelectEvent } from 'src/app/core/controls/spider-file/soft-file.component';
+import { SpiderFileSelectEvent } from 'src/app/core/controls/spider-file/spider-file.component';
 {{string.Join("\n", GetDynamicNgImports(imports))}}
 """;
         }

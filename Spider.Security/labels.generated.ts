@@ -11,8 +11,7 @@ export class TranslateLabelsGeneratedService {
     ) {
     }
 
-    translate(name: string): string
-    {
+    translate = (name: string): string => {
         switch(name) 
         {
             case 'code':

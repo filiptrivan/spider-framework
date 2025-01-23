@@ -30,7 +30,7 @@ namespace Spider.Security.Interface
         void RemoveExpiredRefreshTokens();
         void RemoveRefreshTokenByEmail(string email);
         public void Logout(string browserId, string email);
-        bool RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email);
+        bool RemoveLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email);
 
         // Login verification
         LoginVerificationTokenDTO ValidateAndGetLoginVerificationTokenDTO(string verificationToken, string browserId, string email);

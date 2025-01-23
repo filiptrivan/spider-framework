@@ -71,6 +71,8 @@ namespace Spider.Security.Services
             return GenerateAccessAndRefreshTokens(userIdFromAccessToken, userEmailFromAccessToken, existingRefreshToken.IpAddress, request.BrowserId); // need to recover the original claims
         }
 
+        private readonly object _generateAccessAndRefreshTokensLock = new();
+
         /// <summary>
         /// Password and verificationExpiration (minutes) are only needed if we are registering the account, for email verification
         /// </summary>
@@ -89,12 +91,16 @@ namespace Spider.Security.Services
                 ExpireAt = DateTime.Now.AddMinutes(SettingsProvider.Current.RefreshTokenExpiration),
             };
 
-            RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(browserId, userEmail); // FT: Email also because the hacker could manipulate browserId, but he can't email
+            lock (_generateAccessAndRefreshTokensLock)
+            {
+                RemoveLastRefreshTokenFromTheSameBrowserAndEmail(browserId, userEmail); // FT: Email also because the hacker could manipulate browserId, but he can't email
 
-            // It will always generate new token,
-            // it is beneficial if the user open the application from different devices
-            // if the user open the application on the multiple tabs in the same browser, we are working with the local storage so it will not make the difference
-            _usersRefreshTokens.AddOrUpdate(refreshTokenDTO.TokenString, refreshTokenDTO, (_, _) => refreshTokenDTO);
+                // It will always generate new token,
+                // it is beneficial if the user open the application from different devices
+                // if the user open the application on the multiple tabs in the same browser, we are working with the local storage so it will not make the difference
+                _usersRefreshTokens.AddOrUpdate(refreshTokenDTO.TokenString, refreshTokenDTO, (_, _) => refreshTokenDTO);
+            }
+
             return new JwtAuthResultDTO
             {
                 UserId = userId,
@@ -186,7 +192,7 @@ namespace Spider.Security.Services
         /// </summary>
         public void Logout(string browserId, string email)
         {
-            bool foundTheUser = RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(browserId, email);
+            bool foundTheUser = RemoveLastRefreshTokenFromTheSameBrowserAndEmail(browserId, email);
 
             if (foundTheUser == false)
             {
@@ -198,19 +204,22 @@ namespace Spider.Security.Services
         /// If we found the user => true
         /// If we didn't find the user => false
         /// </summary>
-        public bool RemoveTheLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email)
+        public bool RemoveLastRefreshTokenFromTheSameBrowserAndEmail(string browserId, string email)
         {
-            // TODO FT: Log if the email is null
+            // TODO FT: Log if the email or browser id is null
 
+            // FT: ToList() because it somehow happened that the same user clicks fast two times and send two requests with 
             KeyValuePair<string, RefreshTokenDTO> refreshToken = _usersRefreshTokens.Where(x => x.Value.BrowserId == browserId && x.Value.Email == email).SingleOrDefault();
 
             if (string.IsNullOrEmpty(refreshToken.Key))
             {
+                // TODO FT: Log
                 return false;
             }
             else
             {
                 _usersRefreshTokens.TryRemove(refreshToken.Key, out _);
+
                 return true;
             }
         }

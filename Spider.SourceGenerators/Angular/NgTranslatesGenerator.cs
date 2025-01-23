@@ -83,12 +83,11 @@ import { TranslocoService } from '@jsverse/transloco';
 export class TranslateClassNamesGeneratedService {
 
     constructor(
-    private translocoService: TranslocoService
+        private translocoService: TranslocoService
     ) {
     }
 
-    translate(name: string): string
-    {
+    translate = (name: string): string => {
         switch(name) 
         {
 {{string.Join("\n", GetCasesForClassNameTranslate(referencedClassesDTO))}}
@@ -113,8 +112,7 @@ export class TranslateLabelsGeneratedService {
     ) {
     }
 
-    translate(name: string): string
-    {
+    translate = (name: string): string => {
         switch(name) 
         {
 {{string.Join("\n", GetCasesForLabelTranslate(DTOProperties))}}

@@ -46,11 +46,11 @@ namespace Spider.SourceGenerators.Net
         {
             if (classes.Count <= 1) return;
 
-            List<SpiderClass> softClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
-            List<SpiderClass> allClasses = softClasses.Concat(referencedProjectClasses).ToList();
+            List<SpiderClass> spiderClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
+            List<SpiderClass> allClasses = spiderClasses.Concat(referencedProjectClasses).ToList();
 
-            List<SpiderClass> currentProjectDTOClasses = Helpers.GetDTOClasses(softClasses, allClasses);
-            List<SpiderClass> currentProjectEntities = softClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SpiderClass> currentProjectDTOClasses = Helpers.GetDTOClasses(spiderClasses, allClasses);
+            List<SpiderClass> currentProjectEntities = spiderClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
             List<SpiderClass> allEntityClasses = allClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
 
             StringBuilder sb = new StringBuilder();

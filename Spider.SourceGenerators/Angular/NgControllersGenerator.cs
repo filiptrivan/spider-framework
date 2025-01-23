@@ -63,9 +63,9 @@ namespace Spider.SourceGenerators.Angular
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\services\api\api.service.generated.ts
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", @"\Angular\src\app\business\services\api\api.service.generated.ts");
 
-            List<SpiderClass> softClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
+            List<SpiderClass> spiderClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
 
-            List<SpiderClass> controllerClasses = softClasses
+            List<SpiderClass> controllerClasses = spiderClasses
                 .Where(x => x.Namespace.EndsWith($".{NamespaceExtensionCodes.Controllers}"))
                 .ToList();
 
