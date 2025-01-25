@@ -120,6 +120,8 @@ namespace Spider.SourceGenerators.Angular
     standalone: true,
     imports: [
         CommonModule, 
+        FormsModule,
+        ReactiveFormsModule,
         PrimengModule,
         SpiderControlsModule,
         TranslocoDirective,
@@ -306,12 +308,12 @@ export class {{entity.Name}}BaseDetailsComponent {
         private static string GetTableColAdditionalProperties(SpiderProperty property, List<SpiderClass> entities)
         {
             if (property.IsDropdownControlType())
-                return $", filterField: '{property.Name.FirstCharToLower()}Id', dropdownOrMultiselectValues: await firstValueFrom(this.apiService.getPrimengNamebookListForDropdown(this.apiService.get{property.Type}ListForDropdown))";
+                return $", filterField: '{property.Name.FirstCharToLower()}Id', dropdownOrMultiselectValues: await firstValueFrom(getPrimengNamebookListForDropdown(this.apiService.get{property.Type}ListForDropdown))";
 
             if (property.HasGenerateCommaSeparatedDisplayNameAttribute())
             {
                 SpiderClass extractedEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
-                return $", dropdownOrMultiselectValues: await firstValueFrom(this.apiService.getPrimengNamebookListForDropdown(this.apiService.get{extractedEntity.Name}ListForDropdown))";
+                return $", dropdownOrMultiselectValues: await firstValueFrom(getPrimengNamebookListForDropdown(this.apiService.get{extractedEntity.Name}ListForDropdown))";
             }
 
             switch (property.Type)
@@ -493,7 +495,7 @@ export class {{entity.Name}}BaseDetailsComponent {
                 SpiderClass extractedEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
 
                 result.Add($$"""
-            this.apiService.getPrimengNamebookListForDropdown(this.apiService.get{{extractedEntity.Name}}ListForDropdown).subscribe(po => {
+            getPrimengNamebookListForDropdown(this.apiService.get{{extractedEntity.Name}}ListForDropdown).subscribe(po => {
                 this.{{property.Name.FirstCharToLower()}}For{{entity.Name}}Options = po;
             });
 """);
@@ -809,7 +811,7 @@ export class {{entity.Name}}BaseDetailsComponent {
                 {
                     result.Add($$"""
     search{{property.Name}}For{{entity.Name}}(event: AutoCompleteCompleteEvent) {
-        this.apiService.getPrimengNamebookListForAutocomplete(this.apiService.get{{Helpers.ExtractTypeFromGenericType(property.Type)}}ListForAutocomplete, 50, event?.query ?? '').subscribe(po => {
+        getPrimengNamebookListForAutocomplete(this.apiService.get{{Helpers.ExtractTypeFromGenericType(property.Type)}}ListForAutocomplete, 50, event?.query ?? '').subscribe(po => {
             this.{{property.Name.FirstCharToLower()}}For{{entity.Name}}Options = po;
         });
     }
@@ -1164,29 +1166,16 @@ export class {{entity.Name}}BaseDetailsComponent {
             return $$"""
 import { ValidatorService } from 'src/app/business/services/validators/validation-rules';
 import { TranslateLabelsService } from '../../services/translates/merge-labels';
-import { BaseFormService } from './../../../core/services/base-form.service';
 import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { PrimengModule } from 'src/app/core/modules/primeng.module';
 import { ApiService } from '../../services/api/api.service';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
-import { SpiderControlsModule } from 'src/app/core/controls/spider-controls.module';
-import { SpiderFormArray, SpiderFormControl, SpiderFormGroup } from 'src/app/core/components/spider-form-control/spider-form-control';
-import { PrimengOption } from 'src/app/core/entities/primeng-option';
 import { AutoCompleteCompleteEvent } from 'primeng/autocomplete';
-import { getControl, nameof } from 'src/app/core/services/helper-functions';
 import { ActivatedRoute } from '@angular/router';
 import { firstValueFrom, forkJoin, Observable } from 'rxjs';
-import { BaseEntity } from 'src/app/core/entities/base-entity';
-import { CardSkeletonComponent } from "../../../core/components/card-skeleton/card-skeleton.component";
-import { SpiderButton } from 'src/app/core/entities/spider-button';
-import { IndexCardComponent } from 'src/app/core/components/index-card/index-card.component';
-import { LastMenuIconIndexClicked } from 'src/app/core/entities/last-menu-icon-index-clicked';
 import { MenuItem } from 'primeng/api';
-import { AllClickEvent, Column, SpiderDataTableComponent } from 'src/app/core/components/spider-data-table/spider-data-table.component';
-import { TableFilter } from 'src/app/core/entities/table-filter';
-import { LazyLoadSelectedIdsResult } from 'src/app/core/entities/lazy-load-selected-ids-result';
-import { SpiderFileSelectEvent } from 'src/app/core/controls/spider-file/spider-file.component';
+import { PrimengModule, SpiderControlsModule, CardSkeletonComponent, IndexCardComponent, SpiderDataTableComponent, SpiderFormArray, BaseEntity, LastMenuIconIndexClicked, SpiderFormGroup, SpiderButton, nameof, BaseFormService, getControl, Column, TableFilter, LazyLoadSelectedIdsResult, AllClickEvent, SpiderFileSelectEvent, getPrimengNamebookListForDropdown, PrimengOption, SpiderFormControl, getPrimengNamebookListForAutocomplete } from 'spider';
 {{string.Join("\n", GetDynamicNgImports(imports))}}
 """;
         }
@@ -1203,7 +1192,8 @@ import { SpiderFileSelectEvent } from 'src/app/core/controls/spider-file/spider-
             {
                 string projectName = projectImports.Key.Split('.').Last(); // eg. Security
 
-                if (projectName == "Shared")
+                if (projectName == "Shared" ||
+                    projectName == "Security")
                     continue;
 
                 result.Add($$"""

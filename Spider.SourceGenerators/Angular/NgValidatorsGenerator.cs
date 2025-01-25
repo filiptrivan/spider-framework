@@ -73,10 +73,9 @@ namespace Spider.SourceGenerators.Angular
 
             sb.AppendLine($$"""
 import { ValidationErrors } from '@angular/forms';
-import { SpiderFormControl, SpiderValidatorFn } from 'src/app/core/components/spider-form-control/spider-form-control';
-import { validatePrecisionScale } from 'src/app/core/services/helper-functions';
 import { TranslocoService } from '@jsverse/transloco';
 import { Injectable } from '@angular/core';
+import { SpiderFormControl, SpiderValidatorFn, validatePrecisionScale } from 'spider';
 
 @Injectable({
     providedIn: 'root',

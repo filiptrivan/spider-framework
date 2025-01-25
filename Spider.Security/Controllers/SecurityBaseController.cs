@@ -70,6 +70,18 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
 
         #endregion
 
+        #region
+
+        [HttpGet]
+        [AuthGuard]
+        [SkipSpinner]
+        public async Task<UserDTO> GetCurrentUser()
+        {
+            return await _securityBusinessService.GetCurrentUserDTO();
+        }
+
+        #endregion
+
         #region Role
 
         [HttpPost]

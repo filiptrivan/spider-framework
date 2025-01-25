@@ -581,6 +581,11 @@ namespace Spider.SourceGenerators.Shared
             return property.Attributes.Any(x => x.Name == "M2MExtendEntity");
         }
 
+        public static bool HasUIDoNotGenerateAttribute(this SpiderMethod method)
+        {
+            return method.Attributes.Any(x => x.Name == "UIDoNotGenerate");
+        }
+
         #endregion
 
         #region IsControlType

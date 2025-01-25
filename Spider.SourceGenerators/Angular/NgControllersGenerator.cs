@@ -80,11 +80,16 @@ namespace Spider.SourceGenerators.Angular
             string result = $$"""
 {{string.Join("\n", GetImports(referencedDTOClasses))}}
 
-@Injectable()
+@Injectable({
+    providedIn: 'root'
+})
 export class ApiGeneratedService extends ApiSecurityService {
 
-    constructor(protected override http: HttpClient) {
-        super(http);
+    constructor(
+        protected override http: HttpClient,
+        protected override config: ConfigService
+    ) {
+        super(http, config);
     }
 
 {{string.Join("\n\n", GetAngularHttpMethods(controllerClasses, referencedEntityClasses, referencedDTOClasses))}}
@@ -110,6 +115,9 @@ export class ApiGeneratedService extends ApiSecurityService {
 
                 foreach (SpiderMethod controllerMethod in controllerClass.Methods)
                 {
+                    if (controllerMethod.HasUIDoNotGenerateAttribute())
+                        continue;
+
                     alreadyAddedMethods.Add(controllerMethod.Name);
 
                     if (controllerMethod.Parameters.Any(x => x.HasFromFormAttribute()) && controllerMethod.Parameters.Any(x => x.Type == "IFormFile") == false)
@@ -137,20 +145,18 @@ export class ApiGeneratedService extends ApiSecurityService {
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from 'src/environments/environment';
-import { ApiSecurityService } from './api.service.security';
-import { Namebook } from 'src/app/core/entities/namebook';
-import { Codebook } from 'src/app/core/entities/codebook';
-import { SimpleSaveResult } from 'src/app/core/entities/simple-save-result';
-import { TableFilter } from 'src/app/core/entities/table-filter';
-import { TableResponse } from 'src/app/core/entities/table-response';
-import { LazyLoadSelectedIdsResult } from 'src/app/core/entities/lazy-load-selected-ids-result';
+import { ApiSecurityService, TableFilter, TableResponse, Namebook, Codebook, LazyLoadSelectedIdsResult, VerificationTokenRequest, AuthResult, ExternalProvider } from 'spider';
+import { ConfigService } from '../config.service';
 """);
 
             foreach (SpiderClass DTOClass in DTOClasses)
             {
                 string[] projectNameHelper = DTOClass.Namespace.Split('.');
                 string projectName = projectNameHelper[projectNameHelper.Length - 2];
+
+                if (projectName == "Security")
+                    continue;
+
                 string ngType = DTOClass.Name.Replace("DTO", "");
 
                 if (Helpers.BaseClassNames.Contains(ngType))
@@ -266,7 +272,7 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
     excelManualUpdatePoints = (dto: {{parameter.Type.Replace("DTO", "")}}): Observable<any> => { 
         let formData = new FormData();
 {{string.Join("\n", GetFormDataAppends(parameterType))}}
-        return this.http.post(`${environment.apiUrl}/{{controllerName}}/ExcelManualUpdatePoints`, formData, environment.httpOptions);
+        return this.http.post(`${this.config.apiUrl}/{{controllerName}}/ExcelManualUpdatePoints`, formData, this.config.httpOptions);
     }
 """;
         }
@@ -556,7 +562,7 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
         {
             return $$"""
     {{methodName.FirstCharToLower()}} = ({{GetInputParameters(inputParameters)}}): Observable<{{returnType}}> => { 
-        return this.http.{{httpType.ToString().FirstCharToLower()}}{{GetReturnTypeAfterHttpType(returnType)}}(`${environment.apiUrl}/{{controllerName}}/{{methodName}}{{GetGetAndDeleteParameters(inputParameters, httpType)}}`{{GetPostAndPutParameters(inputParameters, httpType)}}{{httpOptions}});
+        return this.http.{{httpType.ToString().FirstCharToLower()}}{{GetReturnTypeAfterHttpType(returnType)}}(`${this.config.apiUrl}/{{controllerName}}/{{methodName}}{{GetGetAndDeleteParameters(inputParameters, httpType)}}`{{GetPostAndPutParameters(inputParameters, httpType)}}{{httpOptions}});
     }
 """;
         }

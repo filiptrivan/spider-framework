@@ -288,6 +288,21 @@ namespace Spider.Security.Services
 
         #region User
 
+        public async Task<UserDTO> GetCurrentUserDTO()
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                return await _context.DbSet<TUser>()
+                    .Where(x => x.Id == _authenticationService.GetCurrentUserId())
+                    .Select(x => new UserDTO
+                    {
+                        Id = x.Id,
+                        Email = x.Email
+                    })
+                    .SingleOrDefaultAsync();
+            });
+        }
+
         public async Task<List<NamebookDTO<int>>> GetRolesNamebookListForUserExtended(long userId)
         {
             return await _context.WithTransactionAsync(async () =>
