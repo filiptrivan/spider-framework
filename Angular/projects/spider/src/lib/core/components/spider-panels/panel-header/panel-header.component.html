@@ -1,0 +1,25 @@
+<div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+    @if (tabs == null) {
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <span *ngIf="index != null" class="number-circle">{{index + 1}}</span>
+            <i class="{{icon}} primary-color" [style]="bigTitle ? 'font-size: 19px' : 'font-size: 16px;'"></i> 
+            <div [style]="bigTitle ? 'font-size: 16px' : ''">{{title}}</div>
+        </div>
+    }
+    @else {
+        @for (tab of tabs; track $index) {
+            <div (click)="setTabIsSelected(tab)"
+                [style]="{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px',
+                    cursor: 'pointer',
+                    fontWeight: tab.isSelected ? '700' : 'normal'
+                }">
+                <span *ngIf="index != null" class="number-circle">{{index + 1}}</span>
+                <i class="{{tab.icon}} primary-color" [style]="bigTitle ? 'font-size: 19px' : 'font-size: 16px;'"></i> 
+                <div [style]="bigTitle ? 'font-size: 16px' : ''">{{tab.label}}</div>
+            </div>
+        }
+    }
+</div>

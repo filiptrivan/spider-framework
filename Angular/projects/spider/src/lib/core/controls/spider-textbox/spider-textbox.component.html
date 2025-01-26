@@ -1,0 +1,17 @@
+<!-- Can't put (onBlur) in this control -->
+
+<div class="flex flex-column gap-2">
+  <div *ngIf="getTranslatedLabel() != '' && getTranslatedLabel() != null">
+    <label>{{getTranslatedLabel()}}</label>
+    <required *ngIf="control?.required"></required>
+  </div>
+  <input
+    *ngIf="control"
+    [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid"
+    pInputText
+    [formControl]="control"
+    [id]="control?.label"
+    (blur)="control?.markAsDirty()"
+    [placeholder]="placeholder"
+    />
+  </div>

@@ -1,0 +1,45 @@
+<ng-container *transloco="let t">
+    <div class="flex flex-column gap-2">
+        <div *ngIf="getTranslatedLabel() != '' && getTranslatedLabel() != null">
+            <label>{{getTranslatedLabel()}}</label>
+            <!-- FT: It's okay for this control, because for the custom uploads where we are not initializing the control from the backend, there is no need for formControl. -->
+            <required *ngIf="control?.required || required"></required>
+        </div>
+
+        <p-fileUpload [files]="files" [name]="control?.label ?? label" [multiple]="false" [accept]="acceptedFileTypesCommaSeparated" [maxFileSize]="1000000" (onSelect)="onSelectedFiles($event)">
+            <ng-template pTemplate="header" let-files let-chooseCallback="chooseCallback" let-clearCallback="clearCallback" let-uploadCallback="uploadCallback">
+                <div class="flex flex-wrap justify-content-between align-items-center flex-1 gap-2">
+                    <div class="flex gap-2">
+                        <p-button (onClick)="choose($event, chooseCallback)" icon="pi pi-upload" [rounded]="true" [outlined]="true" />
+                        <!-- <p-button (onClick)="clearCallback()" icon="pi pi-times" [rounded]="true" [outlined]="true" severity="danger" [disabled]="!files || files.length === 0" /> -->
+                    </div>
+                </div>
+            </ng-template>
+            <ng-template pTemplate="content" let-files let-removeFileCallback="removeFileCallback">
+                <div *ngIf="files?.length > 0">
+                    <div class="flex justify-content-center p-0 gap-5">
+                        <div *ngFor="let file of files; let index = index" class="card m-0 px-3 py-3 flex flex-column align-items-center gap-3" style="justify-content: center; overflow: hidden;">
+                            <div *ngIf="isImageFileType(file.type)" class="image-container">
+                                <img role="presentation" [src]="file.objectURL"/>
+                            </div>
+                            <div *ngIf="isExcelFileType(file.type)" class="excel-container">
+                                <div class="excel-details">
+                                    <i class="pi pi-file-excel" style="color: green; margin-right: 4px;"></i>
+                                    <span class="file-name">{{ file.name }}</span>
+                                </div>
+                            </div>
+                            <p-button icon="pi pi-times" (onClick)="removeFile(removeFileCallback, index)" [outlined]="true" [rounded]="true" severity="danger" />
+                        </div>
+                    </div>
+                </div>
+            </ng-template>
+            <ng-template pTemplate="file"> </ng-template>
+            <ng-template pTemplate="empty">
+                <div class="flex align-items-center justify-content-center flex-column">
+                    <i class="pi pi-cloud-upload border-2 border-circle p-5 text-8xl text-400 border-400"></i>
+                    <p class="mt-4 mb-0">{{t('DragAndDropFilesHereToUpload')}}</p>
+                </div>
+            </ng-template>
+        </p-fileUpload>
+    </div>
+</ng-container>

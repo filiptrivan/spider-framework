@@ -1,0 +1,39 @@
+<ng-container *transloco="let t">
+    <div class="min-h-screen" style="display: flex; justify-content: center; align-items: center;">
+        <div class="dialog" style="padding: 0px;">
+            @if (verificationTokenRequestFormGroup != null) {
+                <spider-panel>
+                    <panel-header [title]="t('AccountVerificationHeader')" [bigTitle]="true" icon="pi pi-envelope"></panel-header>
+                    
+                    <panel-body>
+                        <form class="grid">
+                            <div class="col-12">
+                                <div class="header">{{t('AccountVerificationTitle')}}</div>
+                            </div>
+                            <div class="col-12">
+                                {{t('AccountVerificationDescription', {email: email})}}
+                            </div>
+                            <div class="col-12">
+                                <spider-textbox [control]="control('verificationCode', verificationTokenRequestFormGroup)"></spider-textbox>
+                            </div>
+                            <div class="col-12">
+                                <p-button (onClick)="codeSubmit()" [label]="t('Submit')" icon="pi pi-verified"></p-button>
+                            </div>
+                        </form>
+                    </panel-body>
+                    
+                    <panel-footer>
+                        <a pButton class="p-button-link" [label]="t('GoToGmail')" icon="pi pi-external-link" href="https://mail.google.com/mail/u/" target="_blank" rel="noopener noreferrer"></a>
+                        <a pButton class="p-button-link" [label]="t('GoToYahoo')" icon="pi pi-external-link" href="https://mail.yahoo.com/d/folders/1/" target="_blank" rel="noopener noreferrer"></a>
+                    </panel-footer>
+                    <panel-footer>
+                        <div>{{t('ResendVerificationCodeFirstPart')}} <a class="link" (click)="resendVerificationToken()">{{t('ResendVerificationCodeLinkSecondPart')}}</a></div>
+                    </panel-footer>
+                </spider-panel>
+            }
+            @else {
+                <!-- TODO FT: Add skeleton -->
+            }
+        </div>
+    </div>
+</ng-container>

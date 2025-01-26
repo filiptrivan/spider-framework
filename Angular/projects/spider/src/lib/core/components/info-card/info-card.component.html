@@ -1,0 +1,18 @@
+<div class="card responsive-card-padding" style="background-color: var(--primary-lighter-color); position: relative; overflow: hidden;">
+    <!-- TODO FT: Translate -->
+    <div style="display: flex; align-items: center; gap: 21px; position: relative; z-index: 2;">
+      <i class="pi pi-info-circle" style="font-size: 26px; color: var(--primary-color);"></i>
+      <div>
+          <div class="header" style="color:var(--primary-color); font-weight: 600; text-align: left;">
+              {{header}}
+          </div>
+          <div style="color:var(--primary-color); text-align: left; margin-top: 8px;">
+            <ng-content></ng-content>
+          </div>
+      </div>
+    </div>
+
+    <div class="card-overflow-icon" style="position: absolute; overflow: hidden; right: 8px; top: -25px; z-index: 1;">
+      <i class="pi pi-info-circle" style="font-size: 270px;"></i>
+    </div>
+  </div>

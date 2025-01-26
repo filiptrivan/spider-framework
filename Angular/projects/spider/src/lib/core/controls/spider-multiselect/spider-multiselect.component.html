@@ -1,0 +1,23 @@
+<div class="flex flex-column gap-2">
+  <div>
+    <label>{{getTranslatedLabel()}}</label>
+    <required *ngIf="control?.required"></required>
+  </div>
+  <span class="p-fluid">
+    <p-multiSelect
+    *ngIf="control"
+    [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid"
+    [id]="label"
+    [formControl]="control"
+    [options]="options"
+    optionLabel="label"
+    optionValue="value"
+    display="chip"
+    [maxSelectedLabels]="20"
+    [placeholder]="placeholder"
+    />
+    <!-- [virtualScroll]="true" FT: I think that this is not doing anything, check -->
+    <!-- (onFilter)="search($event)" FT: While they don't implement lazy load like here: https://github.com/yelhouti/primeng/blob/8.0.0-rc2/src/app/components/multiselect/multiselect.ts
+     we need to use this and dropdown control only on the client -->
+  </span>
+</div>

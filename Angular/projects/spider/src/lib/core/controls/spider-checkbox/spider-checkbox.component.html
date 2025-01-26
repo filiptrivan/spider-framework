@@ -1,0 +1,11 @@
+<div [style]="fakeLabel ? 'margin-top: 12px;' : '' + 'display: flex; align-items: center; height: 100%;'">
+    <p-checkbox
+    *ngIf="control"
+    [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid" 
+    [formControl]="control"
+    [id]="label"
+    [label]="getTranslatedLabel()"
+    [binary]="true"
+    />
+    <required *ngIf="control?.required"></required>
+</div>

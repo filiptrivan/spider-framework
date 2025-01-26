@@ -1,0 +1,33 @@
+<p-panel 
+    [showHeader]="showPanelHeader"
+    [ngClass]="{
+    'multiple-panel-first-without-header': isFirstMultiplePanel && !showPanelHeader,
+    'multiple-panel-first': isFirstMultiplePanel,
+    'multiple-panel-middle': isMiddleMultiplePanel,
+    'multiple-panel-last': isLastMultiplePanel,
+    'spider-panel': true
+    }"
+    >
+    <ng-template pTemplate="header">
+        <div style="padding-left: 10px; padding-right: 10px;">
+            <ng-content select="panel-header"></ng-content>
+        </div>
+    </ng-template>
+
+    <ng-template pTemplate="icons">
+        <div *ngIf="crudMenu" class="mr-2">
+            <i class="pi pi-ellipsis-h icon-hover" (click)="menuItemClick(index, $event)"></i>
+            <p-menu #menu [model]="crudMenu" [popup]="true" appendTo="body"></p-menu>
+        </div>
+        <div *ngIf="showRemoveIcon" class="mr-2">
+            <i class="pi pi-minus icon-hover error-color-light" (click)="removeItemClick()"></i>
+        </div>
+    </ng-template>
+
+    <div class="panel-body-wrapper">
+        <ng-content select="panel-body"></ng-content>
+    </div>
+
+    <ng-content select="panel-footer"></ng-content>
+
+</p-panel>

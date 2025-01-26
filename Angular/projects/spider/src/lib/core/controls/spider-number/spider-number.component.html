@@ -1,0 +1,19 @@
+<div class="flex flex-column gap-2">
+  <div *ngIf="showLabel">
+    <label>{{getTranslatedLabel()}}</label>
+    <required *ngIf="control?.required"></required>
+  </div>
+  <p-inputNumber
+    *ngIf="control"
+    [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control.valid" tooltipStyleClass="spider-tooltip-invalid"
+    [formControl]="control"
+    [id]="control.label"
+    (onBlur)="control.markAsDirty()"
+    [prefix]="prefix"
+    [style]="{'width':'100%'}"
+    [inputStyle]="{'width':'100%'}"
+    [showButtons]="showButtons"
+    buttonLayout="horizontal"
+    [maxFractionDigits]="maxFractionDigits"
+    />
+  </div>

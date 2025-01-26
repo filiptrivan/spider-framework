@@ -1,0 +1,15 @@
+<ng-container *transloco="let t">
+  <p-confirmDialog #cd></p-confirmDialog>
+    <div
+      class="border-bottom-1 surface-border text-lg"
+      style="display: flex; align-items: center; padding-bottom: 10px; width: 100%; gap: 10px;"
+    >
+      <i class="pi pi-exclamation-circle text-4xl"></i>
+      <p>{{t('PleaseConfirmToProceed')}}</p>
+    </div>
+  
+      <div style="display: flex; gap: 5px; justify-content: right; margin-top: 28px;">
+          <p-button (click)="reject()" icon="pi pi-times" [label]="t('Cancle')" severity="secondary"></p-button>
+          <p-button (click)="accept()" icon="pi pi-check" [label]="t('Confirm')" styleClass="p-button-danger"></p-button>
+      </div>
+</ng-container>

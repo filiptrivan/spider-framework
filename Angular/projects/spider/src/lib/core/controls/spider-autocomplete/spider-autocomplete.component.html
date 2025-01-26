@@ -1,0 +1,37 @@
+<ng-container *transloco="let t">
+  <div class="flex flex-column gap-2">
+    <div *ngIf="getTranslatedLabel() != '' && getTranslatedLabel() != null">
+      <label>{{getTranslatedLabel()}}</label>
+      <required *ngIf="control?.required"></required>
+    </div>
+  
+    <div class="p-inputgroup p-fluid">
+      <p-autoComplete
+      *ngIf="control"
+      [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid"
+      [id]="label"
+      [formControl]="control"
+      [placeholder]="placeholder"
+      [suggestions]="options"
+      optionLabel="label"
+      optionValue="value"
+      (completeMethod)="search($event)"
+      [forceSelection]="true"
+      [dropdown]="false"
+      [showClear]="showClear"
+      (onHide)="dropdownMarkAsDirty()"
+      (onSelect)="select($event)"
+      [completeOnFocus]="true"
+      (onDropdownClick)="buttonClick()"
+      [style]="{'width':'100%', 'position' : 'relative'}"
+      [inputStyle]="{'width':'100%'}"
+      [appendTo]="appendTo"
+      [emptyMessage]="emptyMessage"
+      [lazy]="true"
+      />
+      <span *ngIf="showMoreOptions" (click)="moreOptionsClick()" class="p-inputgroup-addon" style="cursor: pointer; background-color: var(--primary-color); border-color: var(--primary-color);">
+        <i class="pi {{moreOptionsIcon}}" style="color: #fff;"></i>
+      </span>
+    </div>
+  </div>
+</ng-container>

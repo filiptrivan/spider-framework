@@ -1,0 +1,33 @@
+<div class="flex flex-column gap-2">
+
+  <div *ngIf="getTranslatedLabel() != '' && getTranslatedLabel() != null">
+    <label>{{getTranslatedLabel()}}</label>
+    <required *ngIf="control?.required"></required>
+    <!-- tabindex="-1": Makes the element focusable, but removes it from the tab order. -->
+    <i *ngIf="showTooltip" class="{{tooltipIcon}}" style="margin-left: 5px; cursor: pointer;" [pTooltip]="tooltipText" tabindex="-1" tooltipEvent="focus"></i>
+  </div>
+
+  <!-- FT: Dropdown doesn't support tooltip event, but it can only has not empty validation, so for now it's okay to not show validation message on dropdown ever -->
+  <div class="p-inputgroup p-fluid">
+    <p-dropdown
+    *ngIf="control"
+    [pTooltip]="getValidationErrrorMessages()" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid" 
+    [id]="label"
+    [formControl]="control"
+    [placeholder]="placeholder"
+    [options]="options"
+    optionLabel="label"
+    optionValue="value"
+    [showClear]="true"
+    (onHide)="dropdownMarkAsDirty()"
+    (onChange)="change($event)"
+    (onDropdownClick)="buttonClick()"
+    [style]="{'width':'100%'}"
+    appendTo="body"
+    />
+    <span *ngIf="showMoreOptions" (click)="moreOptionsClick()" class="p-inputgroup-addon" style="cursor: pointer; background-color: var(--primary-color); border-color: var(--primary-color);">
+      <i class="pi {{moreOptionsIcon}}" style="color: #fff;"></i>
+    </span>
+  </div>
+  
+</div>
