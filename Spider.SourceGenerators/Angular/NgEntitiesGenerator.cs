@@ -73,7 +73,7 @@ namespace Spider.SourceGenerators.Angular
             StringBuilder sb = new StringBuilder();
             StringBuilder sbImports = new StringBuilder();
             sbImports.Append($$"""
-import { BaseEntity, TableFilter, TableFilterContext, TableFilterSortMeta, MimeTypes } from "spider";
+import { BaseEntity, TableFilter, TableFilterContext, TableFilterSortMeta, MimeTypes } from '@playerty/spider';
 {{string.Join("\n", GetEnumPropertyImports(currentProjectDTOClasses, projectName))}}
 
 """);

@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Spider.Security.DTO;
 using Spider.Security.Entities;
 using Spider.Security.Interface;
@@ -8,15 +7,6 @@ using Spider.Shared.Attributes;
 using Spider.Shared.DTO;
 using Spider.Shared.Helpers;
 using Spider.Shared.Interfaces;
-using Spider.Shared.Extensions;
-using Spider.Shared.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 
 namespace Spider.Security.SecurityControllers // Needs to be other namespace because of source generator
 {

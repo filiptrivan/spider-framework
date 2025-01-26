@@ -1,7 +1,7 @@
 import { ValidationErrors } from '@angular/forms';
 import { TranslocoService } from '@jsverse/transloco';
 import { Injectable } from '@angular/core';
-import { SpiderFormControl, SpiderValidatorFn, validatePrecisionScale } from 'spider';
+import { SpiderFormControl, SpiderValidatorFn, validatePrecisionScale } from '@playerty/spider';
 
 @Injectable({
     providedIn: 'root',
