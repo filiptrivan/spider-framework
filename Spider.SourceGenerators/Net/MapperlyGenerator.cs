@@ -211,13 +211,13 @@ namespace {{basePartOfNamespace}}.DataMappers
                         manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}CommaSeparated, src => string.Join(\", \", src.{entityPropName}.Select(x => x.{displayNamePropOfEnumerable})))");
                     }
 
-                    //if (entityProp.Attributes.Any(x => x.Name == "Map"))
+                    //if (entityProp.Attributes.Any(x => x.Name == "IncludeInDTO"))
                     //{
                     //    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName}.Adapt<List<{entityPropTypeInsideListBrackets}>>())");
                     //}
                 }
 
-                if(entityPropType == "byte[]")
+                if (entityPropType == "byte[]")
                 {
                     manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName} == null ? null : Convert.ToBase64String(src.{entityPropName}))");
                 }

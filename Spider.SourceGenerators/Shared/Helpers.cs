@@ -883,7 +883,7 @@ namespace Spider.SourceGenerators.Shared
 
             foreach (SpiderProperty prop in properties)
             {
-                if (prop.SkipPropertyInDTO())
+                if (prop.ShouldSkipPropertyInDTO())
                     continue;
 
                 string propType = prop.Type;
@@ -928,11 +928,6 @@ namespace Spider.SourceGenerators.Shared
             }
 
             return props;
-        }
-
-        public static bool SkipPropertyInDTO(this SpiderProperty property)
-        {
-            return property.Attributes.Any(x => x.Name == "IgnorePropertyInDTO" || x.Name == "M2MMaintanceEntityKey" || x.Name == "M2MExtendEntityKey");
         }
 
         #endregion

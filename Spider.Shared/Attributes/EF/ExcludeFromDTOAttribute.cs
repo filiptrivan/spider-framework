@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 
 namespace Spider.Shared.Attributes.EF
 {
-    public class BusinessServiceDoNotGenerateAttribute : Attribute
+    /// <summary>
+    /// Set this attribute to the property you don't want generated in the DTO.
+    /// </summary>
+    public class ExcludeFromDTOAttribute : Attribute
     {
-        public BusinessServiceDoNotGenerateAttribute() { }
     }
 }

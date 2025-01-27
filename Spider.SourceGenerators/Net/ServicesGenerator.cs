@@ -501,7 +501,7 @@ namespace {{basePartOfTheNamespace}}.Services
         {
             var orderedItemIds = orderedItemsDTO.Select(x => x.Id).ToList();
 
-{{GetOrderedOneToManyNonEmptyValidation(property, entity)}}
+{{GetOrderedOneToManyRequiredValidation(property, entity)}}
 
             return await _context.WithTransactionAsync(async () =>
             {
@@ -525,9 +525,9 @@ namespace {{basePartOfTheNamespace}}.Services
             return result;
         }
 
-        private static string GetOrderedOneToManyNonEmptyValidation(SpiderProperty property, SpiderClass entity)
+        private static string GetOrderedOneToManyRequiredValidation(SpiderProperty property, SpiderClass entity)
         {
-            if (property.HasNonEmptyAttribute())
+            if (property.HasRequiredAttribute())
             {
                 return $$"""
             if (orderedItemIds.Count == 0)
@@ -547,7 +547,7 @@ namespace {{basePartOfTheNamespace}}.Services
         {
             List<string> result = new List<string>();
 
-            foreach (SpiderProperty property in entity.Properties.Where(x => x.HasBusinessServiceDoNotGenerateAttribute() == false))
+            foreach (SpiderProperty property in entity.Properties.Where(x => x.HasExcludeServiceMethodsFromGenerationAttribute() == false))
             {
                 if (property.IsMultiSelectControlType() ||
                     property.IsMultiAutocompleteControlType())

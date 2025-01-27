@@ -9,7 +9,7 @@ namespace Spider.Shared.Attributes
     [AttributeUsage(AttributeTargets.All, AllowMultiple = true)]
     public class CustomValidatorAttribute : Attribute
     {
-        public CustomValidatorAttribute(string validationRule) // TODO FT: do something with this if you need in future
+        public CustomValidatorAttribute(string validationRule)
         {
 
         }

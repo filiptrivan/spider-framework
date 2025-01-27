@@ -597,7 +597,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static string GetFormArrayEmptyValidator(SpiderProperty property)
         {
-            if (property.HasNonEmptyAttribute())
+            if (property.HasRequiredAttribute())
             {
                 return $$"""
         this.{{property.Name.FirstCharToLower()}}FormArray.validator = this.validatorService.isFormArrayEmpty(this.{{property.Name.FirstCharToLower()}}FormArray);

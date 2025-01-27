@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace Spider.Shared.Attributes.EF
 {
+    /// <summary>
+    /// Set this attribute to the numeric properties only.
+    /// </summary>
     public class GreaterThanOrEqualToAttribute : Attribute
     {
         public GreaterThanOrEqualToAttribute(int number) { }

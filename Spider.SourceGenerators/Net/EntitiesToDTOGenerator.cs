@@ -145,7 +145,7 @@ namespace {{basePartOfNamespace}}.DTO
             if (property.EntityName != entity.Name) // FT: Skipping the base properties from other classes
                 return;
 
-            if (property.SkipPropertyInDTO())
+            if (property.ShouldSkipPropertyInDTO())
                 return;
 
             string propType = property.Type;
@@ -176,7 +176,7 @@ namespace {{basePartOfNamespace}}.DTO
 """);
                 return;
             }
-            else if (propType.IsEnumerable() && property.Attributes.Any(x => x.Name == "Map"))
+            else if (propType.IsEnumerable() && property.Attributes.Any(x => x.Name == "IncludeInDTO"))
             {
                 string DTOListPropType = propType.Replace(">", "DTO>");
                 DTOPropertiesWithoutBaseType.Add($$"""

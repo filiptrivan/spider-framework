@@ -484,6 +484,16 @@ namespace Spider.SourceGenerators.Shared
                 propType == "Guid?";
         }
 
+        public static bool IsBlob(this SpiderProperty property)
+        {
+            SpiderAttribute blobNameAttribute = property.Attributes.Where(x => x.Name == "BlobName").SingleOrDefault();
+
+            if (blobNameAttribute == null)
+                return false;
+
+            return true;
+        }
+
         public static bool IsTypeNullable(this string dataType)
         {
             if (dataType.Contains("?"))
@@ -541,9 +551,9 @@ namespace Spider.SourceGenerators.Shared
             return properties.SelectMany(x => x.Attributes).Any(x => x.Name == "BlobName");
         }
 
-        public static bool HasNonEmptyAttribute(this SpiderProperty property)
+        public static bool HasRequiredAttribute(this SpiderProperty property)
         {
-            return property.Attributes.Any(x => x.Name == "NonEmpty");
+            return property.Attributes.Any(x => x.Name == "Required");
         }
 
         public static bool HasOrderedOneToManyAttribute(this SpiderProperty property)
@@ -561,9 +571,9 @@ namespace Spider.SourceGenerators.Shared
             return property.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName");
         }
 
-        public static bool HasBusinessServiceDoNotGenerateAttribute(this SpiderProperty property)
+        public static bool HasExcludeServiceMethodsFromGenerationAttribute(this SpiderProperty property)
         {
-            return property.Attributes.Any(x => x.Name == "BusinessServiceDoNotGenerate");
+            return property.Attributes.Any(x => x.Name == "ExcludeServiceMethodsFromGeneration");
         }
 
         public static bool HasFromFormAttribute(this SpiderParameter parameter)
@@ -707,16 +717,6 @@ namespace Spider.SourceGenerators.Shared
             return precissionAttribute.Value.Split(',').Last();
         }
 
-        public static bool IsBlob(this SpiderProperty property)
-        {
-            SpiderAttribute blobNameAttribute = property.Attributes.Where(x => x.Name == "BlobName").SingleOrDefault();
-
-            if (blobNameAttribute == null)
-                return false;
-
-            return true;
-        }
-
         public static string WithMany(this SpiderProperty property)
         {
             return property.Attributes.Where(x => x.Name == "WithMany").Select(x => x.Value).SingleOrDefault();
@@ -754,6 +754,11 @@ namespace Spider.SourceGenerators.Shared
             else
                 return null; // FT: It doesn't, many to many doesn't
                              //return "Every entity class needs to have the base class";
+        }
+
+        public static bool ShouldSkipPropertyInDTO(this SpiderProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "ExcludeFromDTO" || x.Name == "M2MMaintanceEntityKey" || x.Name == "M2MExtendEntityKey");
         }
 
         #endregion
