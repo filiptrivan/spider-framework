@@ -1119,9 +1119,9 @@ namespace {{basePartOfTheNamespace}}.Services
             SpiderAttribute mainEntityAttribute = mainEntityProperty.Attributes.Where(x => x.Name == "M2MMaintanceEntity").SingleOrDefault();
 
             SpiderProperty extendEntityProperty = manyToManyProperties
-                .Where(x => x.Attributes.Any(x => x.Name == "M2MExtendEntity"))
+                .Where(x => x.Attributes.Any(x => x.Name == "M2MEntity"))
                 .SingleOrDefault();
-            SpiderAttribute extendEntityAttribute = extendEntityProperty.Attributes.Where(x => x.Name == "M2MExtendEntity").SingleOrDefault();
+            SpiderAttribute extendEntityAttribute = extendEntityProperty.Attributes.Where(x => x.Name == "M2MEntity").SingleOrDefault();
 
             if (mainEntityProperty == null)
                 return null;

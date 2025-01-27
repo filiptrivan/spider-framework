@@ -12,7 +12,7 @@ namespace Spider.Security.Entities
         [M2MMaintanceEntity(nameof(Role.Permissions))]
         public virtual Role Role { get; set; }
 
-        [M2MExtendEntity(nameof(Permission.Roles))]
+        [M2MEntity(nameof(Permission.Roles))]
         public virtual Permission Permission { get; set; }
     }
 }

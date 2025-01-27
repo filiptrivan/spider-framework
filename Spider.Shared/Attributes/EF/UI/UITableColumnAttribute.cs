@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 namespace Spider.Shared.Attributes.EF.UI
 {
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
-    public class UIColumnAttribute : Attribute
+    public class UITableColumnAttribute : Attribute
     {
-        public UIColumnAttribute(string field, string translateKey = null) { }
+        public UITableColumnAttribute(string field, string translateKey = null) { }
     }
 }

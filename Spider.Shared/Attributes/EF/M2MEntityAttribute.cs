@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace Spider.Shared.Attributes.EF
 {
-    public class M2MExtendEntityAttribute : Attribute
+    public class M2MEntityAttribute : Attribute
     {
         public string WithManyProperty { get; set; }
 
-        public M2MExtendEntityAttribute(string withManyProperty)
+        public M2MEntityAttribute(string withManyProperty)
         {
             WithManyProperty = withManyProperty;
         }

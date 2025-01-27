@@ -521,19 +521,19 @@ namespace Spider.SourceGenerators.Shared
             return splitType;
         }
 
-        public static List<UIColumn> GetUIColumns(this SpiderProperty property)
+        public static List<UITableColumn> GetUITableColumns(this SpiderProperty property)
         {
-            List<UIColumn> result = new List<UIColumn>();
+            List<UITableColumn> result = new List<UITableColumn>();
 
             foreach (SpiderAttribute attribute in property.Attributes)
             {
-                if (attribute.Name == "UIColumn")
+                if (attribute.Name == "UITableColumn")
                 {
                     List<string> attributeValues = attribute.Value.Split(',').Select(v => v.Trim()).ToList();
                     string field = attributeValues[0];
                     string translationKey = attributeValues.Count > 1 ? attributeValues[1] : null;
 
-                    result.Add(new UIColumn
+                    result.Add(new UITableColumn
                     {
                         Field = field,
                         TranslationKey = translationKey ?? field.Replace("DisplayName", ""),
@@ -586,9 +586,9 @@ namespace Spider.SourceGenerators.Shared
             return property.Attributes.Any(x => x.Name == "M2MMaintanceEntity");
         }
 
-        public static bool HasM2MExtendEntityAttribute(this SpiderProperty property)
+        public static bool HasM2MEntityAttribute(this SpiderProperty property)
         {
-            return property.Attributes.Any(x => x.Name == "M2MExtendEntity");
+            return property.Attributes.Any(x => x.Name == "M2MEntity");
         }
 
         public static bool HasUIDoNotGenerateAttribute(this SpiderMethod method)
@@ -758,7 +758,7 @@ namespace Spider.SourceGenerators.Shared
 
         public static bool ShouldSkipPropertyInDTO(this SpiderProperty property)
         {
-            return property.Attributes.Any(x => x.Name == "ExcludeFromDTO" || x.Name == "M2MMaintanceEntityKey" || x.Name == "M2MExtendEntityKey");
+            return property.Attributes.Any(x => x.Name == "ExcludeFromDTO" || x.Name == "M2MMaintanceEntityKey" || x.Name == "M2MEntityKey");
         }
 
         #endregion

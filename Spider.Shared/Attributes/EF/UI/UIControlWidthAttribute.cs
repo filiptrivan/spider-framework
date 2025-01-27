@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace Spider.Shared.Attributes.EF.UI
 {
-    public class UIColWidthAttribute : Attribute
+    public class UIControlWidthAttribute : Attribute
     {
-        public UIColWidthAttribute(string colWidth) { }
+        public UIControlWidthAttribute(string colWidth) { }
     }
 }

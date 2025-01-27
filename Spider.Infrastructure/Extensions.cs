@@ -46,8 +46,8 @@ namespace Spider.Infrastructure
                     .SingleOrDefault();
 
                 var m2mExtendEntity = properties
-                    .Where(x => x != null && x.GetCustomAttribute<M2MExtendEntityAttribute>() != null)
-                    .Select(x => new { Property = x, Attribute = x.GetCustomAttribute<M2MExtendEntityAttribute>() })
+                    .Where(x => x != null && x.GetCustomAttribute<M2MEntityAttribute>() != null)
+                    .Select(x => new { Property = x, Attribute = x.GetCustomAttribute<M2MEntityAttribute>() })
                     .SingleOrDefault();
 
                 if (m2mMaintanceEntity == null || m2mExtendEntity == null)

@@ -289,7 +289,7 @@ export class {{entity.Name}}BaseDetailsComponent {
         {
             List<string> result = new List<string>();
 
-            foreach (UIColumn col in property.GetUIColumns())
+            foreach (UITableColumn col in property.GetUITableColumns())
             {
                 SpiderClass extractedEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
                 SpiderProperty extractedEntityProperty = extractedEntity?.Properties?.Where(x => x.Name == col.Field.Replace("DisplayName", "").Replace("CommaSeparated", ""))?.SingleOrDefault();
@@ -913,7 +913,7 @@ export class {{entity.Name}}BaseDetailsComponent {
                 string controlType = GetUIStringControlType(GetUIControlType(property));
 
                 result.Add($$"""
-                    <div class="{{GetUIColWidth(property)}}">
+                    <div class="{{GetUIControlWidth(property)}}">
                         <{{controlType}} {{GetControlAttributes(property, entity)}}></{{controlType}}>
                     </div>
 """);
@@ -1020,12 +1020,12 @@ export class {{entity.Name}}BaseDetailsComponent {
             return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\"";
         }
 
-        private static string GetUIColWidth(SpiderProperty property)
+        private static string GetUIControlWidth(SpiderProperty property)
         {
-            SpiderAttribute uiColWidthAttribute = property.Attributes.Where(x => x.Name == "UIColWidth").SingleOrDefault();
+            SpiderAttribute uiControlWidthAttribute = property.Attributes.Where(x => x.Name == "UIControlWidth").SingleOrDefault();
 
-            if (uiColWidthAttribute != null)
-                return uiColWidthAttribute.Value;
+            if (uiControlWidthAttribute != null)
+                return uiControlWidthAttribute.Value;
 
             UIControlTypeCodes controlType = GetUIControlType(property);
 

@@ -371,7 +371,7 @@ namespace Spider.SourceGenerators.Shared
             return entities
                 .Where(x => x.BaseType == null && x.Properties
                     .Any(x => x.Type == entity.Name && x.Attributes
-                        .Any(x => (x.Name == "M2MExtendEntity" || x.Name == "M2MMaintanceEntity") && x.Value == attributeValue)))
+                        .Any(x => (x.Name == "M2MEntity" || x.Name == "M2MMaintanceEntity") && x.Value == attributeValue)))
                 .SingleOrDefault();
         }
 
@@ -382,7 +382,7 @@ namespace Spider.SourceGenerators.Shared
 
             return manyToManyEntity.Properties
                 .Where(x => x.Attributes
-                    .Any(x => (x.Name == "M2MExtendEntity" || x.Name == "M2MMaintanceEntity") && x.Value == attributeValue))
+                    .Any(x => (x.Name == "M2MEntity" || x.Name == "M2MMaintanceEntity") && x.Value == attributeValue))
                 .SingleOrDefault();
         }
 
@@ -398,14 +398,14 @@ namespace Spider.SourceGenerators.Shared
 
             if (manyToManyProperty.HasM2MMaintanceEntityAttribute())
             {
-                oppositeManyToManyProperty = manyToManyEntity.Properties.Where(x => x.HasM2MExtendEntityAttribute()).Single();
+                oppositeManyToManyProperty = manyToManyEntity.Properties.Where(x => x.HasM2MEntityAttribute()).Single();
             }
-            else if (manyToManyProperty.HasM2MExtendEntityAttribute())
+            else if (manyToManyProperty.HasM2MEntityAttribute())
             {
                 oppositeManyToManyProperty = manyToManyEntity.Properties.Where(x => x.HasM2MMaintanceEntityAttribute()).Single();
             }
 
-            string propertyName = oppositeManyToManyProperty.Attributes.Where(x => x.Name == "M2MMaintanceEntity" || x.Name == "M2MExtendEntity").Select(x => x.Value).SingleOrDefault();
+            string propertyName = oppositeManyToManyProperty.Attributes.Where(x => x.Name == "M2MMaintanceEntity" || x.Name == "M2MEntity").Select(x => x.Value).SingleOrDefault();
 
             return extractedPropertyEntity.Properties.Where(x => x.Name == propertyName).SingleOrDefault();
         }
