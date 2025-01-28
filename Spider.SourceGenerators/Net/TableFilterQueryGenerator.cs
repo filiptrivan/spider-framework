@@ -44,7 +44,8 @@ namespace Spider.SourceGenerators.Net
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectClasses, SourceProductionContext context)
         {
-            if (classes.Count <= 1) return;
+            if (classes.Count <= 1) 
+                return;
 
             List<SpiderClass> spiderClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
             List<SpiderClass> allClasses = spiderClasses.Concat(referencedProjectClasses).ToList();
