@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Spider.Shared.Attributes.EF;
 using System.Reflection;
 using Spider.Shared.Helpers;
+using System.ComponentModel.DataAnnotations;
 
 namespace Spider.Infrastructure
 {
@@ -45,12 +46,12 @@ namespace Spider.Infrastructure
                     .Select(x => new { Property = x, Attribute = x.GetCustomAttribute<M2MMaintanceEntityAttribute>() })
                     .SingleOrDefault();
 
-                var m2mExtendEntity = properties
+                var m2mEntity = properties
                     .Where(x => x != null && x.GetCustomAttribute<M2MEntityAttribute>() != null)
                     .Select(x => new { Property = x, Attribute = x.GetCustomAttribute<M2MEntityAttribute>() })
                     .SingleOrDefault();
 
-                if (m2mMaintanceEntity == null || m2mExtendEntity == null)
+                if (m2mMaintanceEntity == null || m2mEntity == null)
                     continue;
 
                 PropertyInfo m2mMaintanceEntityWithManyProperty = mutableEntityTypes
@@ -58,28 +59,33 @@ namespace Spider.Infrastructure
                     .SelectMany(x => x.ClrType.GetProperties())
                     .Where(x => x.Name == m2mMaintanceEntity.Attribute.WithManyProperty)
                     .SingleOrDefault();
-                PropertyInfo m2mExtendEntityWithManyProperty = mutableEntityTypes
-                    .Where(x => x.Name == m2mExtendEntity.Property.PropertyType.FullName)
+                PropertyInfo m2mEntityWithManyProperty = mutableEntityTypes
+                    .Where(x => x.Name == m2mEntity.Property.PropertyType.FullName)
                     .SelectMany(x => x.ClrType.GetProperties())
-                    .Where(x => x.Name == m2mExtendEntity.Attribute.WithManyProperty)
+                    .Where(x => x.Name == m2mEntity.Attribute.WithManyProperty)
                     .SingleOrDefault();
 
-                if (m2mMaintanceEntityWithManyProperty == null || m2mExtendEntityWithManyProperty == null)
+                if (m2mMaintanceEntityWithManyProperty == null || m2mEntityWithManyProperty == null)
                     throw new Exception($"Bad WithManyProperty definitions for {clrType.Name}.");
 
-                modelBuilder.Entity(clrType)
-                    .HasKey(new[] { $"{m2mMaintanceEntity.Property.Name}Id", $"{m2mExtendEntity.Property.Name}Id" });
+                List<string> primaryKeys = [$"{m2mMaintanceEntity.Property.Name}Id", $"{m2mEntity.Property.Name}Id"];
 
-                if (properties.Count == 2 || (m2mMaintanceEntityWithManyProperty.PropertyType.ToString() != m2mExtendEntityWithManyProperty.PropertyType.ToString())) // FT HACK, FT TODO: For now, when we migrate UserNotification and PartnerUserPartnerNotification, we should change this.
+                foreach (PropertyInfo property in properties.Where(x => x != null && x.GetCustomAttribute<KeyAttribute>() != null))
+                    primaryKeys.Add($"{property.Name}Id");
+
+                modelBuilder.Entity(clrType)
+                    .HasKey(primaryKeys.ToArray());
+
+                if (properties.Count == 2 || (m2mMaintanceEntityWithManyProperty.PropertyType.ToString() != m2mEntityWithManyProperty.PropertyType.ToString()))
                 {
                     modelBuilder.Entity(m2mMaintanceEntity.Property.PropertyType) 
                         .HasMany(m2mMaintanceEntity.Attribute.WithManyProperty)
-                        .WithMany(m2mExtendEntity.Attribute.WithManyProperty)
+                        .WithMany(m2mEntity.Attribute.WithManyProperty)
                         .UsingEntity(
                             clrType,
-                            j => j.HasOne(m2mExtendEntity.Property.Name)
+                            j => j.HasOne(m2mEntity.Property.Name)
                                   .WithMany()
-                                  .HasForeignKey($"{m2mExtendEntity.Property.Name}Id"),
+                                  .HasForeignKey($"{m2mEntity.Property.Name}Id"),
                             j => j.HasOne(m2mMaintanceEntity.Property.Name)
                                   .WithMany()
                                   .HasForeignKey($"{m2mMaintanceEntity.Property.Name}Id")
@@ -92,10 +98,10 @@ namespace Spider.Infrastructure
                         .WithOne(m2mMaintanceEntity.Property.Name)
                         .HasForeignKey($"{m2mMaintanceEntity.Property.Name}Id");
 
-                    modelBuilder.Entity(m2mExtendEntity.Property.PropertyType)
-                        .HasMany(clrType, m2mExtendEntityWithManyProperty.Name)
-                        .WithOne(m2mExtendEntity.Property.Name)
-                        .HasForeignKey($"{m2mExtendEntity.Property.Name}Id");
+                    modelBuilder.Entity(m2mEntity.Property.PropertyType)
+                        .HasMany(clrType, m2mEntityWithManyProperty.Name)
+                        .WithOne(m2mEntity.Property.Name)
+                        .HasForeignKey($"{m2mEntity.Property.Name}Id");
                 }
 
             }
