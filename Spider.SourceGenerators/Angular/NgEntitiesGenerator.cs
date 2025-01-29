@@ -121,6 +121,7 @@ export class {{angularClassIdentifier}} extends BaseEntity
         private static List<string> GetAllAngularPropertyDefinitions(List<SpiderProperty> DTOProperties)
         {
             List<string> result = new List<string>();
+
             foreach (SpiderProperty DTOProp in DTOProperties)
             {
                 string DTOPropLowerCase = DTOProp.Name.FirstCharToLower();
@@ -135,6 +136,7 @@ export class {{angularClassIdentifier}} extends BaseEntity
         private static List<string> GetAngularPropertyAssignments(List<SpiderProperty> DTOProperties)
         {
             List<string> result = new List<string>();
+
             foreach (SpiderProperty DTOProp in DTOProperties)
             {
                 string DTOPropLowerCase = DTOProp.Name.FirstCharToLower();

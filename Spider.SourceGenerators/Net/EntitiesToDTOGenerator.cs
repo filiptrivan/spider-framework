@@ -41,30 +41,6 @@ namespace Spider.SourceGenerators.Net
             //    static (spc, source) => Execute(source, spc));
         }
 
-        //        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntityClasses, SourceProductionContext context)
-        //        {
-        //            if (classes.Count <= 1) 
-        //                return;
-
-        //            List<SpiderClass> entities = Helpers.GetSpiderEntityClasses(classes, referencedProjectEntityClasses);
-        //            List<SpiderClass> allEntities = entities.Concat(referencedProjectEntityClasses).ToList();
-
-        //            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(entities[0].Namespace);
-        //            string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Spider.Security
-        //            string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
-
-        //            string result = $$"""
-        //{{GetUsings()}}
-
-        //namespace {{basePartOfNamespace}}.DTO
-        //{
-        //{{string.Join("\n\n", GetDTOClasses(entities, allEntities))}}
-        //}
-        //""";
-
-        //            context.AddSource($"{projectName}DTOList.generated", SourceText.From(result, Encoding.UTF8));
-        //        }
-
         private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntityClasses, SourceProductionContext context)
         {
             if (classes.Count <= 1)
@@ -162,7 +138,7 @@ namespace {{basePartOfNamespace}}.DTO
 """);
                 return;
             }
-            else if (propType.IsEnumerable() && property.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
+            else if (propType.IsEnumerable() && property.HasGenerateCommaSeparatedDisplayNameAttribute())
             {
                 DTOPropertiesWithoutBaseType.Add($$"""
         public string {{propName}}CommaSeparated { get; set; }
@@ -176,7 +152,7 @@ namespace {{basePartOfNamespace}}.DTO
 """);
                 return;
             }
-            else if (propType.IsEnumerable() && property.Attributes.Any(x => x.Name == "IncludeInDTO"))
+            else if (propType.IsEnumerable() && property.HasIncludeInDTOAttribute())
             {
                 string DTOListPropType = propType.Replace(">", "DTO>");
                 DTOPropertiesWithoutBaseType.Add($$"""

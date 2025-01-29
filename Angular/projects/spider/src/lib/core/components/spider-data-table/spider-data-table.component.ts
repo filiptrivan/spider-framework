@@ -87,7 +87,6 @@ export class SpiderDataTableComponent implements OnInit {
   // Client side table
   // @Input() formArrayItems: any[]; // FT: Pass this only if you have some additional logic for showing data
   @Input() getFormArrayItems: (additionalIndexes?: any) => any[];
-  @Input() formArrayControlNamesFromHtml: string[];
   @Input() hasLazyLoad: boolean = true; 
   selectedItemIds: number[] = []; // FT: Pass only when hasLazyLoad === false, it's enough if the M2M association hasn't additional fields
   @Input() getAlreadySelectedItemIds: (additionalIndexes?: any) => number[]; // FT: Pass only when hasLazyLoad === false, it's enough if the M2M association hasn't additional fields

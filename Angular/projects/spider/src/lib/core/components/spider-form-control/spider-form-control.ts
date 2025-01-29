@@ -48,8 +48,6 @@ export class SpiderFormGroup<TValue = any> extends FormGroup {
     public mainDTOName?: string;
     public saveObservableMethod?: (saveBody: any) => Observable<any>;
     public initSaveBody?: () => BaseEntity = () => null;
-    // public setValidatorMethod?: (formControl: SpiderFormControl, className: string) => SpiderValidatorFn;
-    // public translateLabelMethod?: (formControlName: string) => string;
     public controlNamesFromHtml?: string[] = [];
 }
 
@@ -58,4 +56,5 @@ export class SpiderFormArray<TValue = any> extends FormArray {
     public required: boolean;
     public modelConstructor: TValue;
     public translationKey: string;
+    public controlNamesFromHtml?: string[] = [];
 }

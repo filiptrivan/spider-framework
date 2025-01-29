@@ -876,35 +876,40 @@ namespace Spider.SourceGenerators.Shared
             return c.Properties.Where(x => x.Name == propName).Select(x => x.Type).Single();
         }
 
-        public static List<SpiderProperty> GetSpiderDTOProperties(SpiderClass entityClass, List<SpiderClass> entityClasses)
+        public static List<SpiderProperty> GetSpiderDTOProperties(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<SpiderProperty> props = new List<SpiderProperty>(); // public string Email { get; set; }
-            List<SpiderProperty> properties = entityClass.Properties;
+            List<SpiderProperty> DTOProperties = new List<SpiderProperty>(); // public string Email { get; set; }
+            List<SpiderProperty> properties = entity.Properties;
 
-            foreach (SpiderProperty prop in properties)
+            foreach (SpiderProperty property in properties)
             {
-                if (prop.ShouldSkipPropertyInDTO())
+                if (property.ShouldSkipPropertyInDTO())
                     continue;
 
-                string propType = prop.Type;
-                string propName = prop.Name;
+                string propType = property.Type;
+                string propName = property.Name;
                 // FT: Not adding attributes because they are not the same
 
                 if (propType.IsManyToOneType())
                 {
-                    props.Add(new SpiderProperty { Name = $"{propName}DisplayName", Type = "string" });
-                    SpiderClass manyToOneClass = entityClasses.Where(x => x.Name == propType).SingleOrDefault();
-                    props.Add(new SpiderProperty { Name = $"{propName}Id", Type = $"{manyToOneClass.GetIdType(entityClasses)}?" });
+                    DTOProperties.Add(new SpiderProperty { Name = $"{propName}DisplayName", Type = "string" });
+                    SpiderClass manyToOneClass = entities.Where(x => x.Name == propType).SingleOrDefault();
+                    DTOProperties.Add(new SpiderProperty { Name = $"{propName}Id", Type = $"{manyToOneClass.GetIdType(entities)}?" });
                     continue;
                 }
-                else if (propType.IsEnumerable() && prop.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
+                else if (propType.IsEnumerable() && property.HasGenerateCommaSeparatedDisplayNameAttribute())
                 {
-                    props.Add(new SpiderProperty { Name = $"{propName}CommaSeparated", Type = "string" });
+                    DTOProperties.Add(new SpiderProperty { Name = $"{propName}CommaSeparated", Type = "string" });
                     continue;
                 }
                 else if (propType == "byte[]")
                 {
-                    props.Add(new SpiderProperty { Name = propName, Type = "string" });
+                    DTOProperties.Add(new SpiderProperty { Name = propName, Type = "string" });
+                    continue;
+                }
+                else if (propType.IsEnumerable() && property.HasIncludeInDTOAttribute())
+                {
+                    DTOProperties.Add(new SpiderProperty { Name = $"{propName}DTOList", Type = propType.Replace(">", "DTO>") });
                     continue;
                 }
                 else if (propType.IsEnumerable())
@@ -913,21 +918,21 @@ namespace Spider.SourceGenerators.Shared
                 }
                 else if (propType.IsBaseType() && propType != "string")
                 {
-                    propType = $"{prop.Type}?".Replace("??", "?");
+                    propType = $"{property.Type}?".Replace("??", "?");
                 }
-                else if (prop.Attributes.Any(x => x.Name == "BlobName"))
+                else if (property.IsBlob())
                 {
-                    props.Add(new SpiderProperty { Name = $"{propName}Data", Type = "string" });
+                    DTOProperties.Add(new SpiderProperty { Name = $"{propName}Data", Type = "string" });
                 }
                 else if (propType != "string")
                 {
                     propType = "UNSUPPORTED TYPE";
                 }
 
-                props.Add(new SpiderProperty { Name = propName, Type = propType });
+                DTOProperties.Add(new SpiderProperty { Name = propName, Type = propType });
             }
 
-            return props;
+            return DTOProperties;
         }
 
         #endregion

@@ -14,6 +14,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
+using Spider.Shared.Helpers;
 
 namespace Spider.Security.Services
 {
@@ -56,59 +57,7 @@ namespace Spider.Security.Services
 
         public string GetIPAddress()
         {
-            string ipAddress = GetRemoteHostIpAddressUsingXForwardedFor(_httpContextAccessor.HttpContext)?.ToString();
-
-            if (string.IsNullOrEmpty(ipAddress) == true)
-                ipAddress = _httpContextAccessor.HttpContext.Connection.RemoteIpAddress?.ToString();
-
-            if (string.IsNullOrEmpty(ipAddress) == true)
-                ipAddress = GetRemoteHostIpAddressUsingXRealIp(_httpContextAccessor.HttpContext)?.ToString();
-
-            return ipAddress;
-        }
-
-        protected IPAddress GetRemoteHostIpAddressUsingXForwardedFor(HttpContext httpContext)
-        {
-            IPAddress remoteIpAddress = null;
-            var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-            if (string.IsNullOrEmpty(forwardedFor) == false)
-            {
-                var ips = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                      .Select(s => s.Trim());
-                foreach (var ip in ips)
-                {
-                    if (IPAddress.TryParse(ip, out var address) &&
-                        (address.AddressFamily is AddressFamily.InterNetwork
-                         or AddressFamily.InterNetworkV6))
-                    {
-                        remoteIpAddress = address;
-                        break;
-                    }
-                }
-            }
-            return remoteIpAddress;
-        }
-
-        protected IPAddress GetRemoteHostIpAddressUsingXRealIp(HttpContext httpContext)
-        {
-            IPAddress remoteIpAddress = null;
-            var xRealIpExists = httpContext.Request.Headers.TryGetValue("X-Real-IP", out var xRealIp);
-            if (xRealIpExists)
-            {
-                if (!IPAddress.TryParse(xRealIp, out IPAddress address))
-                {
-                    return remoteIpAddress;
-                }
-                var isValidIP = (address.AddressFamily is AddressFamily.InterNetwork
-                                 or AddressFamily.InterNetworkV6);
-
-                if (isValidIP)
-                {
-                    remoteIpAddress = address;
-                }
-                return remoteIpAddress;
-            }
-            return remoteIpAddress;
+            return Helper.GetIPAddress(_httpContextAccessor.HttpContext);
         }
     }
 }

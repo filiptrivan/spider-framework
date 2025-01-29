@@ -25,7 +25,6 @@ import { LastMenuIconIndexClicked } from '../../entities/last-menu-icon-index-cl
 })
 export class BaseFormCopy implements OnInit { 
   formGroup: SpiderFormGroup = new SpiderFormGroup({});
-  formArrayControlNamesFromHtml: string[] = [];
   saveBody: any;
   invalidForm: boolean = false; // FT: We are using this only if we manualy add some form field on the UI, like multiautocomplete, autocomplete etc...
   loading: boolean = true;
@@ -238,8 +237,8 @@ export class BaseFormCopy implements OnInit {
   //#region Model List
   
   getFormArrayControlByIndex<T>(formControlName: keyof T & string, formArray: SpiderFormArray<T>, index: number, filter?: (formGroups: SpiderFormGroup<T>[]) => SpiderFormGroup<T>[]): SpiderFormControl {
-    if(this.formArrayControlNamesFromHtml.findIndex(x => x === formControlName) === -1)
-      this.formArrayControlNamesFromHtml.push(formControlName);
+    if(formArray.controlNamesFromHtml.findIndex(x => x === formControlName) === -1)
+      formArray.controlNamesFromHtml.push(formControlName);
 
     let filteredFormGroups: SpiderFormGroup<T>[];
 
@@ -253,11 +252,9 @@ export class BaseFormCopy implements OnInit {
     return filteredFormGroups[index]?.controls[formControlName] as SpiderFormControl; // FT: Don't change this. It's always possible that change detection occurs before something.
   }
 
-  getFormArrayControls<T>(formControlName: keyof T & string, formArraySaveBodyName: string, filter?: (formGroups: SpiderFormGroup<T>[]) => SpiderFormGroup<T>[]): SpiderFormControl[] {
-    if(this.formArrayControlNamesFromHtml.findIndex(x => x === formControlName) === -1)
-      this.formArrayControlNamesFromHtml.push(formControlName);
-
-    let formArray: SpiderFormArray<T> = this.formGroup.controls[formArraySaveBodyName] as unknown as SpiderFormArray;
+  getFormArrayControls<T>(formControlName: keyof T & string, formArray: SpiderFormArray<T>, filter?: (formGroups: SpiderFormGroup<T>[]) => SpiderFormGroup<T>[]): SpiderFormControl[] {
+    if(formArray.controlNamesFromHtml.findIndex(x => x === formControlName) === -1)
+      formArray.controlNamesFromHtml.push(formControlName);
 
     let filteredFormGroups: SpiderFormGroup<T>[];
 
@@ -322,12 +319,16 @@ export class BaseFormCopy implements OnInit {
 
     Object.keys(this.formGroup.controls).forEach(key => {
       const formArray = this.formGroup.controls[key] as unknown as SpiderFormArray;
+      
       if (formArray instanceof SpiderFormArray){
-        (formArray.controls as FormGroup[]).forEach(formGroup => {
+        (formArray.controls as SpiderFormGroup[]).forEach(formGroup => {
           Object.keys(formGroup.controls).forEach(key => {
             const formControl = formGroup.controls[key] as SpiderFormControl; // this.formArray.markAsDirty(); // FT: For some reason this doesn't work
 
-            if (this.formArrayControlNamesFromHtml.includes(formControl.label) && formControl.invalid) {
+            if (
+              (formGroup.controlNamesFromHtml.includes(formControl.label) || formArray.controlNamesFromHtml.includes(formControl.label)) && 
+              formControl.invalid
+            ) {
               formControl.markAsDirty();
               invalid = true;
             }
@@ -396,6 +397,7 @@ export class BaseFormCopy implements OnInit {
   //#endregion
 
   //#region Helpers
+
   selectedTab(tabs: SpiderTab[]): number {
     const tab = singleOrDefault(tabs, x => x.isSelected);
 
@@ -406,6 +408,7 @@ export class BaseFormCopy implements OnInit {
       return null;
     }
   }
+
   //#endregion
 
 }

@@ -571,6 +571,11 @@ namespace Spider.SourceGenerators.Shared
             return property.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName");
         }
 
+        public static bool HasIncludeInDTOAttribute(this SpiderProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "IncludeInDTO");
+        }
+
         public static bool HasExcludeServiceMethodsFromGenerationAttribute(this SpiderProperty property)
         {
             return property.Attributes.Any(x => x.Name == "ExcludeServiceMethodsFromGeneration");

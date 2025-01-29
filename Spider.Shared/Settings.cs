@@ -33,5 +33,9 @@ namespace Spider.Shared
         public string BlobStorageConnectionString { get; set; }
         public string BlobStorageUrl { get; set; }
         public string BlobStorageContainerName { get; set; }
+
+        public int RequestsLimitNumber { get; set; }
+        public int RequestsLimitWindow { get; set; }
+        public string RateLimitingFixedByIpPolicy { get; } = "fixed-by-ip";
     }
 }

@@ -19,6 +19,8 @@ using Spider.Shared.Exceptions;
 using Spider.Shared.Terms;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 
 namespace Spider.Shared.Extensions
@@ -50,6 +52,8 @@ namespace Spider.Shared.Extensions
             services.SpiderAddDbContext<TDbContext>(); // https://youtu.be/bN57EDYD6M0?si=CVztRqlj0hBSrFXb
 
             services.SpiderAddSwaggerGen();
+
+            services.AddRateLimiters();
         }
 
         public static void SpiderAddAuthentication(this IServiceCollection services)
@@ -88,11 +92,13 @@ namespace Spider.Shared.Extensions
 
         public static void SpiderAddControllers(this IServiceCollection services)
         {
-            services.AddControllers().AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.PropertyNameCaseInsensitive = false;
-                options.JsonSerializerOptions.Converters.Add(new JsonDateTimeConverter());
-            });
+            services
+                .AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.PropertyNameCaseInsensitive = false;
+                    options.JsonSerializerOptions.Converters.Add(new JsonDateTimeConverter());
+                });
         }
 
         public static void SpiderAddAzureClients(this IServiceCollection services)
@@ -141,6 +147,27 @@ namespace Spider.Shared.Extensions
             });
         }
 
+        public static void AddRateLimiters(this IServiceCollection services)
+        {
+            services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+                {
+                    string ipAddress = Helper.GetIPAddress(httpContext);
+                    
+                    return RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: ipAddress,
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = SettingsProvider.Current.RequestsLimitNumber,
+                            Window = TimeSpan.FromSeconds(SettingsProvider.Current.RequestsLimitWindow),
+                        });
+                });
+            });
+        }
+
         #endregion
 
         #region Configure
@@ -152,7 +179,6 @@ namespace Spider.Shared.Extensions
         {
             if (env.IsDevelopment())
             {
-                //GenerateAngularCode();
                 app.UseDeveloperExceptionPage();
             }
 
@@ -269,9 +295,12 @@ namespace Spider.Shared.Extensions
 
         public static void SpiderConfigureEndpoints(this IApplicationBuilder app)
         {
+            app.UseRateLimiter();
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                //.RequireRateLimiting(SettingsProvider.Current.RateLimitingFixedByIpPolicy);
                 endpoints.MapGet("/", async context =>
                 {
                     await context.Response.WriteAsync("Hello from C# backend!");

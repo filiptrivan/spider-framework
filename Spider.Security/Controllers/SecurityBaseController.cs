@@ -4,6 +4,7 @@ using Spider.Security.Entities;
 using Spider.Security.Interface;
 using Spider.Security.Services;
 using Spider.Shared.Attributes;
+using Spider.Shared.Attributes.EF.UI;
 using Spider.Shared.DTO;
 using Spider.Shared.Helpers;
 using Spider.Shared.Interfaces;
@@ -34,9 +35,27 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
         }
 
         [HttpPost]
+        public virtual async Task<AuthResultDTO> Login(VerificationTokenRequestDTO request)
+        {
+            return _securityBusinessService.Login(request);
+        }
+
+        [HttpPost]
+        public virtual async Task<AuthResultDTO> LoginExternal(ExternalProviderDTO externalProviderDTO) // TODO FT: Add enum for which external provider you should login user
+        {
+            return await _securityBusinessService.LoginExternal(externalProviderDTO, SettingsProvider.Current.GoogleClientId);
+        }
+
+        [HttpPost]
         public async Task<RegistrationVerificationResultDTO> SendRegistrationVerificationEmail(RegistrationDTO registrationDTO)
         {
             return await _securityBusinessService.SendRegistrationVerificationEmail(registrationDTO);
+        }
+
+        [HttpPost]
+        public virtual async Task<AuthResultDTO> Register(VerificationTokenRequestDTO request)
+        {
+            return await _securityBusinessService.Register(request);
         }
 
         [HttpGet]
@@ -60,7 +79,7 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
 
         #endregion
 
-        #region
+        #region User
 
         [HttpGet]
         [AuthGuard]
