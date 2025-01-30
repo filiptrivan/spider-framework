@@ -216,10 +216,12 @@ namespace Spider.Shared.Extensions
         {
             app.UseCors(builder =>
             {
-                builder.WithOrigins(new[] { SettingsProvider.Current.FrontendUrl })
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .WithExposedHeaders("Content-Disposition"); // to know how to parse the Excel file name on the front end
+                builder
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials()
+                    .WithOrigins(new[] { SettingsProvider.Current.FrontendUrl })
+                    .WithExposedHeaders("Content-Disposition"); // to know how to parse the Excel file name on the front end
             });
         }
 
@@ -296,16 +298,6 @@ namespace Spider.Shared.Extensions
         public static void SpiderConfigureEndpoints(this IApplicationBuilder app)
         {
             app.UseRateLimiter();
-
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-                //.RequireRateLimiting(SettingsProvider.Current.RateLimitingFixedByIpPolicy);
-                endpoints.MapGet("/", async context =>
-                {
-                    await context.Response.WriteAsync("Hello from C# backend!");
-                });
-            });
         }
 
         #endregion
