@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Azure.Core;
 
 
 namespace Spider.Shared.Extensions
@@ -61,6 +62,23 @@ namespace Spider.Shared.Extensions
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        string accessToken = context.Request.Query["access_token"];
+                        PathString path = context.HttpContext.Request.Path;
+
+                        if (!string.IsNullOrEmpty(accessToken) &&
+                            (path.StartsWithSegments("/api/hubs")))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,

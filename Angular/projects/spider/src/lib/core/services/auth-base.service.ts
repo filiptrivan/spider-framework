@@ -201,7 +201,7 @@ export class AuthBaseService implements OnDestroy {
   }
 
   getTokenRemainingTime(): number {
-    const accessToken = localStorage.getItem(this.config.accessTokenKey);
+    const accessToken = this.getAccessToken();
 
     if (!accessToken) {
       return 0;
@@ -211,6 +211,10 @@ export class AuthBaseService implements OnDestroy {
     const expires = new Date(jwtToken.exp * 1000);
     
     return expires.getTime() - Date.now();
+  }
+
+  getAccessToken(): string {
+    return localStorage.getItem(this.config.accessTokenKey);
   }
 
   private startTokenTimer() {
