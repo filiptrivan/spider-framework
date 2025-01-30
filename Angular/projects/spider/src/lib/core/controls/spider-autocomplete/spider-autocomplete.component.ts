@@ -52,10 +52,6 @@ export class SpiderAutocompleteComponent extends BaseAutocompleteControl impleme
         this.onTextInput.next(event);
     }
 
-    buttonClick(){
-
-    }
-
     select(event){
     }
 

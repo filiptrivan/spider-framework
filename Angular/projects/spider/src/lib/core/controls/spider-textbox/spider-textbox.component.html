@@ -5,13 +5,18 @@
     <label>{{getTranslatedLabel()}}</label>
     <required *ngIf="control?.required"></required>
   </div>
-  <input
-    *ngIf="control"
-    [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid"
-    pInputText
-    [formControl]="control"
-    [id]="control?.label"
-    (blur)="control?.markAsDirty()"
-    [placeholder]="placeholder"
-    />
+  <div class="p-inputgroup p-fluid">
+    <input
+      *ngIf="control"
+      [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid"
+      pInputText
+      [formControl]="control"
+      [id]="control?.label"
+      (blur)="control?.markAsDirty()"
+      [placeholder]="placeholder"
+      />
+      <span *ngIf="showButton" (click)="buttonClick()" class="p-inputgroup-addon" style="cursor: pointer; background-color: var(--primary-color); border-color: var(--primary-color);">
+        <i class="pi {{buttonIcon}}" style="color: #fff;"></i>
+      </span>
   </div>
+</div>

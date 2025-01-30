@@ -237,6 +237,9 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
         private static string GetBaseAngularControllerMethods(SpiderClass entity, List<SpiderClass> entities, HashSet<string> alreadyAddedMethods)
         {
+            if (entity.IsManyToMany()) // TODO FT: Do something with M2M entities
+                return null;
+
             return $$"""
 {{GetBaseTableDataAngularControllerMethod(entity, alreadyAddedMethods)}}
 

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { BaseControl } from '../base-control';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { RequiredComponent } from '../../components/required/required.component';
@@ -20,7 +20,10 @@ import { PrimengModule } from '../../modules/primeng.module';
     ]
 })
 export class SpiderTextboxComponent extends BaseControl implements OnInit {
-
+    @Input() showButton: boolean = false;
+    @Input() buttonIcon: string;
+    @Output() onButtonClick = new EventEmitter();
+    
     constructor(
         protected override translocoService: TranslocoService,
     ) { 
@@ -29,6 +32,11 @@ export class SpiderTextboxComponent extends BaseControl implements OnInit {
 
     override ngOnInit(){
         super.ngOnInit();
+    }
+
+    
+    buttonClick() {
+        this.onButtonClick.next(null);
     }
     
 }
