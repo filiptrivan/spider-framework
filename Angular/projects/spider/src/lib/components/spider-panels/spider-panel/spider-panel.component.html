@@ -1,13 +1,13 @@
 <p-panel 
-    [showHeader]="showPanelHeader"
-    [ngClass]="{
+[showHeader]="showPanelHeader"
+[ngClass]="{
     'multiple-panel-first-without-header': isFirstMultiplePanel && !showPanelHeader,
     'multiple-panel-first': isFirstMultiplePanel,
     'multiple-panel-middle': isMiddleMultiplePanel,
     'multiple-panel-last': isLastMultiplePanel,
-    'spider-panel': true
-    }"
-    >
+    'spider-panel': true,
+}"
+>
     <ng-template pTemplate="header">
         <div style="padding-left: 10px; padding-right: 10px;">
             <ng-content select="panel-header"></ng-content>

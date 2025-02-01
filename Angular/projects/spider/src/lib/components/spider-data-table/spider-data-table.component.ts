@@ -21,6 +21,7 @@ import { PrimengModule } from '../../modules/primeng.module';
 @Component({
   selector: 'spider-data-table',
   templateUrl: './spider-data-table.component.html',
+  styleUrl: 'spider-data-table.component.scss',
   styles: [`
   	:host {
 		  ::ng-deep {

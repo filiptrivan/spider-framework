@@ -1,0 +1,64 @@
+.p-fileupload {
+    .p-fileupload-buttonbar {
+        background: $panelHeaderBg;
+        padding: $panelHeaderPadding;
+        border: $panelHeaderBorder;
+        color: $panelHeaderTextColor;
+        border-bottom: 0 none;
+        border-top-right-radius: $borderRadius;
+        border-top-left-radius: $borderRadius;
+
+        .p-button {
+            margin-right: $inlineSpacing;
+
+            &.p-fileupload-choose.p-focus {
+                @include focused();
+            }
+        }
+    }
+
+    .p-fileupload-content {
+        background: $panelContentBg;
+        padding: $fileUploadContentPadding;
+        border: $panelContentBorder;
+        color: $panelContentTextColor;
+        border-bottom-right-radius: $borderRadius;
+        border-bottom-left-radius: $borderRadius;
+
+        &.p-fileupload-highlight {
+            border-color: 1px dashed var(--primary-color);
+            border-style: dashed;
+            background-color: var(--highlight-bg);
+        }
+    }
+
+    .p-progressbar {
+        height: $fileUploadProgressBarHeight;
+    }
+
+    .p-fileupload-row {
+        > div {
+            padding: $tableBodyCellPadding;
+        }
+    }
+
+    &.p-fileupload-advanced {
+        .p-message {
+            margin-top: 0;
+        }
+    }
+}
+
+.p-fileupload-choose {
+    &:not(.p-disabled):hover {
+        background: var(--primary-dark-color);
+        color: $buttonTextHoverColor;
+        border-color: var(--primary-dark-color);
+    }
+
+    &:not(.p-disabled):active {
+        background: var(--primary-darker-color);
+        color: $buttonTextActiveColor;
+        border-color: var(--primary-darker-color);
+    }
+}

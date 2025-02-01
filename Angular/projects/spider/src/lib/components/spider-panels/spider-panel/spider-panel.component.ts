@@ -5,8 +5,6 @@ import { Menu } from 'primeng/menu';
 @Component({
   selector: 'spider-panel',
   templateUrl: './spider-panel.component.html',
-  styles: [
-  ]
 })
 export class SpiderPanelComponent implements OnInit {
   @Input() isFirstMultiplePanel: boolean = false;

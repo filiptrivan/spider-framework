@@ -1,0 +1,90 @@
+.p-checkbox {
+    width: $checkboxWidth;
+    height: $checkboxHeight;
+
+    .p-checkbox-box {
+        border: $checkboxBorder;
+        background: $inputBg;
+        width: $checkboxWidth;
+        height: $checkboxHeight;
+        color: $textColor;
+        border-radius: $borderRadius;
+        transition: $formElementTransition;
+
+        .p-checkbox-icon {
+            transition-duration: $transitionDuration;
+            color: $checkboxIconActiveColor;
+            font-size: $checkboxIconFontSize;
+        }
+        
+        .p-icon {
+            width: $checkboxIconFontSize;
+            height: $checkboxIconFontSize;
+        }
+
+        &.p-highlight {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+        }
+    }
+
+    &:not(.p-checkbox-disabled) {
+        .p-checkbox-box {
+            &:hover {
+                border-color: var(--primary-color);
+            }
+
+            &.p-focus {
+                @include focused-input();
+            }
+
+            &.p-highlight:hover {    
+                border-color: var(--primary-darker-color);
+                background: var(--primary-darker-color);
+                color: $checkboxIconActiveHoverColor;
+            }
+        }
+    }
+}
+
+p-checkbox.ng-dirty.ng-invalid > .p-checkbox > .p-checkbox-box {
+    @include invalid-input();
+}
+
+.p-input-filled {
+    .p-checkbox {
+        .p-checkbox-box {
+            background-color: $inputFilledBg;
+
+            &.p-highlight {
+                background: var(--primary-color);
+            }
+        }
+
+        &:not(.p-checkbox-disabled) {
+            .p-checkbox-box {
+                &:hover {
+                    background-color: $inputFilledHoverBg;
+                }
+        
+                &.p-highlight:hover {    
+                    background: var(--primary-darker-color);
+                }
+            }
+        }
+    }
+}
+
+.p-checkbox-label {
+    margin-left: $inlineSpacing;
+}
+
+@if (var(--highlight-bg) == var(--primary-color)) {
+    .p-highlight {
+        .p-checkbox {
+            .p-checkbox-box {
+                border-color: $checkboxIconActiveColor;
+            }
+        }
+    }
+} 

@@ -181,7 +181,8 @@ namespace Spider.Shared.Extensions
                         {
                             PermitLimit = SettingsProvider.Current.RequestsLimitNumber,
                             Window = TimeSpan.FromSeconds(SettingsProvider.Current.RequestsLimitWindow),
-                        });
+                        }
+                    );
                 });
             });
         }

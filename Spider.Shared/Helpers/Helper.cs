@@ -115,45 +115,45 @@ namespace Spider.Shared.Helpers
         private static IPAddress GetRemoteHostIpAddressUsingXForwardedFor(HttpContext httpContext)
         {
             IPAddress remoteIpAddress = null;
-            var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            string forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+
             if (string.IsNullOrEmpty(forwardedFor) == false)
             {
-                var ips = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                      .Select(s => s.Trim());
-                foreach (var ip in ips)
+                List<string> ipList = forwardedFor
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .ToList();
+
+                foreach (string ip in ipList)
                 {
                     if (IPAddress.TryParse(ip, out var address) &&
-                        (address.AddressFamily is AddressFamily.InterNetwork
-                         or AddressFamily.InterNetworkV6))
+                       (address.AddressFamily is AddressFamily.InterNetwork or AddressFamily.InterNetworkV6))
                     {
                         remoteIpAddress = address;
                         break;
                     }
                 }
             }
+
             return remoteIpAddress;
         }
 
         private static IPAddress GetRemoteHostIpAddressUsingXRealIp(HttpContext httpContext)
         {
-            IPAddress remoteIpAddress = null;
-            var xRealIpExists = httpContext.Request.Headers.TryGetValue("X-Real-IP", out var xRealIp);
+            bool xRealIpExists = httpContext.Request.Headers.TryGetValue("X-Real-IP", out var xRealIp);
+
             if (xRealIpExists)
             {
                 if (!IPAddress.TryParse(xRealIp, out IPAddress address))
-                {
-                    return remoteIpAddress;
-                }
-                var isValidIP = (address.AddressFamily is AddressFamily.InterNetwork
-                                 or AddressFamily.InterNetworkV6);
+                    return null;
+
+                bool isValidIP = address.AddressFamily is AddressFamily.InterNetwork or AddressFamily.InterNetworkV6;
 
                 if (isValidIP)
-                {
-                    remoteIpAddress = address;
-                }
-                return remoteIpAddress;
+                    return address;
             }
-            return remoteIpAddress;
+
+            return null;
         }
 
         #endregion
