@@ -2,11 +2,11 @@ import { Component } from '@angular/core';
 import { ConfigBaseService } from '../../services/config-base.service'
 
 @Component({
-    selector: 'app-footer',
+    selector: 'footer',
     templateUrl: './app.footer.component.html',
     standalone: true
 })
-export class AppFooterComponent {
+export class FooterComponent {
     companyName: string = this.config.companyName;
 
     constructor(

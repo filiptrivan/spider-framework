@@ -1,0 +1,31 @@
+<ng-container *transloco="let t">
+    @if (registrationFormGroup != null) {
+        @if (showEmailSentDialog == false) {
+            <auth (onCompanyNameChange)="companyNameChange($event)">
+                <form [formGroup]="formGroup" style="margin-bottom: 16px;"> <!-- FT: We are not loading anything from the server here so we don't need defer block -->
+                    <div class="col-12" style="padding-left: 0; padding-right: 0;">
+                        <spider-textbox [control]="control('email', registrationFormGroup)"></spider-textbox>
+                    </div>
+                    
+                    <div class="mb-4 gap-5">
+                        <div class="text-center" style="font-size: smaller;">
+                            {{t('AgreementsOnRegister')}} <b class="primary-color cursor-pointer">{{t('UserAgreement')}}</b>, <b class="primary-color cursor-pointer">{{t('PrivacyPolicy')}}</b>, {{t('and')}} <b class="primary-color cursor-pointer">{{t('CookiePolicy')}}</b>.
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <p-button [label]="t('AgreeAndJoin')" (onClick)="sendRegistrationVerificationEmail()" [outlined]="true" [style]="{width: '100%'}"></p-button>
+                        <!-- TODO FT: Add possibility to change this name from the specific project -->
+                        <p-button [label]="t('AlreadyHasAccount', {companyName: companyName})" routerLink="/auth/login" [style]="{width: '100%'}"></p-button>
+                    </div>
+                </form>
+            </auth>
+        }
+        @else {
+            <registration-verification [email]="registrationFormGroup.controls.email.getRawValue()"></registration-verification>
+        }
+    }
+    @else {
+        <!-- TODO FT: Add skeleton -->
+    }
+</ng-container>

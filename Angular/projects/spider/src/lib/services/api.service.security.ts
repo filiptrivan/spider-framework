@@ -58,6 +58,10 @@ export class ApiSecurityService {
         return this.http.get<User>(`${this.config.apiUrl}/Security/GetCurrentUser`, this.config.httpSkipSpinnerOptions);
     }
 
+    getCurrentUserPermissionCodes = (): Observable<string[]> => { 
+        return this.http.get<string[]>(`${this.config.apiUrl}/Security/GetCurrentUserPermissionCodes`, this.config.httpSkipSpinnerOptions);
+    }
+
     //#endregion
 
     //#region Role
@@ -104,6 +108,14 @@ export class ApiSecurityService {
 
     getPermissionsNamebookListForRole = (roleId: number): Observable<Namebook[]> => {
         return this.http.get<Namebook[]>(`${this.config.apiUrl}/Security/GetPermissionsNamebookListForRole?roleId=${roleId}`, this.config.httpSkipSpinnerOptions);
+    }
+
+    //#endregion
+
+    //#region Notification
+
+    getUnreadNotificationsCountForCurrentUser = (): Observable<number> => { 
+        return this.http.get<number>(`${this.config.apiUrl}/Notification/GetUnreadNotificationsCountForCurrentUser`, this.config.httpOptions);
     }
 
     //#endregion

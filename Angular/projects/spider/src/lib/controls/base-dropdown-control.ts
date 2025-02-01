@@ -16,13 +16,13 @@ import { PrimengOption } from '../entities/primeng-option';
     @Input() options: PrimengOption[];
     @Input() showMoreOptions: boolean = false;
     @Input() moreOptionsIcon: string = 'pi-ellipsis-h';
-    @Output() onMoreOptionsClick: EventEmitter<null> = new EventEmitter();
+    @Output() onButtonClick: EventEmitter<null> = new EventEmitter();
     
     dropdownMarkAsDirty(){
       this.control.markAsDirty();
     }
 
     moreOptionsClick(){
-      this.onMoreOptionsClick.next(null);
+      this.onButtonClick.next(null);
     }
   }

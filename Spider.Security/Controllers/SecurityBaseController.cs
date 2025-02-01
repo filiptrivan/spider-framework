@@ -17,13 +17,21 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
         private readonly IJwtAuthManager _jwtAuthManagerService;
         private readonly IApplicationDbContext _context;
         private readonly AuthenticationService _authenticationService;
+        private readonly AuthorizationService _authorizationService;
 
-        public SecurityBaseController(SecurityBusinessService<TUser> securityBusinessService, IJwtAuthManager jwtAuthManagerService, IApplicationDbContext context, AuthenticationService authenticationService)
+        public SecurityBaseController(
+            SecurityBusinessService<TUser> securityBusinessService,
+            IJwtAuthManager jwtAuthManagerService,
+            IApplicationDbContext context,
+            AuthenticationService authenticationService,
+            AuthorizationService authorizationService
+        )
         {
             _securityBusinessService = securityBusinessService;
             _jwtAuthManagerService = jwtAuthManagerService;
             _context = context;
             _authenticationService = authenticationService;
+            _authorizationService = authorizationService;
         }
 
         #region Authentication
@@ -41,6 +49,7 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
         }
 
         [HttpPost]
+        [UIDoNotGenerate]
         public virtual async Task<AuthResultDTO> LoginExternal(ExternalProviderDTO externalProviderDTO) // TODO FT: Add enum for which external provider you should login user
         {
             return await _securityBusinessService.LoginExternal(externalProviderDTO, SettingsProvider.Current.GoogleClientId);
@@ -87,6 +96,14 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
         public async Task<UserDTO> GetCurrentUser()
         {
             return await _securityBusinessService.GetCurrentUserDTO();
+        }
+
+        [HttpGet]
+        [AuthGuard]
+        [UIDoNotGenerate]
+        public virtual async Task<List<string>> GetCurrentUserPermissionCodes()
+        {
+            return await _authorizationService.GetCurrentUserPermissionCodes<TUser>();
         }
 
         #endregion

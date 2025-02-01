@@ -1,0 +1,28 @@
+<ng-container *transloco="let t">
+    <div class="flex min-h-screen overflow-hidden" style="padding: 20px;">
+        <div class="flex flex-column w-full">
+            <div class="w-full sm:w-30rem" style="margin: auto; border-radius:50px; padding:0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%);">
+                <div class="surface-card py-6 px-5 sm:px-6" style="border-radius:45px;">
+                    <div class="text-center" style="margin-bottom: 38px;">
+                        <img [src]="image" alt="{{companyName}} Logo" height="60">
+                    </div>
+
+                    <ng-content></ng-content>
+    
+                    <div *ngIf="hasGoogleAuth && showGoogleAuth">
+                        <div style="display: flex; align-items: center; gap: 7px; justify-content: center; margin-bottom: 16px;">
+                            <div class="separator"></div>
+                            <div>{{t('or')}}</div>
+                            <div class="separator"></div>
+                        </div>
+                        <div>
+                            <!-- https://code-maze.com/how-to-sign-in-with-google-angular-aspnet-webapi/ -->
+                            <google-button (loginWithGoogle)="onGoogleSignIn($event)"></google-button> 
+                        </div>
+                    </div>
+    
+                </div>
+            </div>
+        </div>
+    </div>
+</ng-container>

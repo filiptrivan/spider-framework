@@ -1,8 +1,8 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { VerificationWrapperComponent } from './verification-wrapper.component';
 import { TranslocoService } from '@jsverse/transloco';
-import { SpiderMessageService } from '../../services/spider-message.service';
-import { AuthBaseService } from '../../services/auth-base.service';
+import { SpiderMessageService } from '../../../services/spider-message.service';
+import { AuthBaseService } from '../../../services/auth-base.service';
 
 @Component({
     selector: 'login-verification',

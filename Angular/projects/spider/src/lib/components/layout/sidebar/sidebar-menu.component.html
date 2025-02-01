@@ -1,0 +1,6 @@
+<ul class="layout-menu">
+    <ng-container *ngFor="let item of menu; let i = index;">
+        <li menuitem *ngIf="!item.separator" [item]="item" [index]="i" [root]="true"></li>
+        <li *ngIf="item.separator" class="gray-separator" style="margin-top: 11px;"></li>
+    </ng-container>
+</ul>

@@ -1,12 +1,13 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, of, Subject, Subscription } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, Observable, of, Subject, Subscription } from 'rxjs';
 import { map, tap, delay, finalize } from 'rxjs/operators';
 import { SocialUser, SocialAuthService } from '@abacritt/angularx-social-login';
 import { ExternalProvider, Login, VerificationTokenRequest, AuthResult, Registration, RegistrationVerificationResult, RefreshTokenRequest, User } from '../entities/security-entities';
 import { ConfigBaseService } from './config-base.service';
 import { ApiSecurityService } from './api.service.security';
+import { InitCompanyAuthDialogDetails } from '../entities/init-company-auth-dialog-details';
 
 @Injectable({
   providedIn: 'root'
@@ -14,6 +15,9 @@ import { ApiSecurityService } from './api.service.security';
 export class AuthBaseService implements OnDestroy {
   private readonly apiUrl = this.config.apiUrl;
   private timer?: Subscription;
+
+  protected _currentUserPermissions = new BehaviorSubject<string[] | null>(null);
+  currentUserPermissions$ = this._currentUserPermissions.asObservable();
 
   protected _user = new BehaviorSubject<User | null>(null);
   user$ = this._user.asObservable();
@@ -69,9 +73,13 @@ export class AuthBaseService implements OnDestroy {
     }
   }
 
-    onAfterLogoutEvent = () => {}
+  onAfterLogoutEvent = () => {
+    this._currentUserPermissions.next(null);
+  }
 
-    onAfterLoginEvent = () => {}
+  onAfterLoginEvent = async () => {
+    await firstValueFrom(this.getCurrentUserPermissionCodes()); // FT: Needs to be after setting local storage
+  }
     
   sendLoginVerificationEmail(body: Login): Observable<any> {
     const browserId = this.getBrowserId();
@@ -121,7 +129,9 @@ export class AuthBaseService implements OnDestroy {
     );
   }
 
-    onAfterHandledLoginResult = () => {}
+  onAfterHandledLoginResult = async () => {
+    await firstValueFrom(this.getCurrentUserPermissionCodes()); // FT: Needs to be after setting local storage
+  }
 
   logout() {
     const browserId = this.getBrowserId();
@@ -139,7 +149,9 @@ export class AuthBaseService implements OnDestroy {
       .subscribe();
   }
 
-    onAfterLogout = () => {}
+  onAfterLogout = () => {
+    this._currentUserPermissions.next(null);
+  }
 
   refreshToken(): Observable<Promise<AuthResult> | null> {
     let refreshToken = localStorage.getItem(this.config.refreshTokenKey);
@@ -171,7 +183,9 @@ export class AuthBaseService implements OnDestroy {
     );
   }
 
-    onAfterRefreshToken = () => {}
+  onAfterRefreshToken = async () => {
+    await firstValueFrom(this.getCurrentUserPermissionCodes()); // FT: Needs to be after setting local storage
+  }
 
   setLocalStorage(loginResult: AuthResult) {
     localStorage.setItem(this.config.accessTokenKey, loginResult.accessToken);
@@ -241,7 +255,28 @@ export class AuthBaseService implements OnDestroy {
     this.externalAuthService.signOut();
   }
 
+  initCompanyAuthDialogDetails = (): Observable<InitCompanyAuthDialogDetails> => {
+    return of(
+      new InitCompanyAuthDialogDetails ({
+        image: `assets/demo/images/logo/logo-dark.svg`, 
+        companyName: this.config.companyName,
+      })
+    );
+  }
+
+  getCurrentUserPermissionCodes(): Observable<string[]> {
+    return this.apiService.getCurrentUserPermissionCodes().pipe(
+      map(permissionCodes => {
+        this._currentUserPermissions.next(permissionCodes);
+        return permissionCodes;
+      }
+    ));
+  }
+
   ngOnDestroy(): void {
     window.removeEventListener('storage', this.storageEventListener.bind(this));
+    this.onAfterNgOnDestroy();
   }
+
+  onAfterNgOnDestroy = () => {};
 }

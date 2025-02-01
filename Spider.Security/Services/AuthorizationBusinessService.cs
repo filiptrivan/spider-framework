@@ -4,6 +4,7 @@ using Spider.Security.Interface;
 using Azure.Storage.Blobs;
 using Spider.Security.Enums;
 using Spider.Security.DTO;
+using Microsoft.EntityFrameworkCore;
 
 namespace Spider.Security.Services
 {
@@ -131,7 +132,6 @@ namespace Spider.Security.Services
                 await AuthorizeAndThrowAsync<TUser>(PermissionCodes.DeletePermission);
             });
         }
-
 
     }
 }

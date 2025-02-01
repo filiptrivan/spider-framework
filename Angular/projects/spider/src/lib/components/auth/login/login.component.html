@@ -1,0 +1,25 @@
+<ng-container *transloco="let t">
+    @if (loginFormGroup != null) {
+        @if (showEmailSentDialog == false) {
+            <auth (onCompanyNameChange)="companyNameChange($event)">
+                <form [formGroup]="formGroup" style="margin-bottom: 16px;"> <!-- FT: We are not loading anything from the server here so we don't need defer block -->
+                    <div class="col-12" style="padding-left: 0; padding-right: 0; margin-bottom: 32px;">
+                        <spider-textbox [control]="control('email', loginFormGroup)"></spider-textbox>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <p-button [label]="t('Login')" (onClick)="sendLoginVerificationEmail()" [outlined]="true" [style]="{width: '100%'}"></p-button>
+                        <!-- TODO FT: Add possibility to change this name from the specific project -->
+                        <p-button *ngIf="usersCanRegister" [label]="t('NewToLoyaltyJoinNow', {companyName: companyName})" routerLink="/auth/registration" [style]="{width: '100%'}"></p-button>
+                    </div>
+                </form>
+            </auth>
+        }
+        @else {
+            <login-verification [email]="loginFormGroup.controls.email.getRawValue()"></login-verification>
+        }
+    }
+    @else {
+        <!-- TODO FT: Add skeleton -->
+    }
+</ng-container>

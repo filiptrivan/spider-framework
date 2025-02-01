@@ -5,6 +5,7 @@ using Spider.Shared.Extensions;
 using Spider.Shared.Exceptions;
 using Spider.Security.Interface;
 using Azure.Storage.Blobs;
+using Microsoft.EntityFrameworkCore;
 
 namespace Spider.Security.Services
 {
@@ -44,6 +45,7 @@ namespace Spider.Security.Services
         {
             bool result = false;
             long userId = _authenticationService.GetCurrentUserId();
+
             await _context.WithTransactionAsync(async () =>
             {
                 TUser user = await GetInstanceAsync<TUser, long>(userId, null);
@@ -94,6 +96,22 @@ namespace Spider.Security.Services
             });
 
             if (result == false) throw new UnauthorizedException();
+        }
+
+        public async Task<List<string>> GetCurrentUserPermissionCodes<TUser>() where TUser : class, IUser, new()
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                long userId = _authenticationService.GetCurrentUserId();
+
+                return await _context.DbSet<TUser>()
+                    .Where(x => x.Id == userId)
+                    .SelectMany(x => x.Roles)
+                    .SelectMany(x => x.Permissions)
+                    .Select(x => x.Code)
+                    .Distinct()
+                    .ToListAsync();
+            });
         }
 
     }

@@ -4,13 +4,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
-import { BaseFormCopy } from '../base-form/base-form copy';
-import { BaseFormService } from '../../services/base-form.service';
-import { SpiderFormGroup } from '../spider-form-control/spider-form-control';
-import { SpiderControlsModule } from '../../controls/spider-controls.module';
-import { VerificationTokenRequest } from '../../entities/security-entities';
-import { PrimengModule } from '../../modules/primeng.module';
-import { SpiderMessageService } from '../../services/spider-message.service';
+import { BaseFormCopy } from '../../base-form/base-form copy';
+import { BaseFormService } from '../../../services/base-form.service';
+import { SpiderFormGroup } from '../../spider-form-control/spider-form-control';
+import { SpiderControlsModule } from '../../../controls/spider-controls.module';
+import { VerificationTokenRequest } from '../../../entities/security-entities';
+import { PrimengModule } from '../../../modules/primeng.module';
+import { SpiderMessageService } from '../../../services/spider-message.service';
 
 @Component({
     selector: 'verification-wrapper',

@@ -1,5 +1,6 @@
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NgModule, APP_INITIALIZER, Optional, SkipSelf, ErrorHandler } from '@angular/core';
-import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { appInitializer } from '../services/app-initializer';
 import { JwtInterceptor } from '../interceptors/jwt.interceptor';
 import { UnauthorizedInterceptor } from '../interceptors/unauthorized.interceptor';
@@ -8,10 +9,18 @@ import { JsonHttpInterceptor } from '../interceptors/json-parser.interceptor';
 import { AuthBaseService } from '../services/auth-base.service';
 import { SpiderErrorHandler } from '../handlers/spider-error-handler';
 import { MessageService } from 'primeng/api';
+import { CommonModule } from '@angular/common';
+import { BrowserModule } from '@angular/platform-browser';
+import { ToastModule } from 'primeng/toast';
 
 @NgModule({
   declarations: [],
   imports: [
+    BrowserModule,
+    CommonModule,
+    HttpClientModule,
+    BrowserAnimationsModule,
+    ToastModule,
   ],
   providers: [
     MessageService,
@@ -47,6 +56,11 @@ import { MessageService } from 'primeng/api';
     },
   ],
   exports: [
+    BrowserModule,
+    CommonModule,
+    HttpClientModule,
+    BrowserAnimationsModule,
+    ToastModule,
   ] 
 })
 export class CoreModule {
