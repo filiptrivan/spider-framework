@@ -19,10 +19,8 @@ using Spider.Shared.Exceptions;
 using Spider.Shared.Terms;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;
-using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
-using Azure.Core;
-
+using Serilog;
 
 namespace Spider.Shared.Extensions
 {
@@ -265,9 +263,12 @@ namespace Spider.Shared.Extensions
 
                     if (contextFeature != null)
                     {
-                        Guid guid = Guid.NewGuid();
                         Exception exception = contextFeature.Error;
-                        // TODO FT: log here
+
+                        Log.Error(exception, $$"""
+Currently authenticated user: {userEmail} (id: {userId});
+""", Helper.GetCurrentUserEmail(context), Helper.GetCurrentUserId(context));
+
                         string exceptionString = "";
 
                         if (env.IsDevelopment())
@@ -300,7 +301,7 @@ namespace Spider.Shared.Extensions
                         }
                         else
                         {
-                            message = $"{SharedTerms.GlobalError} {guid}";
+                            message = $"{SharedTerms.GlobalError}";
                         }
 
                         await context.Response.WriteAsJsonAsync(new

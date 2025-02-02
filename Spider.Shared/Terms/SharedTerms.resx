@@ -110,8 +110,8 @@
     <comment>Vaš zahtev za brisanje nije uspeo, jer entitet ne postoji u našoj bazi podataka. Možda je obrisan u međuvremenu.</comment>
   </data>
   <data name="GlobalError" xml:space="preserve">
-    <value>An error occurred in the system, our team has been informed and will fix it as soon as possible. Thank you for your patience. Error code:</value>
-    <comment>Dogodila se greška u sistemu, naš tim je obavešten i otkloniće je u najkraćem mogućem roku. Hvala Vam na strpljenju. Kod greške:</comment>
+    <value>An error occurred in the system, our team has been informed and will fix it as soon as possible. Thank you for your patience.</value>
+    <comment>Dogodila se greška u sistemu, naš tim je obavešten i otkloniće je u najkraćem mogućem roku. Hvala Vam na strpljenju.</comment>
   </data>
   <data name="Password" xml:space="preserve">
     <value>Password</value>

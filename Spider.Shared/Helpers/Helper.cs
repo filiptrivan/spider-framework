@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace Spider.Shared.Helpers
 {
@@ -61,6 +62,20 @@ namespace Spider.Shared.Helpers
         }
 
         #region Security
+
+        #region User
+
+        public static long GetCurrentUserId(HttpContext context)
+        {
+            return long.Parse(context.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.PrimarySid)?.Value);
+        }
+
+        public static string GetCurrentUserEmail(HttpContext context)
+        {
+            return context.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
+        }
+
+        #endregion
 
         #region JWT
 

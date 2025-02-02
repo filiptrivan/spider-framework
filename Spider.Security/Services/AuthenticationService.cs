@@ -34,7 +34,12 @@ namespace Spider.Security.Services
         
         public long GetCurrentUserId()
         {
-            return long.Parse(_httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.PrimarySid)?.Value);
+            return Helper.GetCurrentUserId(_httpContextAccessor.HttpContext);
+        }
+
+        public string GetCurrentUserEmail()
+        {
+            return Helper.GetCurrentUserEmail(_httpContextAccessor.HttpContext);
         }
 
         public async Task<TUser> GetCurrentUser<TUser>() where TUser : class, IUser, new()
@@ -43,11 +48,6 @@ namespace Spider.Security.Services
             {
                 return await GetInstanceAsync<TUser, long>(GetCurrentUserId(), null);
             });
-        }
-
-        public string GetCurrentUserEmail()
-        {
-            return _httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
         }
 
         public async Task<string> GetAccessTokenAsync()

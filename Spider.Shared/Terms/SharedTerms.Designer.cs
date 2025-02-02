@@ -151,7 +151,7 @@ namespace Spider.Shared.Terms {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to An error occurred in the system, our team has been informed and will fix it as soon as possible. Thank you for your patience. Error code:.
+        ///   Looks up a localized string similar to An error occurred in the system, our team has been informed and will fix it as soon as possible. Thank you for your patience..
         /// </summary>
         public static string GlobalError {
             get {

@@ -1,16 +1,10 @@
 ﻿using OfficeOpenXml;
 using System.Globalization;
-using Nucleus.Core.Caching;
 using System.Reflection;
 using Spider.Shared.Excel.DTO;
 using System.Drawing;
 using OfficeOpenXml.Style;
-using Spider.Shared.DTO;
-using Riok.Mapperly.Abstractions;
-using System;
 using OfficeOpenXml.Table;
-using System.ComponentModel;
-using OfficeOpenXml.FormulaParsing.Excel.Functions.Math;
 
 namespace Spider.Shared.Excel
 {
