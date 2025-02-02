@@ -1,5 +1,5 @@
 import { TranslocoService } from '@jsverse/transloco';
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { MessageService } from 'primeng/api';
 
 @Injectable({
@@ -9,41 +9,46 @@ export class SpiderMessageService { // TODO FT: nece da prikaze poruku ako je ne
   constructor(
     private messageService: MessageService, 
     private translocoService: TranslocoService, 
-    private zone: NgZone
   ) {
     
   }
 
   successMessage(detail: string, title: string = this.translocoService.translate('SuccessfulAction')) {
-    this.zone.run(()=>{
-      this.messageService.add({
-        severity: 'success',
-        summary: title,
-        detail: detail,
-        life: 10000,
-      });
+    this.messageService.add({
+      severity: 'success',
+      summary: title,
+      detail: detail,
+      life: 10000,
     });
   }
 
   warningMessage(detail: string, title: string = this.translocoService.translate('Warning')){
-    this.zone.run(()=>{
+    this.messageService.add({
+      severity: 'warn',
+      summary: title,
+      detail: detail,
+      life: 10000,
+    });
+  }
+
+  // FT HACK: Only for the http status 419
+  warning419Message(detail: string, title: string = this.translocoService.translate('Warning')){
+    setTimeout(() => {
       this.messageService.add({
         severity: 'warn',
         summary: title,
         detail: detail,
         life: 10000,
       });
-    });
+    }, 500);
   }
 
   errorMessage(detail: string, title: string = this.translocoService.translate('Error')){
-    this.zone.run(()=>{
-      this.messageService.add({
-        severity: 'error',
-        summary: title,
-        detail: detail,
-        life: 10000,
-      });
+    this.messageService.add({
+      severity: 'error',
+      summary: title,
+      detail: detail,
+      life: 10000,
     });
   }
   

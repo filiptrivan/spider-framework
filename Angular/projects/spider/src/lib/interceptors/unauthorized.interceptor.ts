@@ -65,7 +65,7 @@ export class UnauthorizedInterceptor implements HttpInterceptor {
       );
       return of(err.message);
     } 
-    else if (err.status == 400 || err.status == 401 || err.status == 419) {
+    else if (err.status == 400 || err.status == 401) {
       this.messageService.warningMessage(
         errorResponse.message ?? this.translocoService.translate('BadRequestDetails'),
         this.translocoService.translate('Warning'),
@@ -74,6 +74,14 @@ export class UnauthorizedInterceptor implements HttpInterceptor {
       if(err.status == 401) {
         // this.authService.logout();
       }
+
+      return of(err.message);
+    } 
+    else if (err.status == 419) {
+      this.messageService.warning419Message(
+        errorResponse.message ?? this.translocoService.translate('BadRequestDetails'),
+        this.translocoService.translate('Warning'),
+      );
 
       return of(err.message);
     } 
