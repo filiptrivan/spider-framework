@@ -1,4 +1,4 @@
-﻿using Spider.Shared.Terms;
+﻿using Spider.Shared.Resources;
 using System;
 using System.Collections.Generic;
 using System.Linq;

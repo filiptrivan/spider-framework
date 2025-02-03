@@ -77,12 +77,7 @@ export class UnauthorizedInterceptor implements HttpInterceptor {
 
       return of(err.message);
     } 
-    else if (err.status == 419) {
-      this.messageService.warning419Message(
-        errorResponse.message ?? this.translocoService.translate('BadRequestDetails'),
-        this.translocoService.translate('Warning'),
-      );
-
+    else if (err.status == 419) { // FT: We don't want to show error message to the user, we just log him out.
       return of(err.message);
     } 
     else {
@@ -90,6 +85,7 @@ export class UnauthorizedInterceptor implements HttpInterceptor {
         errorResponse.message,
         this.translocoService.translate('UnexpectedErrorTitle'),
       );
+
       return of(err.message);
     }
 

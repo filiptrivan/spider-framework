@@ -2,7 +2,7 @@
 using Spider.Security.DTO;
 using Spider.Security.Interface;
 using Spider.Shared.Exceptions;
-using Spider.Shared.Terms;
+using Spider.Shared.Resources;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.IdentityModel.Tokens.Jwt;

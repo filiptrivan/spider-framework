@@ -16,7 +16,7 @@ using Spider.Security.Entities;
 using Spider.Shared.DTO;
 using Azure.Storage.Blobs;
 using Microsoft.IdentityModel.Tokens;
-using Spider.Shared.Terms;
+using Spider.Shared.Resources;
 
 namespace Spider.Security.Services
 {

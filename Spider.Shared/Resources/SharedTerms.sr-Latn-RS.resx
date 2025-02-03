@@ -117,7 +117,82 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="EntityDoesNotExistInDatabase" xml:space="preserve">
+    <value>Entitet koji tražite ne postoji u bazi podataka.</value>
+  </data>
+  <data name="ConcurrencyException" xml:space="preserve">
+    <value>Entitet je izmenjen ili izbrisan u međuvremenu od strane drugog korisnika, pokušajte ponovo.</value>
+  </data>
+  <data name="EntityDoesNotExistInDatabaseForDeleteRequest" xml:space="preserve">
+    <value>Vaš zahtev za brisanje nije uspeo, jer entitet ne postoji u našoj bazi podataka. Možda je obrisan u međuvremenu.</value>
+  </data>
+  <data name="GlobalError" xml:space="preserve">
+    <value>Dogodila se greška u sistemu, naš tim je obavešten i otkloniće je u najkraćem mogućem roku. Hvala Vam na strpljenju.</value>
+  </data>
   <data name="Password" xml:space="preserve">
     <value>Šifra</value>
+  </data>
+  <data name="UserExcel" xml:space="preserve">
+    <value>Korisnici</value>
+  </data>
+  <data name="RoleExcel" xml:space="preserve">
+    <value>Uloge</value>
+  </data>
+  <data name="NotificationExcel" xml:space="preserve">
+    <value>Notifikacije</value>
+  </data>
+  <data name="UnauthorizedAccessExceptionMessage" xml:space="preserve">
+    <value>Nemate potrebnu dozvolu da biste izvršili operaciju.</value>
+  </data>
+  <data name="ExpiredVerificationCodeException" xml:space="preserve">
+    <value>Vaš verifikacioni kod je istekao. Zatražite novi kod da biste nastavili.</value>
+  </data>
+  <data name="LatestVerificationCodeException" xml:space="preserve">
+    <value>Poslato je više verifikacionih kodova, molimo Vas da unesete poslednji.</value>
+  </data>
+  <data name="ExpiredRefreshTokenException" xml:space="preserve">
+    <value>Vaša sesija je istekla, molimo Vas da se prijavite ponovo.</value>
+  </data>
+  <data name="TwoDifferentIpAddressesRefreshException" xml:space="preserve">
+    <value>Ne možete da koristite aplikaciju sa dve različite IP adrese u isto vreme, molimo vas da se prijavite ponovo.</value>
+  </data>
+  <data name="OnlyThirdPartyAccountButTriedToRegisterOrLoginException" xml:space="preserve">
+    <value>Vaš nalog je već registrovan putem treće strane (npr. Google). Ako želite da dodate i lozinku, koristite opciju „Zaboravili ste lozinku?”, ili se prijavite na profil i postavite lozinku.</value>
+  </data>
+  <data name="SameEmailAlreadyExistsException" xml:space="preserve">
+    <value>Nalog sa ovom email adresom već postoji.</value>
+  </data>
+  <data name="DisabledAccountException" xml:space="preserve">
+    <value>Vaš nalog je trenutno blokiran. Obratite se administratoru za pomoć.</value>
+  </data>
+  <data name="AuthenticationEmailDoesNotExistException" xml:space="preserve">
+    <value>Nalog sa unetom email adresom ne postoji. Molimo vas da proverite unesenu adresu ili kreirate novi nalog.</value>
+  </data>
+  <data name="AuthenticationIncorectPasswordException" xml:space="preserve">
+    <value>Pogrešna lozinka. Molimo vas da pokušate ponovo ili resetujete lozinku ako ste je zaboravili.</value>
+  </data>
+  <data name="ResetPasswordEmailDoesNotExistException" xml:space="preserve">
+    <value>Nalog sa unetom email adresom ne postoji. Molimo vas da proverite unesenu adresu ili kreirate novi nalog.</value>
+  </data>
+  <data name="EmailAccountVerificationTitle" xml:space="preserve">
+    <value>Verifikacija naloga</value>
+  </data>
+  <data name="And" xml:space="preserve">
+    <value>I</value>
+  </data>
+  <data name="CreatedAt" xml:space="preserve">
+    <value>Datum kreiranja</value>
+  </data>
+  <data name="ModifiedAt" xml:space="preserve">
+    <value>Datum promene</value>
+  </data>
+  <data name="Id" xml:space="preserve">
+    <value>Identifikator</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Naziv</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Opis</value>
   </data>
 </root>

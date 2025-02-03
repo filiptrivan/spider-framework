@@ -1,6 +1,6 @@
 import { Component, Input } from "@angular/core";
 import { Router } from '@angular/router';
-import { CommonModule, Location } from "@angular/common";
+import { CommonModule } from "@angular/common";
 import { getParentUrl } from "../../services/helper-functions";
 import { TranslocoDirective } from "@jsverse/transloco";
 import { PrimengModule } from "../../modules/primeng.module";
@@ -19,14 +19,13 @@ import { PrimengModule } from "../../modules/primeng.module";
 export class SpiderReturnButtonComponent {
   @Input() navigateUrl: string;
 
-  constructor(private router: Router, private location: Location) {}
+  constructor(private router: Router) {}
 
   onReturn(){
     if(this.navigateUrl == undefined){
         const currentUrl = this.router.url;
         const parentUrl: string = getParentUrl(currentUrl);
         this.router.navigateByUrl(parentUrl);
-        // this.location.back();
     }else{
         this.router.navigate([this.navigateUrl]);
     }

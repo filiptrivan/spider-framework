@@ -31,18 +31,6 @@ export class SpiderMessageService { // TODO FT: nece da prikaze poruku ako je ne
     });
   }
 
-  // FT HACK: Only for the http status 419
-  warning419Message(detail: string, title: string = this.translocoService.translate('Warning')){
-    setTimeout(() => {
-      this.messageService.add({
-        severity: 'warn',
-        summary: title,
-        detail: detail,
-        life: 10000,
-      });
-    }, 500);
-  }
-
   errorMessage(detail: string, title: string = this.translocoService.translate('Error')){
     this.messageService.add({
       severity: 'error',

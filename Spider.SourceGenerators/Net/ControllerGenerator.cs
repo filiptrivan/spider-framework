@@ -79,7 +79,7 @@ using Spider.Infrastructure;
 using Spider.Shared.Helpers;
 using Spider.Shared.Attributes;
 using Spider.Shared.Interfaces;
-using {{projectName}}.Shared.Terms;
+using {{projectName}}.Shared.Resources;
 using {{projectName}}.Business.Entities;
 using {{projectName}}.Business.DTO;
 {{string.Join("\n", Helpers.GetEntityClassesUsings(allEntityClasses))}}

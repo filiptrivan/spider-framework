@@ -775,7 +775,7 @@ namespace Spider.SourceGenerators.Shared
             if (string.IsNullOrEmpty(source))
                 return null;
 
-            int index = source.IndexOf(keyForReplace, StringComparison.Ordinal);
+            int index = source.LastIndexOf(keyForReplace, StringComparison.Ordinal);
 
             if (index == -1)
                 return source; // If the key is not found, return the original string.

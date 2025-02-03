@@ -181,4 +181,24 @@
     <value>And</value>
     <comment>I</comment>
   </data>
+  <data name="CreatedAt" xml:space="preserve">
+    <value>Created at</value>
+    <comment>Datum kreiranja</comment>
+  </data>
+  <data name="ModifiedAt" xml:space="preserve">
+    <value>Modified at</value>
+    <comment>Datum promene</comment>
+  </data>
+  <data name="Id" xml:space="preserve">
+    <value>Identifier</value>
+    <comment>Identifikator</comment>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Name</value>
+    <comment>Naziv</comment>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Description</value>
+    <comment>Opis</comment>
+  </data>
 </root>

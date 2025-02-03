@@ -35,12 +35,7 @@
 	</ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Terms\PropertyTerms.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>PropertyTerms.resx</DependentUpon>
-    </Compile>
-    <Compile Update="Terms\SharedTerms.Designer.cs">
+    <Compile Update="Resources\SharedTerms.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>SharedTerms.resx</DependentUpon>
@@ -48,15 +43,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Update="Terms\PropertyTerms.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>PropertyTerms.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-    <EmbeddedResource Update="Terms\SharedTerms.resx">
+    <EmbeddedResource Update="Resources\SharedTerms.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>SharedTerms.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Update="Terms\SharedTerms.sr-Latn-RS.resx">
+    <EmbeddedResource Update="Resources\SharedTerms.sr-Latn-RS.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
     </EmbeddedResource>
   </ItemGroup>

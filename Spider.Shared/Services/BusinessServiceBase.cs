@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Spider.Shared.Interfaces;
 using Spider.Shared.Exceptions;
-using Spider.Shared.Terms;
+using Spider.Shared.Resources;
 using Spider.Shared.Extensions;
 using Azure;
 using System.ComponentModel;

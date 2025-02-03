@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Spider.Shared.Terms {
+namespace Spider.Shared.Resources {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace Spider.Shared.Terms {
         public static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Spider.Shared.Terms.SharedTerms", typeof(SharedTerms).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Spider.Shared.Resources.SharedTerms", typeof(SharedTerms).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -93,6 +93,24 @@ namespace Spider.Shared.Terms {
         public static string ConcurrencyException {
             get {
                 return ResourceManager.GetString("ConcurrencyException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Created at.
+        /// </summary>
+        public static string CreatedAt {
+            get {
+                return ResourceManager.GetString("CreatedAt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Description.
+        /// </summary>
+        public static string Description {
+            get {
+                return ResourceManager.GetString("Description", resourceCulture);
             }
         }
         
@@ -160,11 +178,38 @@ namespace Spider.Shared.Terms {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Identifier.
+        /// </summary>
+        public static string Id {
+            get {
+                return ResourceManager.GetString("Id", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Please use the most recent verification code, as multiple codes were sent..
         /// </summary>
         public static string LatestVerificationCodeException {
             get {
                 return ResourceManager.GetString("LatestVerificationCodeException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Modified at.
+        /// </summary>
+        public static string ModifiedAt {
+            get {
+                return ResourceManager.GetString("ModifiedAt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        public static string Name {
+            get {
+                return ResourceManager.GetString("Name", resourceCulture);
             }
         }
         

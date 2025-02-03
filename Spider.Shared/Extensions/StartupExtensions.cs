@@ -16,7 +16,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Spider.Shared.Exceptions;
-using Spider.Shared.Terms;
+using Spider.Shared.Resources;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;
 using System.Threading.RateLimiting;

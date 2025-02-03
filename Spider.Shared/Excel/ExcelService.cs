@@ -5,6 +5,9 @@ using Spider.Shared.Excel.DTO;
 using System.Drawing;
 using OfficeOpenXml.Style;
 using OfficeOpenXml.Table;
+using System.Resources;
+using Spider.Shared.Resources;
+using Spider.Shared.Helpers;
 
 namespace Spider.Shared.Excel
 {
@@ -41,7 +44,7 @@ namespace Spider.Shared.Excel
             return mem;
         }
 
-        public MemoryStream FillReportTemplate<T>(IList<T> data, int count, string[] excelPropertiesToExclude, ExcelReportOptionsDTO options = null)
+        public MemoryStream FillReportTemplate<T>(IList<T> data, int count, string[] excelPropertiesToExclude, ResourceManager resourceManager, ExcelReportOptionsDTO options = null)
             where T : class
         {
             if (options == null)
@@ -57,7 +60,7 @@ namespace Spider.Shared.Excel
                     Type type = typeof(T);
                     PropertyInfo[] propertiesToInclude = GetMembersToInclude(excelPropertiesToExclude, type);
 
-                    LoadFromCollectionOverride(data, count, type, sheet, propertiesToInclude);
+                    LoadFromCollectionOverride(data, count, type, sheet, propertiesToInclude, resourceManager);
                 }
                 excel.SaveAs(outputStream);
             }
@@ -77,14 +80,17 @@ namespace Spider.Shared.Excel
             return memberInfos;
         }
 
-        private static void LoadFromCollectionOverride<T>(IList<T> data, int count, Type typeofT, ExcelWorksheet sheet, PropertyInfo[] propertiesToInclude)
+        private static void LoadFromCollectionOverride<T>(IList<T> data, int count, Type typeofT, ExcelWorksheet sheet, PropertyInfo[] propertiesToInclude, ResourceManager resourceManager)
         {
             int cellRow = 0;
             int cellCol = 0;
             for (int headerIndex = 0; headerIndex < propertiesToInclude.Length; headerIndex++)
             {
-                cellCol = headerIndex+1;
-                sheet.Cells[1, cellCol].Value = propertiesToInclude[headerIndex].Name;
+                cellCol = headerIndex + 1;
+
+                string propertyName = propertiesToInclude[headerIndex].Name;
+                sheet.Cells[1, cellCol].Value = GetHeaderTranslation(resourceManager, propertyName);
+
                 sheet.Cells[1, cellCol].Style.Fill.PatternType = ExcelFillStyle.Solid;
                 sheet.Cells[1, cellCol].Style.Fill.BackgroundColor.SetColor(ColorTranslator.FromHtml("#F0F0F0"));
                 sheet.Cells[1, cellCol].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
@@ -92,7 +98,7 @@ namespace Spider.Shared.Excel
 
                 for (int dataIndex = 0; dataIndex < count; dataIndex++)
                 {
-                    cellRow = dataIndex+2;
+                    cellRow = dataIndex + 2;
                     if (typeofT==typeof(string) || typeofT==typeof(decimal) || typeofT==typeof(DateTime) || typeofT.IsPrimitive)
                     {
                         sheet.Cells[cellRow, cellCol].Value = data[dataIndex];
@@ -108,6 +114,14 @@ namespace Spider.Shared.Excel
                     sheet.Column(cellCol).Style.Numberformat.Format = "dd.MM.yyyy."; // TODO FT: make this with locale
                 }
             }
+        }
+
+        private static string GetHeaderTranslation(ResourceManager resourceManager, string propertyName)
+        {
+            return 
+               resourceManager.GetTranslation(propertyName) ?? 
+               SharedTerms.ResourceManager.GetTranslation(propertyName) ?? 
+               propertyName;
         }
 
         /// <summary>

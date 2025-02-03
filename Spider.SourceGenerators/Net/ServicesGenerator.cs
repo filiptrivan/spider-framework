@@ -7,6 +7,7 @@ using Spider.SourceGenerators.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System;
 
 namespace Spider.SourceGenerators.Net
 {
@@ -55,7 +56,7 @@ namespace Spider.SourceGenerators.Net
             bool isSecurityProject = projectName == "Security";
 
             string result = $$"""
-{{GetUsings(basePartOfTheNamespace)}}
+{{GetUsings(basePartOfTheNamespace, projectName)}}
 
 namespace {{basePartOfTheNamespace}}.Services
 {
@@ -75,7 +76,7 @@ namespace {{basePartOfTheNamespace}}.Services
             _blobContainerClient = blobContainerClient;
         }
 
-{{string.Join("\n\n", GetBusinessServiceMethods(entities, allEntities))}}
+{{string.Join("\n\n", GetBusinessServiceMethods(entities, allEntities, projectName))}}
 
     }
 }
@@ -84,7 +85,7 @@ namespace {{basePartOfTheNamespace}}.Services
             context.AddSource($"BusinessService.generated", SourceText.From(result, Encoding.UTF8));
         }
 
-        private static List<string> GetBusinessServiceMethods(List<SpiderClass> entityClasses, List<SpiderClass> allEntityClasses)
+        private static List<string> GetBusinessServiceMethods(List<SpiderClass> entityClasses, List<SpiderClass> allEntityClasses, string projectName)
         {
             List<string> result = new List<string>();
 
@@ -107,7 +108,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Read
 
-{{GetReadBusinessServiceMethods(entity, allEntityClasses)}}
+{{GetReadBusinessServiceMethods(entity, allEntityClasses, projectName)}}
 
         #endregion
 
@@ -141,7 +142,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Read
 
-        private static string GetReadBusinessServiceMethods(SpiderClass entity, List<SpiderClass> allEntityClasses)
+        private static string GetReadBusinessServiceMethods(SpiderClass entity, List<SpiderClass> allEntityClasses, string projectName)
         {
             string entityIdType = entity.GetIdType(allEntityClasses);
             string entityDisplayNameProperty = Helpers.GetDisplayNameProperty(entity);
@@ -217,7 +218,7 @@ namespace {{basePartOfTheNamespace}}.Services
             });
 
             string[] excelPropertiesToExclude = ExcelPropertiesToExclude.GetHeadersToExclude(new {{entity.Name}}DTO());
-            return _excelService.FillReportTemplate<{{entity.Name}}DTO>(data, paginationResult.TotalRecords, excelPropertiesToExclude).ToArray();
+            return _excelService.FillReportTemplate<{{entity.Name}}DTO>(data, paginationResult.TotalRecords, excelPropertiesToExclude, {{GetTermsClassName(projectName)}}.ResourceManager).ToArray();
         }
 
         public async virtual Task<List<NamebookDTO<{{entityIdType}}>>> Get{{entity.Name}}ListForAutocomplete(int limit, string query, IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
@@ -298,6 +299,11 @@ namespace {{basePartOfTheNamespace}}.Services
             });
         }
 """;
+        }
+
+        private static string GetTermsClassName(string projectName)
+        {
+            return projectName == "Security" ? "SharedTerms" : "TermsGenerated";
         }
 
         private static string GetPopulateDTOWithBlobPartsForDTO(SpiderClass entityClass, List<SpiderProperty> propertiesEntityClass)
@@ -1191,7 +1197,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         #region Helpers
 
-        private static string GetUsings(string basePartOfTheNamespace)
+        private static string GetUsings(string basePartOfTheNamespace, string projectName)
         {
             return $$"""
 using {{basePartOfTheNamespace}}.ValidationRules;
@@ -1201,6 +1207,7 @@ using {{basePartOfTheNamespace}}.Entities;
 using {{basePartOfTheNamespace}}.Enums;
 using {{basePartOfTheNamespace}}.ExcelProperties;
 using {{basePartOfTheNamespace}}.TableFiltering;
+{{(projectName == "Security" ? "" : $"using {basePartOfTheNamespace.ReplaceEverythingAfter(".", ".Shared")}.Resources;")}}
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using FluentValidation;
@@ -1213,7 +1220,7 @@ using Spider.Shared.DTO;
 using Spider.Shared.Entities;
 using Spider.Shared.Extensions;
 using Spider.Shared.Exceptions;
-using Spider.Shared.Terms;
+using Spider.Shared.Resources;
 using Mapster;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;

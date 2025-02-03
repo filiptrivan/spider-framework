@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Globalization;
+using System.Resources;
 
 namespace Spider.Shared.Helpers
 {
@@ -59,6 +61,12 @@ namespace Spider.Shared.Helpers
         {
             using StreamReader streamReader = new StreamReader(jsonConfigurationFile);
             return streamReader.ReadToEnd();
+        }
+
+        public static string GetTranslation(this ResourceManager manager, string key)
+        {
+            string result = manager.GetString(key, CultureInfo.CurrentCulture);
+            return string.IsNullOrEmpty(result) ? null : result;
         }
 
         #region Security

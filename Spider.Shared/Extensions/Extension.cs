@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Spider.Shared.Resources;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -31,7 +32,7 @@ namespace Spider.Shared.Extensions
             List<string> stringList = input.Select(item => item?.ToString() ?? string.Empty).ToList();
 
             if (stringList.Count > 1)
-                return $"{string.Join(", ", stringList.Take(stringList.Count - 1))} {Terms.SharedTerms.And.FirstCharToLower()} {stringList.Last()}"; // TODO FT: Add to the resources
+                return $"{string.Join(", ", stringList.Take(stringList.Count - 1))} {SharedTerms.And.FirstCharToLower()} {stringList.Last()}"; // TODO FT: Add to the resources
             else
                 return stringList.FirstOrDefault();
         }
