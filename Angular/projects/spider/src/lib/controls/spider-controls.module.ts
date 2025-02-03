@@ -1,6 +1,5 @@
 import { NgModule } from '@angular/core';
 import { SpiderPanelsModule } from '../components/spider-panels/spider-panels.module';
-import { SpiderReturnButtonComponent } from '../components/spider-buttons/spider-return-button.component';
 import { SpiderMultiAutocompleteComponent } from './spider-multiautocomplete/spider-multiautocomplete.component';
 import { SpiderPasswordComponent } from './spider-password/spider-password.component';
 import { SpiderTextboxComponent } from './spider-textbox/spider-textbox.component';
@@ -14,7 +13,8 @@ import { SpiderColorpickComponent } from './spider-colorpick/spider-colorpick.co
 import { SpiderFileComponent } from './spider-file/spider-file.component';
 import { SpiderCalendarComponent } from './spider-calendar/spider-calendar.component';
 import { SpiderAutocompleteComponent } from './spider-autocomplete/spider-autocomplete.component';
-import { SpiderButtonComponent } from '../components/spider-buttons/spider-button.component';
+import { SpiderButtonComponent } from '../components/spider-buttons/spider-button/spider-button.component';
+import { SpiderReturnButtonComponent } from '../components/spider-buttons/return-button/spider-return-button.component';
 
 @NgModule({
   imports: [

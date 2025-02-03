@@ -206,66 +206,63 @@ using {{item}};
         private static string GetCaseForString(string DTOIdentifier, string entityDotNotation)
         {
             return $$"""
-                        case "{{DTOIdentifier.FirstCharToLower()}}":
-                            switch (filter.MatchMode)
-                            {
-                                case "startsWith":
-                                    condition = x => x.{{entityDotNotation}}.StartsWith(filter.Value.ToString());
-                                    break;
-                
-                                case "contains":
-                                    condition = x => x.{{entityDotNotation}}.Contains(filter.Value.ToString());
-                                    break;
-                
-                                case "equals":
-                                    condition = x => x.{{entityDotNotation}}.Equals(filter.Value.ToString());
-                                    break;
-                
-                                default:
-                                    throw new ArgumentException("Invalid Match mode!");
-                            }
-                            predicate = predicate.And(condition);
-                            break;
+                            case "{{DTOIdentifier.FirstCharToLower()}}":
+                                switch (filter.MatchMode)
+                                {
+                                    case "startsWith":
+                                        condition = x => x.{{entityDotNotation}}.StartsWith(filter.Value.ToString());
+                                        break;
+                                    case "contains":
+                                        condition = x => x.{{entityDotNotation}}.Contains(filter.Value.ToString());
+                                        break;
+                                    case "equals":
+                                        condition = x => x.{{entityDotNotation}}.Equals(filter.Value.ToString());
+                                        break;
+                                    default:
+                                        throw new ArgumentException("Invalid Match mode!");
+                                }
+                                predicate = predicate.And(condition);
+                                break;
 """;
         }
 
         private static string GetCaseForBool(string DTOIdentifier, string entityDotNotation)
         {
             return $$"""
-                        case "{{DTOIdentifier.FirstCharToLower()}}":
-                            switch (filter.MatchMode)
-                            {
-                                case "equals":
-                                    condition = x => x.{{entityDotNotation}}.Equals(Convert.ToBoolean(filter.Value.ToString()));
-                                    break;
-                
-                                default:
-                                    throw new ArgumentException("Invalid Match mode!");
-                            }
-                            predicate = predicate.And(condition);
-                            break;
+                            case "{{DTOIdentifier.FirstCharToLower()}}":
+                                switch (filter.MatchMode)
+                                {
+                                    case "equals":
+                                        condition = x => x.{{entityDotNotation}}.Equals(Convert.ToBoolean(filter.Value.ToString()));
+                                        break;
+                                    default:
+                                        throw new ArgumentException("Invalid Match mode!");
+                                }
+                                predicate = predicate.And(condition);
+                                break;
 """;
         }
 
         private static string GetCaseForDateTime(string DTOIdentifier, string entityDotNotation)
         {
             return $$"""
-                        case "{{DTOIdentifier.FirstCharToLower()}}":
-                            switch (filter.MatchMode)
-                            {
-                                case "dateBefore":
-                                    condition = x => x.{{entityDotNotation}} <= Convert.ToDateTime(filter.Value.ToString());
-                                    break;
-                
-                                case "dateAfter":
-                                    condition = x => x.{{entityDotNotation}} >= Convert.ToDateTime(filter.Value.ToString());
-                                    break;
-                
-                                default:
-                                    throw new ArgumentException("Invalid Match mode!");
-                            }
-                            predicate = predicate.And(condition);
-                            break;
+                            case "{{DTOIdentifier.FirstCharToLower()}}":
+                                switch (filter.MatchMode)
+                                {
+                                    case "equals":
+                                        condition = x => x.{{entityDotNotation}} == Convert.ToDateTime(filter.Value.ToString());
+                                        break;
+                                    case "dateBefore":
+                                        condition = x => x.{{entityDotNotation}} < Convert.ToDateTime(filter.Value.ToString());
+                                        break;
+                                    case "dateAfter":
+                                        condition = x => x.{{entityDotNotation}} > Convert.ToDateTime(filter.Value.ToString());
+                                        break;
+                                    default:
+                                        throw new ArgumentException("Invalid Match mode!");
+                                }
+                                predicate = predicate.And(condition);
+                                break;
 """;
         }
 
@@ -274,50 +271,45 @@ using {{item}};
             string numberTypeWithoutQuestion = numberType.Replace("?", "");
 
             return $$"""
-                        case "{{DTOIdentifier.FirstCharToLower()}}":
-                            switch (filter.MatchMode)
-                            {
-                                case "equals":
-                                    condition = x => x.{{entityDotNotation}} == {{numberTypeWithoutQuestion}}.Parse(filter.Value.ToString());
-                                    break;
-
-                                case "lte":
-                                    condition = x => x.{{entityDotNotation}} <= {{numberTypeWithoutQuestion}}.Parse(filter.Value.ToString());
-                                    break;
-
-                                case "gte":
-                                    condition = x => x.{{entityDotNotation}} <= {{numberTypeWithoutQuestion}}.Parse(filter.Value.ToString());
-                                    break;
-
-                                case "in":
-                                    {{numberType}}[] values = JsonSerializer.Deserialize<{{numberType}}[]>(filter.Value.ToString());
-                                    condition = x => values.Contains(x.{{entityDotNotation}});
-                                    break;
-                
-                                default:
-                                    throw new ArgumentException("Invalid Match mode!");
-                            }
-                            predicate = predicate.And(condition);
-                            break;
+                            case "{{DTOIdentifier.FirstCharToLower()}}":
+                                switch (filter.MatchMode)
+                                {
+                                    case "equals":
+                                        condition = x => x.{{entityDotNotation}} == {{numberTypeWithoutQuestion}}.Parse(filter.Value.ToString());
+                                        break;
+                                    case "lte":
+                                        condition = x => x.{{entityDotNotation}} < {{numberTypeWithoutQuestion}}.Parse(filter.Value.ToString());
+                                        break;
+                                    case "gte":
+                                        condition = x => x.{{entityDotNotation}} > {{numberTypeWithoutQuestion}}.Parse(filter.Value.ToString());
+                                        break;
+                                    case "in":
+                                        {{numberType}}[] values = JsonSerializer.Deserialize<{{numberType}}[]>(filter.Value.ToString());
+                                        condition = x => values.Contains(x.{{entityDotNotation}});
+                                        break;
+                                    default:
+                                        throw new ArgumentException("Invalid Match mode!");
+                                }
+                                predicate = predicate.And(condition);
+                                break;
 """;
         }
 
         private static string GetCaseForEnumerable(string DTOIdentifier, string entityDotNotation, string idType)
         {
             return $$"""
-                        case "{{DTOIdentifier.FirstCharToLower()}}":
-                            switch (filter.MatchMode)
-                            {
-                                case "in":
-                                    {{idType}}[] values = JsonSerializer.Deserialize<{{idType}}[]>(filter.Value.ToString());
-                                    condition = x => x.{{entityDotNotation}}.Any(x => values.Contains(x.Id));
-                                    break;
-                
-                                default:
-                                    throw new ArgumentException("Invalid Match mode!");
-                            }
-                            predicate = predicate.And(condition);
-                            break;
+                            case "{{DTOIdentifier.FirstCharToLower()}}":
+                                switch (filter.MatchMode)
+                                {
+                                    case "in":
+                                        {{idType}}[] values = JsonSerializer.Deserialize<{{idType}}[]>(filter.Value.ToString());
+                                        condition = x => x.{{entityDotNotation}}.Any(x => values.Contains(x.Id));
+                                        break;
+                                    default:
+                                        throw new ArgumentException("Invalid Match mode!");
+                                }
+                                predicate = predicate.And(condition);
+                                break;
 """;
         }
 

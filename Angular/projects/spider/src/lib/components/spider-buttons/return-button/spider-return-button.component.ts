@@ -1,10 +1,10 @@
 import { Component, Input } from "@angular/core";
 import { Router } from '@angular/router';
 import { CommonModule } from "@angular/common";
-import { getParentUrl } from "../../services/helper-functions";
+import { getParentUrl } from "../../../services/helper-functions";
 import { TranslocoDirective } from "@jsverse/transloco";
 import { ButtonModule } from "primeng/button";
-import { SpiderButtonComponent } from "./spider-button.component";
+import { SpiderButtonComponent } from "../spider-button/spider-button.component";
 
 @Component({
   selector: 'spider-return-button',

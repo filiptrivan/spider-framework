@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { Subscription } from "rxjs";
 import { TranslocoDirective } from "@jsverse/transloco";
-import { GoogleButtonComponent } from "../../google-button/google-button.component";
+import { GoogleButtonComponent } from "../../spider-buttons/google-button/google-button.component";
 import { ConfigBaseService } from "../../../services/config-base.service";
 import { AuthBaseService } from "../../../services/auth-base.service";
 

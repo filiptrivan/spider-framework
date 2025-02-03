@@ -109,6 +109,7 @@ export class SpiderDataTableComponent implements OnInit {
 
   ngOnInit(): void {
     this.matchModeDateOptions = [
+      { label: this.translocoService.translate('OnDate'), value: 'equals' },
       { label: this.translocoService.translate('DatesBefore'), value: 'dateBefore' },
       { label: this.translocoService.translate('DatesAfter'), value: 'dateAfter' },
     ];

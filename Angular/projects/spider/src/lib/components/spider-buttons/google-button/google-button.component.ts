@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Output } from "@angular/core";
 import { TranslocoDirective } from "@jsverse/transloco";
 import { ButtonModule } from "primeng/button";
+import { SpiderButtonComponent } from "../spider-button/spider-button.component";
 
 @Component({
   selector: 'google-button',
@@ -9,6 +10,7 @@ import { ButtonModule } from "primeng/button";
   imports: [
     ButtonModule,
     TranslocoDirective,
+    SpiderButtonComponent
   ],
   standalone: true,
 })
