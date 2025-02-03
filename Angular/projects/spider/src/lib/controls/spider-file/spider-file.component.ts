@@ -8,6 +8,7 @@ import { getMimeTypeForFileName, isExcelFileType, isImageFileType } from '../../
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { BaseEntity } from '../../entities/base-entity';
 import { PrimengModule } from '../../modules/primeng.module';
+import { SpiderButtonComponent } from '../../components/spider-buttons/spider-button.component';
 
 @Component({
     selector: 'spider-file',
@@ -20,6 +21,7 @@ import { PrimengModule } from '../../modules/primeng.module';
         FormsModule,
         PrimengModule,
         RequiredComponent,
+        SpiderButtonComponent,
         TranslocoDirective
     ]
 })

@@ -3,7 +3,8 @@ import { Router } from '@angular/router';
 import { CommonModule } from "@angular/common";
 import { getParentUrl } from "../../services/helper-functions";
 import { TranslocoDirective } from "@jsverse/transloco";
-import { PrimengModule } from "../../modules/primeng.module";
+import { ButtonModule } from "primeng/button";
+import { SpiderButtonComponent } from "./spider-button.component";
 
 @Component({
   selector: 'spider-return-button',
@@ -11,7 +12,8 @@ import { PrimengModule } from "../../modules/primeng.module";
   styles: [],
   imports: [
     CommonModule,
-    PrimengModule,
+    ButtonModule,
+    SpiderButtonComponent,
     TranslocoDirective,
   ],
   standalone: true,
@@ -26,7 +28,8 @@ export class SpiderReturnButtonComponent {
         const currentUrl = this.router.url;
         const parentUrl: string = getParentUrl(currentUrl);
         this.router.navigateByUrl(parentUrl);
-    }else{
+    }
+    else{
         this.router.navigate([this.navigateUrl]);
     }
   }

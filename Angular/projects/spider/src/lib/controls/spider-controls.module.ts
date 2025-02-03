@@ -14,6 +14,7 @@ import { SpiderColorpickComponent } from './spider-colorpick/spider-colorpick.co
 import { SpiderFileComponent } from './spider-file/spider-file.component';
 import { SpiderCalendarComponent } from './spider-calendar/spider-calendar.component';
 import { SpiderAutocompleteComponent } from './spider-autocomplete/spider-autocomplete.component';
+import { SpiderButtonComponent } from '../components/spider-buttons/spider-button.component';
 
 @NgModule({
   imports: [
@@ -22,6 +23,7 @@ import { SpiderAutocompleteComponent } from './spider-autocomplete/spider-autoco
     SpiderCheckboxComponent,
     SpiderCalendarComponent,
     SpiderReturnButtonComponent,
+    SpiderButtonComponent,
     SpiderPanelsModule,
     SpiderPasswordComponent,
     SpiderAutocompleteComponent,
@@ -39,6 +41,7 @@ import { SpiderAutocompleteComponent } from './spider-autocomplete/spider-autoco
     SpiderCheckboxComponent,
     SpiderCalendarComponent,
     SpiderReturnButtonComponent,
+    SpiderButtonComponent,
     SpiderPanelsModule,
     SpiderPasswordComponent,
     SpiderAutocompleteComponent,

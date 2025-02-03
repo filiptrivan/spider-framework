@@ -3,6 +3,7 @@ import { Component } from "@angular/core";
 import { DynamicDialogConfig, DynamicDialogRef } from "primeng/dynamicdialog";
 import { TranslocoDirective } from '@jsverse/transloco';
 import { PrimengModule } from '../../modules/primeng.module';
+import { SpiderButtonComponent } from '../spider-buttons/spider-button.component';
 
 @Component({
   selector: 'spider-delete-confirmation',
@@ -11,6 +12,7 @@ import { PrimengModule } from '../../modules/primeng.module';
   standalone: true,
   imports: [
     PrimengModule,
+    SpiderButtonComponent,
     TranslocoDirective,
   ],
   providers: [

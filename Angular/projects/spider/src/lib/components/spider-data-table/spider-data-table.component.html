@@ -2,20 +2,19 @@
   <div [class]="showCardWrapper ? 'card responsive-card-padding overflow-auto' : ''">
     <p-table #dt [value]="items" [rows]="rows" [rowHover]="true" styleClass="p-datatable-gridlines" [paginator]="showPaginator" responsiveLayout="scroll" [lazy]="hasLazyLoad"
     (onLazyLoad)="lazyLoad($event)" [totalRecords]="totalRecords" class="spider-table" [loading]="(items === undefined || loading === true)" [selectionMode]="selectionMode" dataKey="id" 
-    (onFilter)="filter($event)"
-    > 
-    <ng-template pTemplate="caption">
-      <div class="table-header overflow-auto">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <i class="{{tableIcon}} text-2xl primary-color"></i>
-          <h5 style="margin: 0px;">{{tableTitle}}</h5>
+    (onFilter)="filter($event)"> 
+      <ng-template pTemplate="caption">
+        <div class="table-header overflow-auto">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="{{tableIcon}} text-2xl primary-color"></i>
+            <h5 style="margin: 0px;">{{tableTitle}}</h5>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button pButton [label]="t('ClearFilters')" class="p-button-outlined remove-button-border-focus" style="flex: none;" icon="pi pi-filter-slash" (click)="clear(dt)"></button>
+            <button pButton *ngIf="showExportToExcelButton" [label]="t('ExportToExcel')" class="p-button-outlined remove-button-border-focus" style="flex: none;" icon="pi pi-download" (click)="exportListToExcel()"></button>
+            <button pButton *ngIf="showReloadTableButton" [label]="t('Reload')" class="p-button-outlined remove-button-border-focus" style="flex: none;" icon="pi pi-refresh" (click)="reloadTable()"></button>
+          </div>
         </div>
-        <div style="display: flex; gap: 8px;">
-          <button pButton [label]="t('ClearFilters')" class="p-button-outlined remove-button-border-focus" style="flex: none;" icon="pi pi-filter-slash" (click)="clear(dt)"></button>
-          <button pButton *ngIf="showExportToExcelButton" [label]="t('ExportToExcel')" class="p-button-outlined remove-button-border-focus" style="flex: none;" icon="pi pi-download" (click)="exportListToExcel()"></button>
-          <button pButton *ngIf="showReloadTableButton" [label]="t('Reload')" class="p-button-outlined remove-button-border-focus" style="flex: none;" icon="pi pi-refresh" (click)="reloadTable()"></button>
-        </div>
-      </div>
       </ng-template>
       <ng-template pTemplate="header">
         <tr>
@@ -57,7 +56,7 @@
               <p-checkbox (onChange)="selectRow(rowData.id, rowData.index)" [ngModel]="isRowSelected(rowData.id)" [binary]="true"></p-checkbox>
           </td>
           <ng-container *ngFor="let col of cols; trackBy: colTrackByFn">
-            <td [pTooltip]="getRowData(rowData, col)" *ngIf="!col.editable">
+            <td [pTooltip]="getRowData(rowData, col)" [style]="getStyleForBodyColumn(col)" *ngIf="!col.editable">
               <div style="display: flex; align-items: center; justify-content: center; gap: 18px;">
                 <ng-container *ngFor="let action of col.actions; trackBy: actionTrackByFn" >
                   <span [pTooltip]="action.name" [class]="getClassForAction(action)" (click)="getMethodForAction(action, rowData)"></span>
@@ -86,7 +85,7 @@
       </ng-template>
       <ng-template pTemplate="paginatorright">
         <div style="display: flex; justify-content: end; gap: 10px;">
-          <p-button *ngIf="showAddButton" [label]="t('AddNew')" icon="pi pi-plus" (onClick)="navigateToDetails(0)"></p-button>
+          <spider-button *ngIf="showAddButton" [label]="t('AddNew')" icon="pi pi-plus" (onClick)="navigateToDetails(0)"></spider-button>
         </div>
       </ng-template>
     </p-table>

@@ -8,9 +8,9 @@
                     </div>
                     
                     <div style="display: flex; flex-direction: column; gap: 16px;">
-                        <p-button [label]="t('Login')" (onClick)="sendLoginVerificationEmail()" [outlined]="true" [style]="{width: '100%'}"></p-button>
+                        <spider-button [label]="t('Login')" (onClick)="sendLoginVerificationEmail()" [outlined]="true" [style]="{width: '100%'}"></spider-button>
                         <!-- TODO FT: Add possibility to change this name from the specific project -->
-                        <p-button *ngIf="usersCanRegister" [label]="t('NewToJoinNow', {companyName: companyName})" routerLink="/auth/registration" [style]="{width: '100%'}"></p-button>
+                        <spider-button *ngIf="usersCanRegister" [label]="t('NewToJoinNow', {companyName: companyName})" routerLink="/auth/registration" [style]="{width: '100%'}"></spider-button>
                     </div>
                 </form>
             </auth>

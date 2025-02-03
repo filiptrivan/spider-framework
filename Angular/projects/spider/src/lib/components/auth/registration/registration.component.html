@@ -14,9 +14,9 @@
                     </div>
                     
                     <div style="display: flex; flex-direction: column; gap: 16px;">
-                        <p-button [label]="t('AgreeAndJoin')" (onClick)="sendRegistrationVerificationEmail()" [outlined]="true" [style]="{width: '100%'}"></p-button>
+                        <spider-button [label]="t('AgreeAndJoin')" (onClick)="sendRegistrationVerificationEmail()" [outlined]="true" [style]="{width: '100%'}"></spider-button>
                         <!-- TODO FT: Add possibility to change this name from the specific project -->
-                        <p-button [label]="t('AlreadyHasAccount', {companyName: companyName})" routerLink="/auth/login" [style]="{width: '100%'}"></p-button>
+                        <spider-button [label]="t('AlreadyHasAccount', {companyName: companyName})" routerLink="/auth/login" [style]="{width: '100%'}"></spider-button>
                     </div>
                 </form>
             </auth>

@@ -37,8 +37,4 @@ export class SpiderMultiAutocompleteComponent extends BaseAutocompleteControl im
         this.onTextInput.next(event);
     }
 
-    buttonClick(){
-
-    }
-
 }

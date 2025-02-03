@@ -63,8 +63,8 @@ export class BaseFormCopy implements OnInit {
   createFormGroup<T>(
     formGroup: SpiderFormGroup<T>, 
     modelConstructor: T & BaseEntity, 
-    updateOnChangeControls?: (keyof T)[])
-  {
+    updateOnChangeControls?: (keyof T)[]
+  ) {
     return this.baseFormService.createFormGroup(
       formGroup, modelConstructor, updateOnChangeControls
     );

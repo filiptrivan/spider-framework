@@ -108,9 +108,9 @@ namespace Spider.SourceGenerators.Angular
         </panel-body>
 
         <panel-footer>
-            <p-button (onClick)="save()" [label]="t('Save')" icon="pi pi-save"></p-button>
+            <spider-button (onClick)="save()" [label]="t('Save')" icon="pi pi-save"></spider-button>
             @for (button of additionalButtons; track button.label) {
-                <p-button (onClick)="button.onClick()" [label]="button.label" [icon]="button.icon"></p-button>
+                <spider-button (onClick)="button.onClick()" [label]="button.label" [icon]="button.icon"></spider-button>
             }
             <spider-return-button></spider-return-button>
         </panel-footer>
@@ -719,7 +719,7 @@ export class {{entity.Name}}BaseDetailsComponent {
                             }
 
                             <div class="panel-add-button">
-                                <p-button (onClick)="addNewItemTo{{property.Name}}(null)" [label]="t('AddNew{{Helpers.ExtractTypeFromGenericType(property.Type)}}')" icon="pi pi-plus"></p-button>
+                                <spider-button (onClick)="addNewItemTo{{property.Name}}(null)" [label]="t('AddNew{{Helpers.ExtractTypeFromGenericType(property.Type)}}')" icon="pi pi-plus"></spider-button>
                             </div>
 
                         </panel-body>

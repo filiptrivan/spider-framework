@@ -21,12 +21,11 @@
     [showClear]="true"
     (onHide)="dropdownMarkAsDirty()"
     (onChange)="change($event)"
-    (onDropdownClick)="buttonClick()"
     [style]="{'width':'100%'}"
     appendTo="body"
     />
-    <span *ngIf="showMoreOptions" (click)="moreOptionsClick()" class="p-inputgroup-addon" style="cursor: pointer; background-color: var(--primary-color); border-color: var(--primary-color);">
-      <i class="pi {{moreOptionsIcon}}" style="color: #fff;"></i>
+    <span *ngIf="showAddon" (click)="addonClick()" class="p-inputgroup-addon" style="cursor: pointer; background-color: var(--primary-color); border-color: var(--primary-color);">
+      <i class="pi {{addonIcon}}" style="color: #fff;"></i>
     </span>
   </div>
   

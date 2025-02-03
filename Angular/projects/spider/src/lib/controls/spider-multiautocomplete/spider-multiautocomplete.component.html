@@ -19,12 +19,11 @@
       (onHide)="dropdownMarkAsDirty()"
       [completeOnFocus]="true"
       dropdownIcon="pi pi-plus"
-      (onDropdownClick)="buttonClick()"
       [style]="{'width':'100%'}"
       [inputStyle]="{'width':'100%'}"
       />
-    <span *ngIf="showMoreOptions" (click)="moreOptionsClick()" class="p-inputgroup-addon" style="cursor: pointer; background-color: var(--primary-color); border-color: var(--primary-color);">
-      <i class="pi {{moreOptionsIcon}}" style="color: #fff;"></i>
+    <span *ngIf="showAddon" (click)="addonClick()" class="p-inputgroup-addon" style="cursor: pointer; background-color: var(--primary-color); border-color: var(--primary-color);">
+      <i class="pi {{addonIcon}}" style="color: #fff;"></i>
     </span>
   </div>
 </div>

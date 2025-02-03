@@ -302,6 +302,15 @@ export class SpiderDataTableComponent implements OnInit {
     return this.cols.some(x => x.actions?.length > 0);
   }
 
+  getStyleForBodyColumn(col: Column<any>) {
+    switch(col.filterType){
+      case 'numeric':
+        return 'text-align: right;';
+      default:
+        return null;
+    }
+  }
+
   getClassForAction(action: Action): string{
     switch(action.field){
       case 'Details':

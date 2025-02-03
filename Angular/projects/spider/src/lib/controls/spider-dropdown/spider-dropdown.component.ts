@@ -33,10 +33,6 @@ export class SpiderDropdownComponent extends BaseDropdownControl implements OnIn
         super.ngOnInit();
     }
 
-    buttonClick(){
-
-    }
-
     change(event: DropdownChangeEvent){
         this.onChange.next(event);
     }

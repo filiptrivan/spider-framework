@@ -22,15 +22,14 @@
       (onHide)="dropdownMarkAsDirty()"
       (onSelect)="select($event)"
       [completeOnFocus]="true"
-      (onDropdownClick)="buttonClick()"
       [style]="{'width':'100%', 'position' : 'relative'}"
       [inputStyle]="{'width':'100%'}"
       [appendTo]="appendTo"
       [emptyMessage]="emptyMessage"
       [lazy]="true"
       />
-      <span *ngIf="showMoreOptions" (click)="moreOptionsClick()" class="p-inputgroup-addon" style="cursor: pointer; background-color: var(--primary-color); border-color: var(--primary-color);">
-        <i class="pi {{moreOptionsIcon}}" style="color: #fff;"></i>
+      <span *ngIf="showAddon" (click)="addonClick()" class="p-inputgroup-addon" style="cursor: pointer; background-color: var(--primary-color); border-color: var(--primary-color);">
+        <i class="{{addonIcon}}" style="color: #fff;"></i>
       </span>
     </div>
   </div>

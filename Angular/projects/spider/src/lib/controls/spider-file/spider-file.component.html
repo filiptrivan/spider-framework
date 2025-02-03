@@ -10,7 +10,7 @@
             <ng-template pTemplate="header" let-files let-chooseCallback="chooseCallback" let-clearCallback="clearCallback" let-uploadCallback="uploadCallback">
                 <div class="flex flex-wrap justify-content-between align-items-center flex-1 gap-2">
                     <div class="flex gap-2">
-                        <p-button (onClick)="choose($event, chooseCallback)" icon="pi pi-upload" [rounded]="true" [outlined]="true" />
+                        <spider-button (onClick)="choose($event, chooseCallback)" icon="pi pi-upload" [rounded]="true" [outlined]="true" />
                         <!-- <p-button (onClick)="clearCallback()" icon="pi pi-times" [rounded]="true" [outlined]="true" severity="danger" [disabled]="!files || files.length === 0" /> -->
                     </div>
                 </div>
@@ -28,7 +28,7 @@
                                     <span class="file-name">{{ file.name }}</span>
                                 </div>
                             </div>
-                            <p-button icon="pi pi-times" (onClick)="removeFile(removeFileCallback, index)" [outlined]="true" [rounded]="true" severity="danger" />
+                            <spider-button icon="pi pi-times" (onClick)="removeFile(removeFileCallback, index)" [outlined]="true" [rounded]="true" severity="danger" />
                         </div>
                     </div>
                 </div>
