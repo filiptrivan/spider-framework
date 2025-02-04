@@ -235,12 +235,12 @@ namespace {{basePartOfNamespace}}.ValidationRules
         {
             List<string> mergedRules = new();
 
-            foreach (var group in rulesOnDTO.Concat(rulesOnDTOProperties).Concat(rulesOnEntity).Concat(rulesOnEntityProperties).GroupBy(x => GetRuleIdentifierPart(x)))
+            foreach (IGrouping<string, string> ruleGroup in rulesOnDTO.Concat(rulesOnDTOProperties).Concat(rulesOnEntity).Concat(rulesOnEntityProperties).GroupBy(x => GetRuleIdentifierPart(x)))
             {
-                List<string> rulePartsOnDTO = GetRuleParts(rulesOnDTO, group.Key);
-                List<string> rulePartsOnDTOProperties = GetRuleParts(rulesOnDTOProperties, group.Key);
-                List<string> rulePartsOnEntity = GetRuleParts(rulesOnEntity, group.Key);
-                List<string> rulePartsOnEntityProperties = GetRuleParts(rulesOnEntityProperties, group.Key);
+                List<string> rulePartsOnDTO = GetRuleParts(rulesOnDTO, ruleGroup.Key);
+                List<string> rulePartsOnDTOProperties = GetRuleParts(rulesOnDTOProperties, ruleGroup.Key);
+                List<string> rulePartsOnEntity = GetRuleParts(rulesOnEntity, ruleGroup.Key);
+                List<string> rulePartsOnEntityProperties = GetRuleParts(rulesOnEntityProperties, ruleGroup.Key);
 
                 RemoveDuplicateRuleParts([rulePartsOnDTOProperties, rulePartsOnEntity, rulePartsOnEntityProperties], rulePartsOnDTO);
                 RemoveDuplicateRuleParts([rulePartsOnEntity, rulePartsOnEntityProperties], rulePartsOnDTOProperties);
@@ -248,7 +248,7 @@ namespace {{basePartOfNamespace}}.ValidationRules
 
                 List<string> mergedRuleParts = rulePartsOnDTO.Concat(rulePartsOnDTOProperties).Concat(rulePartsOnEntity).Concat(rulePartsOnEntityProperties).ToList();
 
-                mergedRules.Add($"{group.Key}){string.Join("", mergedRuleParts)};");
+                mergedRules.Add($"{ruleGroup.Key}){string.Join("", mergedRuleParts)};");
             }
 
             return mergedRules;
@@ -256,30 +256,11 @@ namespace {{basePartOfNamespace}}.ValidationRules
 
         private static void RemoveDuplicateRuleParts(List<List<string>> rulePartsToRemove, List<string> priorRuleParts)
         {
-            for (int i = 0; i < rulePartsToRemove.Count; i++)
-            {
-                for (int j = 0; j < rulePartsToRemove[i].Count; j++)
-                {
-                    foreach (string priorRulePart in priorRuleParts)
-                    {
-                        string rulePartName = GetRulePartName(priorRulePart); // .Length(
-                        if (rulePartsToRemove[i][j].StartsWith(rulePartName))
-                        {
-                            rulePartsToRemove[i].RemoveAt(j);
-                        }
-                    }
-                }
-            }
-        }
+            List<string> priorRulePartNames = priorRuleParts.Select(GetRulePartName).ToList();
 
-        ///// <param name="rule">RuleFor(x => x.Username).Length(0, 70).NotEmpty();</param>
-        ///// <returns>.Length, .NotEmpty</returns>
-        //private static List<string> GetRulePartNames(string rule)
-        //{
-        //    List<string> helper = rule.Split('(').ToList(); // "x => x.Username).Length", "0, 70).NotEmpty"
-        //    List<string> rulePartNames = helper.Select(x => x.Substring(0, x.LastIndexOf(')') + 1)).ToList(); // .Length, .NotEmpty
-        //    return rulePartNames;
-        //}
+            foreach (List<string> ruleParts in rulePartsToRemove)
+                ruleParts.RemoveAll(part => priorRulePartNames.Any(name => part.StartsWith(name)));
+        }
 
         /// <param name="rule">RuleFor(x => x.Username).Length(0, 70).Required();</param>
         /// <returns>.Length(0, 70), .Required()</returns>
