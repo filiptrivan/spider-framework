@@ -1207,7 +1207,7 @@ using {{basePartOfTheNamespace}}.Entities;
 using {{basePartOfTheNamespace}}.Enums;
 using {{basePartOfTheNamespace}}.ExcelProperties;
 using {{basePartOfTheNamespace}}.TableFiltering;
-{{(projectName == "Security" ? "" : $"using {basePartOfTheNamespace.ReplaceEverythingAfter(".", ".Shared")}.Resources;")}}
+{{(projectName == "Security" ? "" : $"using {basePartOfTheNamespace.ReplaceEverythingAfterLast(".", ".Shared")}.Resources;")}}
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using FluentValidation;

@@ -82,21 +82,10 @@ namespace Spider.SourceGenerators.Shared
                 }
                 else if (baseClass == null)
                 {
-                    if (baseType.ToString() == "Role")
-                    {
-                        properties.AddRange(GetRoleProperties());
-                    }
-                    else if (baseType.ToString() == "RoleDTO")
-                    {
-                        properties.AddRange(GetRoleDTOProperties());
-                    }
-                    else
-                    {
-                        SpiderClass spiderBaseClass = referencedProjectsClasses.Where(x => x.Name == c.Identifier.Text).SingleOrDefault();
+                    SpiderClass spiderBaseClass = referencedProjectsClasses.Where(x => x.Name == c.Identifier.Text).SingleOrDefault();
 
-                        if (spiderBaseClass != null)
-                            properties.AddRange(spiderBaseClass.Properties);
-                    }
+                    if (spiderBaseClass != null)
+                        properties.AddRange(spiderBaseClass.Properties);
 
                     break;
                 }
@@ -298,6 +287,18 @@ namespace Spider.SourceGenerators.Shared
             string[] namespacePartsWithoutLastElement = namespaceParts.Take(namespaceParts.Length - 1).ToArray();
 
             return namespacePartsWithoutLastElement; // eg. Spider, Generator, Security
+        }
+
+        public static string GetBasePartOfNamespace(string namespaceValue)
+        {
+            return string.Join(".", GetNamespacePartsWithoutLastElement(namespaceValue));  // eg. Spider.Security
+        }
+
+        public static string GetProjectName(string namespaceValue)
+        {
+            string[] namespacePartsWithoutLastElement = GetNamespacePartsWithoutLastElement(namespaceValue);
+
+            return namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
         }
 
         public static List<SpiderProperty> GetManyToOneRequiredProperties(string entityName, List<SpiderClass> entities)
@@ -772,49 +773,46 @@ namespace Spider.SourceGenerators.Shared
 
         public static List<SpiderClass> GetDTOClasses(List<SpiderClass> currentProjectClasses, List<SpiderClass> allClasses)
         {
-            return currentProjectClasses
+            List<SpiderClass> DTOList = new();
+
+            foreach (var x in currentProjectClasses
                 .Where(x => x.Namespace.EndsWith($".{EntitiesNamespaceEnding}") || x.Namespace.EndsWith($".{DTONamespaceEnding}"))
-                .SelectMany(x =>
+            )
+            {
+                if (x.Name.EndsWith("DTO") || x.Namespace.EndsWith(".DTO"))
                 {
-                    if (x.Name.EndsWith("DTO") || x.Namespace.EndsWith(".DTO"))
+                    DTOList.Add(new SpiderClass
                     {
-                        return new List<SpiderClass>
-                        {
-                            new SpiderClass
-                            {
-                                Name = x.Name,
-                                Properties = x.Properties,
-                                Attributes = x.Attributes,
-                                BaseType = x.BaseType,
-                                IsAbstract = x.IsAbstract,
-                                Methods = x.Methods,
-                                Namespace = x.Namespace,
-                                IsGenerated = false,
-                            }
-                        };
-                    }
-                    else // Entity
+                        Name = x.Name,
+                        Properties = x.Properties,
+                        Attributes = x.Attributes,
+                        BaseType = x.BaseType,
+                        IsAbstract = x.IsAbstract,
+                        Methods = x.Methods,
+                        Namespace = x.Namespace,
+                        IsGenerated = false,
+                    });
+                }
+                else // Entity
+                {
+                    DTOList.Add(new SpiderClass
                     {
-                        return new List<SpiderClass>
-                        {
-                            new SpiderClass
-                            {
-                                Name = $"{x.Name}DTO",
-                                Properties = GetSpiderDTOProperties(x, allClasses),
-                                Namespace = x.Namespace.Replace(".Entities", ".DTO"),
-                                IsGenerated = true
-                            },
-                            new SpiderClass
-                            {
-                                Name = $"{x.Name}SaveBodyDTO",
-                                Properties = GetSaveBodyDTOProperties(x, allClasses),
-                                Namespace = x.Namespace.Replace(".Entities", ".DTO"),
-                                IsGenerated = true
-                            },
-                        };
-                    }
-                })
-                .ToList();
+                        Name = $"{x.Name}DTO",
+                        Properties = GetSpiderDTOProperties(x, allClasses),
+                        Namespace = x.Namespace.Replace(".Entities", ".DTO"),
+                        IsGenerated = true
+                    });
+                    DTOList.Add(new SpiderClass
+                    {
+                        Name = $"{x.Name}SaveBodyDTO",
+                        Properties = GetSaveBodyDTOProperties(x, allClasses),
+                        Namespace = x.Namespace.Replace(".Entities", ".DTO"),
+                        IsGenerated = true
+                    });
+                }
+            }
+
+            return DTOList;
         }
 
         private static List<SpiderProperty> GetSaveBodyDTOProperties(SpiderClass entity, List<SpiderClass> entities)
@@ -1180,61 +1178,6 @@ namespace Spider.SourceGenerators.Shared
 
         #region Populate hacks
 
-        // FT HACK, FT TODO: Make this with all project references
-        private static List<SpiderProperty> GetRoleProperties()
-        {
-            List<SpiderProperty> properties = new List<SpiderProperty>
-            {
-                new SpiderProperty
-                {
-                    Name="Name", Type="string", Attributes=new List<SpiderAttribute>
-                    {
-                        new SpiderAttribute { Name="DisplayName" },
-                        new SpiderAttribute { Name="Required" },
-                        new SpiderAttribute { Name="StringLength", Value="255, MinimumLength = 1" },
-                    }
-                },
-                new SpiderProperty
-                {
-                    Name="Description", Type="string", Attributes=new List<SpiderAttribute>
-                    {
-                        new SpiderAttribute { Name="StringLength", Value="400, MinimumLength = 1" },
-                    }
-                },
-                new SpiderProperty
-                {
-                    Name="Permissions", Type="List<Permission>"
-                }
-            };
-
-            properties.AddRange(GetPropertiesForBaseClasses(BusinessObject, "int"));
-
-            return properties;
-        }
-
-        private static List<SpiderProperty> GetRoleDTOProperties()
-        {
-            List<SpiderProperty> properties = new List<SpiderProperty>
-            {
-                new SpiderProperty
-                {
-                    Name="Name", Type="string",
-                },
-                new SpiderProperty
-                {
-                    Name="Description", Type="string"
-                },
-                new SpiderProperty
-                {
-                    Name="Permissions", Type="List<PermissionDTO>"
-                }
-            };
-
-            properties.AddRange(GetPropertiesForBaseClasses($"{BusinessObject}DTO", "int"));
-
-            return properties;
-        }
-
         private static List<SpiderAttribute> GetAllAttributesOfTheMember(MemberDeclarationSyntax prop)
         {
             List<SpiderAttribute> attributes = new List<SpiderAttribute>();
@@ -1310,16 +1253,6 @@ namespace Spider.SourceGenerators.Shared
                         //new SpiderProperty { Type = "DateTime", IdentifierText = "CreatedAt" },
                     };
                 }
-            }
-            else if (typeName.StartsWith($"LazyTableSelectionDTO")) // TODO FT: Put inside variable
-            {
-                return new List<SpiderProperty>()
-                {
-                    new SpiderProperty { Type = $"TableFilterDTO", Name = "TableFilter" },
-                    new SpiderProperty { Type = $"List<{idType}>", Name = "SelectedIds" },
-                    new SpiderProperty { Type = $"List<{idType}>", Name = "UnselectedIds" },
-                    new SpiderProperty { Type = "bool?", Name = "AreAllSelected" },
-                };
             }
             else
             {
@@ -1431,6 +1364,20 @@ namespace Spider.SourceGenerators.Shared
             resourceWriter.Generate();
 
             resourceWriter.Close();
+        }
+
+        public static IEnumerable<T> SkipLast<T>(this IEnumerable<T> source)
+        {
+            using (var e = source.GetEnumerator())
+            {
+                if (e.MoveNext())
+                {
+                    for (var value = e.Current; e.MoveNext(); value = e.Current)
+                    {
+                        yield return value;
+                    }
+                }
+            }
         }
 
         #endregion

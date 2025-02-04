@@ -25,11 +25,11 @@ namespace Spider.SourceGenerators.Models
         /// </summary>
         public bool IsGenerated { get; set; }
 
-        public List<SpiderProperty> Properties { get; set; } = new List<SpiderProperty>();
+        public List<SpiderProperty> Properties { get; set; } = new();
 
 
-        public List<SpiderAttribute> Attributes { get; set; }
+        public List<SpiderAttribute> Attributes { get; set; } = new();
 
-        public List<SpiderMethod> Methods { get; set; }
+        public List<SpiderMethod> Methods { get; set; } = new();
     }
 }

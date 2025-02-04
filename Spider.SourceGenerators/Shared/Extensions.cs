@@ -775,13 +775,55 @@ namespace Spider.SourceGenerators.Shared
             if (string.IsNullOrEmpty(source))
                 return null;
 
-            int index = source.LastIndexOf(keyForReplace, StringComparison.Ordinal);
+            int index = source.IndexOf(keyForReplace, StringComparison.Ordinal);
 
             if (index == -1)
-                return source; // If the key is not found, return the original string.
+                return source;
 
             // Get the part before the key and append the new value.
             return $"{source.Substring(0, index)}{valueToInsert}";
+        }
+
+        public static string ReplaceEverythingAfterLast(this string source, string keyForReplace, string valueToInsert)
+        {
+            if (string.IsNullOrEmpty(source))
+                return null;
+
+            int index = source.LastIndexOf(keyForReplace, StringComparison.Ordinal);
+
+            if (index == -1)
+                return source;
+
+            // Get the part before the key and append the new value.
+            return $"{source.Substring(0, index)}{valueToInsert}";
+        }
+
+        public static string ReplaceEverythingAfterTo(this string source, string keyForReplace, string to, string valueToInsert)
+        {
+            if (string.IsNullOrEmpty(source))
+                return null;
+
+            int keyIndex = source.IndexOf(keyForReplace, StringComparison.Ordinal);
+            if (keyIndex == -1)
+                return source;
+
+            int searchStartIndex = keyIndex + keyForReplace.Length;
+
+            int toIndex = source.IndexOf(to, searchStartIndex, StringComparison.Ordinal);
+            if (toIndex == -1)
+                return source;
+
+            int secondToIndex = source.IndexOf(to, toIndex, StringComparison.Ordinal);
+            if (secondToIndex != -1)
+                toIndex = secondToIndex; // FT: If there are "))" in the source i want to get index of the second
+
+            // Construct the new string:
+            // 1. Everything before keyForReplace remains unchanged.
+            // 2. Insert the new value.
+            // 3. Append everything from 'to' onward.
+            string beforeKey = source.Substring(0, keyIndex);
+            string afterTo = source.Substring(toIndex);
+            return $"{beforeKey}{valueToInsert}{afterTo}";
         }
 
         public static Dictionary<string, string> PrepareForTranslation(this IEnumerable<Dictionary<string, string>> data)
