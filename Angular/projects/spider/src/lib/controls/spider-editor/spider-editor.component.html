@@ -5,13 +5,16 @@
     <label>{{getTranslatedLabel()}}</label>
     <required *ngIf="control?.required"></required>
   </div>
+
   <p-editor
-    *ngIf="control"
-    [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid"
-    [formControl]="control"
-    [id]="control.label"
-    (blur)="control.markAsDirty()"
-    [placeholder]="placeholder"
-    [style]="{ height: '320px' }"
-    />
-  </div>
+  *ngIf="control"
+  [formControl]="control"
+  [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control.valid" tooltipStyleClass="spider-tooltip-invalid"
+  [class]="control.invalid && control.dirty ? 'control-error-border' : ''"
+  [id]="control.label"
+  [placeholder]="placeholder"
+  (click)="onClick()"
+  [style]="{ height: '320px' }"
+  ></p-editor>
+
+</div>

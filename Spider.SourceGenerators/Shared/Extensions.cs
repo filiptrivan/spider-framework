@@ -630,6 +630,11 @@ namespace Spider.SourceGenerators.Shared
             return property.Attributes.Any(x => x.Name == "UIControlType" && x.Value == UIControlTypeCodes.Autocomplete.ToString());
         }
 
+        public static bool IsEditorControlType(this SpiderProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "UIControlType" && x.Value == UIControlTypeCodes.Editor.ToString());
+        }
+
         #endregion
 
         #endregion

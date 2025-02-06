@@ -19,7 +19,7 @@ import { TranslocoService } from '@jsverse/transloco';
     @Input() showTooltip: boolean = false;
     @Input() tooltipText: string = null;
     @Input() tooltipIcon: string = 'pi pi-info-circle';
-    errorMessageTooltipEvent: string;
+    errorMessageTooltipEvent: 'hover' | 'focus';
     validationErrorMessage: string;
     
     constructor(

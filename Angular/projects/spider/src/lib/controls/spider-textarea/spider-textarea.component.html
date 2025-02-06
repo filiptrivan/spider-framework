@@ -7,12 +7,12 @@
   </div>
   <textarea
     *ngIf="control"
-    [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid"
+    [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control.valid" tooltipStyleClass="spider-tooltip-invalid"
     pInputTextarea
     [formControl]="control"
-    [id]="control?.label"
-    (blur)="control?.markAsDirty()"
+    [id]="control.label"
+    (blur)="control.markAsDirty()"
     [autoResize]="true"
-    [class]="control?.disabled ? 'disabled' : ''"
+    [class]="control.disabled ? 'disabled' : ''"
     ></textarea>
   </div>

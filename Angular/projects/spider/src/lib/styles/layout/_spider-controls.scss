@@ -6,3 +6,7 @@
 .spider-tooltip-invalid.p-tooltip.p-tooltip-bottom .p-tooltip-arrow {
   border-bottom-color: $errorColorLight;
 }
+
+.spider-tooltip-invalid.p-tooltip.p-tooltip-top .p-tooltip-arrow {
+  border-top-color: $errorColorLight;
+}

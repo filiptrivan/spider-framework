@@ -200,8 +200,9 @@ export class ValidatorServiceGenerated {
             if (rules.Contains("NotEmpty") || property.Type == "int" || property.Type == "long" || property.Type == "byte")
             {
                 string ruleName = "notEmptyRule";
+
                 ruleStatements.Add($$"""
-        const {{ruleName}} = typeof value !== 'undefined' && value !== null && value !== '';
+        const {{ruleName}} = {{GetRequiredControlCheckInTypeScript(property)}};
 """);
                 ruleNames.Add(ruleName);
                 validationMessages.Add("is mandatory");
@@ -324,6 +325,18 @@ export class ValidatorServiceGenerated {
                     translocoVariables.AddRange(["precision", "scale"]);
                     translationTags.Add("PrecisionScale");
                 }
+            }
+        }
+
+        private static string GetRequiredControlCheckInTypeScript(SpiderProperty property)
+        {
+            if (property.IsEditorControlType())
+            {
+                return "typeof value !== 'undefined' && value !== null && value !== '' && value !== '<p></p>'";
+            }
+            else
+            {
+                return "typeof value !== 'undefined' && value !== null && value !== ''";
             }
         }
 

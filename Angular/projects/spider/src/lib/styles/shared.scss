@@ -192,6 +192,11 @@
 	}
 }
 
+.control-error-border{
+	outline: 1px solid $errorColor;
+	border-radius: 12px;
+}
+
 .error-color{
 	background-color: $errorColor;
 }
