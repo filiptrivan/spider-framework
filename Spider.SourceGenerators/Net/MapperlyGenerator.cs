@@ -191,7 +191,7 @@ namespace {{basePartOfNamespace}}.DataMappers
                     manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}DisplayName, src => src.{entityPropName}.{displayNamePropOfManyToOne})"); // "dest.TierDisplayName", "src.Tier.Name"
                 }
 
-                if (entityPropType.IsEnumerable())
+                if (entityPropType.IsOneToManyType())
                 {
                     string entityPropTypeInsideListBrackets = Helpers.ExtractTypeFromGenericType(entityPropType);
 

@@ -413,7 +413,7 @@ namespace Spider.SourceGenerators.Shared
         {
             if (type.IsEnumerable())
                 return false;
-            if (type.IsBaseType())
+            if (type.IsBaseDataType())
                 return false;
 
             return true;
@@ -451,12 +451,17 @@ namespace Spider.SourceGenerators.Shared
             return type.Contains("List") || type.Contains("IList") || type.Contains("[]");
         }
 
+        public static bool IsOneToManyType(this string type)
+        {
+            return type.Contains("List");
+        }
+
         public static bool IsEnum(this string type)
         {
             return type.EndsWith("Codes") || type.EndsWith("Codes>");
         }
 
-        public static bool IsBaseType(this string propType)
+        public static bool IsBaseDataType(this string propType)
         {
             return
                 propType == "string" ||
@@ -511,7 +516,7 @@ namespace Spider.SourceGenerators.Shared
 
             string splitType = bigType.Split('.').Last().Replace(">", "");
 
-            if (bigType.IsEnumerable())
+            if (bigType.IsOneToManyType())
             {
                 string enumerableType = bigType.Split('<').First().Split('.').Last();
 
@@ -768,7 +773,14 @@ namespace Spider.SourceGenerators.Shared
 
         public static bool ShouldSkipPropertyInDTO(this SpiderProperty property)
         {
-            return property.Attributes.Any(x => x.Name == "ExcludeFromDTO" || x.Name == "M2MMaintanceEntityKey" || x.Name == "M2MEntityKey");
+            if (property.Attributes.Any(x => x.Name == "ExcludeFromDTO" || x.Name == "M2MMaintanceEntityKey" || x.Name == "M2MEntityKey") ||
+               (property.Type.IsOneToManyType() && !property.HasGenerateCommaSeparatedDisplayNameAttribute() && !property.HasIncludeInDTOAttribute())
+            )
+            {
+                return true;
+            }
+
+            return false;
         }
 
         #endregion

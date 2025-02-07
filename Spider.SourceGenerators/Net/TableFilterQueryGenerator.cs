@@ -379,7 +379,7 @@ using {{item}};
             SpiderProperty prop = entityClassProperties.Where(x => x.Name == propName).Single(); // Role
 
             int i = 1;
-            while (prop.Type.IsBaseType() == false)
+            while (prop.Type.IsBaseDataType() == false)
             {
                 SpiderClass helperClass = allClasses.Where(x => x.Name == prop.Type).Single(); // Role
 

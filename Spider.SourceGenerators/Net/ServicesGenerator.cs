@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System;
+using System.Diagnostics;
 
 namespace Spider.SourceGenerators.Net
 {
@@ -852,7 +853,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
             List<string> result = new List<string>();
 
-            foreach (SpiderProperty oneToManyProperty in entity.Properties.Where(prop => prop.Type.IsEnumerable())) // List<Role> Roles
+            foreach (SpiderProperty oneToManyProperty in entity.Properties.Where(prop => prop.Type.IsOneToManyType())) // List<Role> Roles
             {
                 SpiderClass extractedPropertyEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(oneToManyProperty.Type)).Single(); // Role
 

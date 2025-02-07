@@ -53,17 +53,13 @@ namespace Spider.SourceGenerators.Net
             if (shouldGenerate == false)
                 return;
 
-            List<SpiderClass> projectClasses = Helpers.GetSpiderClasses(classes, referencedProjectEntityClassesAndServices);
-
-            List<SpiderClass> customControllers = projectClasses.Where(x => x.Namespace.EndsWith(".Controllers")).ToList();
-
-            List<SpiderClass> referencedProjectEntityClasses = referencedProjectEntityClassesAndServices.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
-
+            List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectEntityClassesAndServices);
+            List<SpiderClass> customControllers = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Controllers")).ToList();
+            List<SpiderClass> referencedProjectEntities = referencedProjectEntityClassesAndServices.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
             List<SpiderClass> referencedProjectServices = referencedProjectEntityClassesAndServices.Where(x => x.Namespace.EndsWith(".Services")).ToList();
+            List<SpiderClass> allEntities = currentProjectClasses.Concat(referencedProjectEntities).ToList();
 
-            List<SpiderClass> allEntityClasses = projectClasses.Concat(referencedProjectEntityClasses).ToList();
-
-            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(projectClasses[0].Namespace);
+            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(currentProjectClasses[0].Namespace);
 
             string basePartOfTheNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. PlayertyLoyals.Infrastructure
             //string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Infrastructure
@@ -82,12 +78,12 @@ using Spider.Shared.Interfaces;
 using {{projectName}}.Shared.Resources;
 using {{projectName}}.Business.Entities;
 using {{projectName}}.Business.DTO;
-{{string.Join("\n", Helpers.GetEntityClassesUsings(allEntityClasses))}}
-{{string.Join("\n", Helpers.GetDTOClassesUsings(allEntityClasses))}}
+{{string.Join("\n", Helpers.GetEntityClassesUsings(allEntities))}}
+{{string.Join("\n", Helpers.GetDTOClassesUsings(allEntities))}}
 
 namespace {{basePartOfTheNamespace}}.Controllers
 {
-{{string.Join("\n\n", GetControllerClasses(referencedProjectEntityClasses, referencedProjectServices))}}
+{{string.Join("\n\n", GetControllerClasses(referencedProjectEntities, referencedProjectServices))}}
 }
 """;
 

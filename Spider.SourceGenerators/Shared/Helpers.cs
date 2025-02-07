@@ -798,6 +798,7 @@ namespace Spider.SourceGenerators.Shared
                     DTOList.Add(new SpiderClass
                     {
                         Name = $"{x.Name}DTO",
+                        BaseType = x.GetDTOBaseType(),
                         Properties = GetSpiderDTOProperties(x, allClasses),
                         Namespace = x.Namespace.Replace(".Entities", ".DTO"),
                         IsGenerated = true
@@ -818,7 +819,7 @@ namespace Spider.SourceGenerators.Shared
         private static List<SpiderProperty> GetSaveBodyDTOProperties(SpiderClass entity, List<SpiderClass> entities)
         {
             List<SpiderProperty> result = new List<SpiderProperty>();
-            result.Add(new SpiderProperty { Name = $"{entity.Name}DTO", Type = $"{entity.Name}DTO" });
+            result.Add(new SpiderProperty { Name = $"{entity.Name}DTO", Type = $"{entity.Name}DTO", EntityName = $"{entity.Name}SaveBodyDTO" });
 
             foreach (SpiderProperty property in entity.Properties)
             {
@@ -827,20 +828,20 @@ namespace Spider.SourceGenerators.Shared
 
                 if (property.HasOrderedOneToManyAttribute())
                 {
-                    result.Add(new SpiderProperty { Name = $"{property.Name}DTO", Type = $"List<{extractedEntity.Name}>" });
+                    result.Add(new SpiderProperty { Name = $"{property.Name}DTO", Type = $"List<{extractedEntity.Name}DTO>", EntityName = $"{entity.Name}SaveBodyDTO" });
                 }
                 else if (
                     property.IsMultiSelectControlType() ||
                     property.IsMultiAutocompleteControlType())
                 {
-                    result.Add(new SpiderProperty { Name = $"Selected{property.Name}Ids", Type = $"List<{extractedEntityIdType}>" });
+                    result.Add(new SpiderProperty { Name = $"Selected{property.Name}Ids", Type = $"List<{extractedEntityIdType}>", EntityName = $"{entity.Name}SaveBodyDTO" });
                 }
                 else if (property.HasSimpleManyToManyTableLazyLoadAttribute())
                 {
-                    result.Add(new SpiderProperty { Name = $"Selected{property.Name}Ids", Type = $"List<{extractedEntityIdType}>" });
-                    result.Add(new SpiderProperty { Name = $"Unselected{property.Name}Ids", Type = $"List<{extractedEntityIdType}>" });
-                    result.Add(new SpiderProperty { Name = $"AreAll{property.Name}Selected", Type = "bool?" });
-                    result.Add(new SpiderProperty { Name = $"{property.Name}TableFilter", Type = "TableFilterDTO" });
+                    result.Add(new SpiderProperty { Name = $"Selected{property.Name}Ids", Type = $"List<{extractedEntityIdType}>", EntityName = $"{entity.Name}SaveBodyDTO" });
+                    result.Add(new SpiderProperty { Name = $"Unselected{property.Name}Ids", Type = $"List<{extractedEntityIdType}>", EntityName = $"{entity.Name}SaveBodyDTO" });
+                    result.Add(new SpiderProperty { Name = $"AreAll{property.Name}Selected", Type = "bool?", EntityName = $"{entity.Name}SaveBodyDTO" });
+                    result.Add(new SpiderProperty { Name = $"{property.Name}TableFilter", Type = "TableFilterDTO", EntityName = $"{entity.Name}SaveBodyDTO" });
                 }
             }
 
@@ -877,60 +878,51 @@ namespace Spider.SourceGenerators.Shared
         public static List<SpiderProperty> GetSpiderDTOProperties(SpiderClass entity, List<SpiderClass> entities)
         {
             List<SpiderProperty> DTOProperties = new List<SpiderProperty>(); // public string Email { get; set; }
-            List<SpiderProperty> properties = entity.Properties;
 
-            foreach (SpiderProperty property in properties)
+            foreach (SpiderProperty property in entity.Properties)
             {
                 if (property.ShouldSkipPropertyInDTO())
                     continue;
 
-                string propType = property.Type;
-                string propName = property.Name;
-                // FT: Not adding attributes because they are not the same
+                if (property.Type.IsManyToOneType())
+                {
+                    SpiderClass manyToOneClass = entities.Where(x => x.Name == property.Type).SingleOrDefault();
 
-                if (propType.IsManyToOneType())
-                {
-                    DTOProperties.Add(new SpiderProperty { Name = $"{propName}DisplayName", Type = "string" });
-                    SpiderClass manyToOneClass = entities.Where(x => x.Name == propType).SingleOrDefault();
-                    DTOProperties.Add(new SpiderProperty { Name = $"{propName}Id", Type = $"{manyToOneClass.GetIdType(entities)}?" });
-                    continue;
+                    DTOProperties.Add(new SpiderProperty { Name = $"{property.Name}DisplayName", Type = "string", EntityName = $"{property.EntityName}DTO" });
+                    DTOProperties.Add(new SpiderProperty { Name = $"{property.Name}Id", Type = $"{manyToOneClass.GetIdType(entities)}?", EntityName = $"{property.EntityName}DTO" });
                 }
-                else if (propType.IsEnumerable() && property.HasGenerateCommaSeparatedDisplayNameAttribute())
+                else if (property.Type.IsOneToManyType() && property.HasGenerateCommaSeparatedDisplayNameAttribute())
                 {
-                    DTOProperties.Add(new SpiderProperty { Name = $"{propName}CommaSeparated", Type = "string" });
-                    continue;
+                    DTOProperties.Add(new SpiderProperty { Name = $"{property.Name}CommaSeparated", Type = "string", EntityName = $"{property.EntityName}DTO" });
                 }
-                else if (propType == "byte[]")
+                else if (property.Type.IsOneToManyType() && property.HasIncludeInDTOAttribute())
                 {
-                    DTOProperties.Add(new SpiderProperty { Name = propName, Type = "string" });
-                    continue;
+                    DTOProperties.Add(new SpiderProperty { Name = $"{property.Name}DTOList", Type = property.Type.Replace(">", "DTO>"), EntityName = $"{property.EntityName}DTO" });
                 }
-                else if (propType.IsEnumerable() && property.HasIncludeInDTOAttribute())
+                else if (property.Type == "byte[]")
                 {
-                    DTOProperties.Add(new SpiderProperty { Name = $"{propName}DTOList", Type = propType.Replace(">", "DTO>") });
-                    continue;
-                }
-                else if (propType.IsEnumerable())
-                {
-                    continue;
-                }
-                else if (propType.IsBaseType() && propType != "string")
-                {
-                    propType = $"{property.Type}?".Replace("??", "?");
+                    DTOProperties.Add(new SpiderProperty { Name = property.Name, Type = "string", EntityName = $"{property.EntityName}DTO" });
                 }
                 else if (property.IsBlob())
                 {
-                    DTOProperties.Add(new SpiderProperty { Name = $"{propName}Data", Type = "string" });
+                    DTOProperties.Add(new SpiderProperty { Name = $"{property.Name}Data", Type = "string", EntityName = $"{property.EntityName}DTO" });
+                    DTOProperties.Add(new SpiderProperty { Name = property.Name, Type = "string", EntityName = $"{property.EntityName}DTO" });
                 }
-                else if (propType != "string")
+                else
                 {
-                    propType = "UNSUPPORTED TYPE";
+                    DTOProperties.Add(new SpiderProperty { Name = property.Name, Type = GetFormatedDTOPropertyType(property.Type), EntityName = $"{property.EntityName}DTO" });
                 }
-
-                DTOProperties.Add(new SpiderProperty { Name = propName, Type = propType });
             }
 
             return DTOProperties;
+        }
+
+        public static string GetFormatedDTOPropertyType(string propertyType)
+        {
+            if (propertyType != "string" && propertyType.IsBaseDataType())
+                return $"{propertyType}?".Replace("??", "?");
+
+            return propertyType;
         }
 
         #endregion
@@ -947,7 +939,7 @@ namespace Spider.SourceGenerators.Shared
             foreach (SpiderProperty prop in properties)
             {
                 string cSharpDataType = prop.Type;
-                if (cSharpDataType.IsBaseType() == false)
+                if (cSharpDataType.IsBaseDataType() == false)
                 {
                     string angularDataType = GetAngularDataTypeForImport(cSharpDataType);
 
@@ -1055,7 +1047,7 @@ namespace Spider.SourceGenerators.Shared
             {
                 result = "Codebook";
             }
-            else if (parts[parts.Length - 1].IsBaseType())
+            else if (parts[parts.Length - 1].IsBaseDataType())
             {
                 result = GetAngularType(parts[parts.Length - 1]); // List<long>
             }

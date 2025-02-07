@@ -78,7 +78,7 @@ namespace Spider.Infrastructure
 
                 if (properties.Count == 2 || (m2mMaintanceEntityWithManyProperty.PropertyType.ToString() != m2mEntityWithManyProperty.PropertyType.ToString()))
                 {
-                    modelBuilder.Entity(m2mMaintanceEntity.Property.PropertyType) 
+                    modelBuilder.Entity(m2mMaintanceEntity.Property.PropertyType)
                         .HasMany(m2mMaintanceEntity.Attribute.WithManyProperty)
                         .WithMany(m2mEntity.Attribute.WithManyProperty)
                         .UsingEntity(
@@ -131,7 +131,6 @@ namespace Spider.Infrastructure
                 }
             }
         }
-
 
     }
 }
