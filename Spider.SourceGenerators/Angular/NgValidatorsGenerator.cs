@@ -57,21 +57,39 @@ namespace Spider.SourceGenerators.Angular
         {
             if (classes.Count <= 1) return;
 
+            if (callingProjectDirectory.Contains(".WebAPI") == false)
+                return;
+
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\services\validators
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", @"\Angular\src\app\business\services\validators");
 
             referencedProjectClasses = referencedProjectClasses.OrderBy(x => x.Name).ToList();
 
-            List<SpiderClass> entityClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SpiderClass> entities = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
             List<SpiderClass> DTOClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
 
             string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(classes[0]);
             string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
 
-            StringBuilder sb = new StringBuilder();
-            StringBuilder sbMethods = new StringBuilder();
+            List<string> switchCases = new();
+            List<string> validationMethods = new();
 
-            sb.AppendLine($$"""
+            foreach (SpiderClass DTOClass in DTOClasses)
+            {
+                SpiderClass entityClass = entities.Where(x => DTOClass.Name.Replace("DTO", "") == x.Name).SingleOrDefault(); // If it is null then we only made DTO, without entity class
+
+                List<SpiderValidationRule> rules = Helpers.GetValidationRules(DTOClass.Properties, DTOClass.Attributes, entityClass);
+
+                string angularValidationSwitchCases = GetAngularValidationSwitchCases(DTOClass, rules);
+                if (string.IsNullOrEmpty(angularValidationSwitchCases) == false)
+                    switchCases.Add(angularValidationSwitchCases);
+
+                string angularValidationMethods = GenerateAngularValidationMethods(DTOClass, rules);
+                if (string.IsNullOrEmpty(angularValidationMethods) == false)
+                    validationMethods.Add(angularValidationMethods);
+            }
+
+            string result = $$"""
 import { ValidationErrors } from '@angular/forms';
 import { TranslocoService } from '@jsverse/transloco';
 import { Injectable } from '@angular/core';
@@ -89,95 +107,99 @@ export class ValidatorServiceGenerated {
 
     setValidator = (formControl: SpiderFormControl, className: string): SpiderValidatorFn => {
         switch(formControl.label + className){
-""");
-            foreach (SpiderClass DTOClass in DTOClasses) // Grouping because UserDTO.generated and UserDTO
-            {
-                SpiderClass entityClass = entityClasses.Where(x => DTOClass.Name.Replace("DTO", "") == x.Name).SingleOrDefault(); // If it is null then we only made DTO, without entity class
-
-                string validationClassConstructorBody = GetValidationClassConstructorBody(DTOClass.Properties, DTOClass.Attributes, entityClass, entityClasses);
-
-                sb.AppendLine(GetAngularValidationCases(DTOClass.Name, validationClassConstructorBody));
-                sbMethods.AppendLine(GenerateAngularValidationMethods(DTOClass.Name, validationClassConstructorBody, DTOClass.Properties));
-            }
-            sb.AppendLine($$"""
+{{string.Join("\n", switchCases)}}
             default:
                 return null;
         }
     }
 
-{{sbMethods}}
-}
-""");
-            //sb.AppendLine(sbMethods.ToString());
+{{string.Join("\n", validationMethods)}}
 
-            Helpers.WriteToTheFile(sb.ToString(), Path.Combine(outputPath, "validators.generated.ts"));
+}
+""";
+
+            Helpers.WriteToTheFile(result, Path.Combine(outputPath, "validators.generated.ts"));
         }
 
-        public static string GenerateAngularValidationMethods(string DTOClassName, string validationClassConstructorBody, List<SpiderProperty> DTOProperties)
-        {
-            string validationClassName = DTOClassName.Replace("DTO", "");
+        #region Switch Cases
 
-            List<string> validationRulePropNames = ParseValidationParameters(validationClassConstructorBody);
+        public static string GetAngularValidationSwitchCases(SpiderClass DTOClass, List<SpiderValidationRule> rules)
+        {
+            string validationClassName = DTOClass.Name.Replace("DTO", "");
+
+            StringBuilder validationCases = new();
+
+            foreach (SpiderValidationRule rule in rules)
+            {
+                validationCases.AppendLine($$"""
+            case '{{rule.Property.Name.FirstCharToLower()}}{{validationClassName}}':
+                return this.{{rule.Property.Name.FirstCharToLower()}}{{validationClassName}}Validator(formControl);
+""");
+            }
+
+            return validationCases.ToString();
+        }
+
+        #endregion
+
+        #region Validation Methods
+
+        public static string GenerateAngularValidationMethods(SpiderClass DTOClass, List<SpiderValidationRule> rules)
+        {
+            string validationClassName = DTOClass.Name.Replace("DTO", "");
 
             StringBuilder sb = new StringBuilder();
 
-            foreach (string validationRulePropName in validationRulePropNames)
-                sb.AppendLine(GenerateAngularValidationMethod(validationRulePropName, validationClassName, validationClassConstructorBody, DTOProperties));
+            foreach (SpiderValidationRule rule in rules)
+                sb.AppendLine(GenerateAngularValidationMethod(rule, validationClassName, DTOClass.Properties));
 
             return sb.ToString();
         }
 
-        public static string GenerateAngularValidationMethod(string validationRulePropName, string classNameForValidation, string input, List<SpiderProperty> DTOProperties)
+        public static string GenerateAngularValidationMethod(SpiderValidationRule rule, string validationClassName, List<SpiderProperty> DTOProperties)
         {
-            string validationRulePropNameFirstLower = AdjustManyToOnePropertyNameForValidation(validationRulePropName);
+            List<string> ruleStatements = new(); // eg. const {ruleName}: boolean = typeof value !== 'undefined' && value !== '';
+            List<string> validationMessages = new(); // eg. must have a minimum of {min} and a maximum of {max} characters
+            List<string> translocoVariables = new(); // eg. [max, min]
+            List<string> translationTags = new(); // eg. Length, IsEmpty
+            List<string> ruleNames = new(); // eg. notEmptyRule
 
-            string pattern = $@"RuleFor\(x => x\.{validationRulePropName}\)(.*?);";
-            Match match = Regex.Match(input, pattern, RegexOptions.Singleline);
+            PopulateAngularValidationData(rule, DTOProperties, ruleStatements, validationMessages, translocoVariables, ruleNames, translationTags);
 
-            if (!match.Success)
-            {
-                return string.Empty;
-            }
-
-            string rules = match.Groups[1].Value.Trim(); // .NotEmpty().Length(0,45)
-
-            List<string> ruleStatements = new List<string>(); // eg. const {ruleName}: boolean = typeof value !== 'undefined' && value !== '';
-            List<string> validationMessages = new List<string>(); // eg. must have a minimum of {min} and a maximum of {max} characters
-            List<string> translocoVariables = new List<string>(); // eg. [max, min]
-            List<string> translationTags = new List<string>(); // eg. Length, IsEmpty
-            List<string> ruleNames = new List<string>(); // eg. notEmptyRule
-
-            PopulateListOfStrings(rules, DTOProperties, validationRulePropName, ruleStatements, validationMessages, translocoVariables, ruleNames, translationTags);
-
-            string allRules = string.Join(" && ", ruleNames);
+            string allAngularRules = string.Join(" && ", ruleNames);
 
             string result = $$"""
-    {{validationRulePropNameFirstLower}}{{classNameForValidation}}Validator = (control: SpiderFormControl): SpiderValidatorFn => {
+    {{rule.Property.Name.FirstCharToLower()}}{{validationClassName}}Validator = (control: SpiderFormControl): SpiderValidatorFn => {
         const validator: SpiderValidatorFn = (): ValidationErrors | null => {
             const value = control.value;
 
 {{string.Join("\n", ruleStatements)}}
 
-            const {{validationRulePropNameFirstLower}}Valid = {{allRules}};
+            const valid = {{allAngularRules}};
 
-            return {{validationRulePropNameFirstLower}}Valid ? null : { _ : this.translocoService.translate('{{string.Join("", translationTags)}}', {{{string.Join(", ", translocoVariables)}}}) };
+            return valid ? null : { _ : this.translocoService.translate('{{string.Join("", translationTags)}}', {{{string.Join(", ", translocoVariables)}}}) };
         };
 {{GetNonEmptyControlData(ruleNames)}}
         control.validator = validator;
-{{GetUpdateValidationAndValidityData()}}
+{{GetUpdateValidationAndValidityData(rule.Property)}}
         return validator;
     }
+
 """;
 
             return result;
         }
 
-        private static string GetUpdateValidationAndValidityData()
+        private static string GetUpdateValidationAndValidityData(SpiderProperty ruleProperty)
         {
-            return $$"""
-        // TODO FT: When you improve generated code, and could realize on the backend is this property of the Date type, generate this line only for Date form controls.
-        control.updateValueAndValidity(); // FT: It's necessary for Date angular type
+            if (ruleProperty.Type == "DateTime" || ruleProperty.Type == "DateTime?")
+            {
+                return $$"""
+        control.updateValueAndValidity(); // FT: It's necessary only for Date Angular type
 """;
+            }
+
+            return null;
         }
 
         private static string GetNonEmptyControlData(List<string> ruleNames)
@@ -193,26 +215,33 @@ export class ValidatorServiceGenerated {
             return null;
         }
 
-        public static void PopulateListOfStrings(string rules, List<SpiderProperty> DTOProperties, string validationRulePropName, List<string> ruleStatements, List<string> validationMessages, List<string> translocoVariables, List<string> ruleNames, List<string> translationTags)
+        public static void PopulateAngularValidationData(
+            SpiderValidationRule rule,
+            List<SpiderProperty> DTOProperties,
+            List<string> ruleStatements,
+            List<string> validationMessages,
+            List<string> translocoVariables,
+            List<string> ruleNames,
+            List<string> translationTags
+        )
         {
-            SpiderProperty property = DTOProperties.Where(x => x.Name == validationRulePropName).Single();
-
-            if (rules.Contains("NotEmpty") || property.Type == "int" || property.Type == "long" || property.Type == "byte")
+            if (rule.ValidationRuleParts.Any(x => x.Name == "NotEmpty"))
             {
                 string ruleName = "notEmptyRule";
 
                 ruleStatements.Add($$"""
-        const {{ruleName}} = {{GetRequiredControlCheckInTypeScript(property)}};
+            const {{ruleName}} = {{GetRequiredControlCheckInTypeScript(rule.Property)}};
 """);
                 ruleNames.Add(ruleName);
                 validationMessages.Add("is mandatory");
                 translationTags.Add("NotEmpty");
             }
 
-            if (rules.Contains("Length"))
+            if (rule.ValidationRuleParts.Any(x => x.Name == "Length"))
             {
-                Match lengthMatch = Regex.Match(rules, @"Length\((\d+),\s*(\d+)\)");
-                Match singleLengthMatch = Regex.Match(rules, @"Length\((\d+)\)");
+                SpiderValidationRulePart rulePart = rule.ValidationRuleParts.SingleOrDefault(x => x.Name == "Length");
+                Match lengthMatch = Regex.Match(rulePart.MethodParametersBody, @"(\d+),\s*(\d+)");
+                Match singleLengthMatch = Regex.Match(rulePart.MethodParametersBody, @"(\d+)");
 
                 if (lengthMatch.Success)
                 {
@@ -220,9 +249,9 @@ export class ValidatorServiceGenerated {
                     string min = lengthMatch.Groups[1].Value;
                     string max = lengthMatch.Groups[2].Value;
                     ruleStatements.Add($$"""
-        const min = {{min}};
-        const max = {{max}};
-        const {{ruleName}} = (value?.length >= min && value?.length <= max) || (typeof value === 'undefined' || value === null || value === '');
+            const min = {{min}};
+            const max = {{max}};
+            const {{ruleName}} = (value?.length >= min && value?.length <= max) || (typeof value === 'undefined' || value === null || value === '');
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must have a minimum of ${{min}} and a maximum of ${{max}} characters");
@@ -234,8 +263,8 @@ export class ValidatorServiceGenerated {
                     string ruleName = "stringSingleLengthRule";
                     string length = singleLengthMatch.Groups[1].Value;
                     ruleStatements.Add($$"""
-        const length = {{length}};
-        const {{ruleName}} = (value?.length == length) || (typeof value === 'undefined' || value === null || value === '');
+            const length = {{length}};
+            const {{ruleName}} = (value?.length == length) || (typeof value === 'undefined' || value === null || value === '');
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must be ${{length}} character long");
@@ -244,69 +273,65 @@ export class ValidatorServiceGenerated {
                 }
             }
 
-            if (rules.Contains("LessThanOrEqualTo"))
+            if (rule.ValidationRuleParts.Any(x => x.Name == "LessThanOrEqualTo"))
             {
-                Match rangeMatch = Regex.Match(rules, @"LessThanOrEqualTo\((\d+)\)");
+                SpiderValidationRulePart rulePart = rule.ValidationRuleParts.SingleOrDefault(x => x.Name == "LessThanOrEqualTo");
 
-                if (rangeMatch.Success)
-                {
-                    string ruleName = "numberMaxRangeRule";
-                    string max = rangeMatch.Groups[1].Value;
-                    ruleStatements.Add($$"""
-        const max = {{max}};
-        const {{ruleName}} = (value <= max) || (typeof value === 'undefined' || value === null || value === '');
+                string ruleName = "numberMaxRangeRule";
+                string max = rulePart.MethodParametersBody;
+                ruleStatements.Add($$"""
+            const max = {{max}};
+            const {{ruleName}} = (value <= max) || (typeof value === 'undefined' || value === null || value === '');
 """);
-                    ruleNames.Add(ruleName);
-                    validationMessages.Add($"must be less or equal to ${{max}}");
-                    translocoVariables.AddRange(["max"]);
-                    translationTags.Add("NumberRangeMax");
-                }
+                ruleNames.Add(ruleName);
+                validationMessages.Add($"must be less or equal to ${{max}}");
+                translocoVariables.AddRange(["max"]);
+                translationTags.Add("NumberRangeMax");
             }
 
-            if (rules.Contains("GreaterThanOrEqualTo"))
+            if (rule.ValidationRuleParts.Any(x => x.Name == "GreaterThanOrEqualTo"))
             {
-                Match rangeMatch = Regex.Match(rules, @"GreaterThanOrEqualTo\((\d+)\)");
+                SpiderValidationRulePart rulePart = rule.ValidationRuleParts.SingleOrDefault(x => x.Name == "GreaterThanOrEqualTo");
 
-                if (rangeMatch.Success)
-                {
-                    string ruleName = "numberMinRangeRule";
-                    string min = rangeMatch.Groups[1].Value;
-                    ruleStatements.Add($$"""
-        const min = {{min}};
-        const {{ruleName}} = (value >= min) || (typeof value === 'undefined' || value === null || value === '');
+                string ruleName = "numberMinRangeRule";
+                string min = rulePart.MethodParametersBody;
+                ruleStatements.Add($$"""
+            const min = {{min}};
+            const {{ruleName}} = (value >= min) || (typeof value === 'undefined' || value === null || value === '');
 """);
-                    ruleNames.Add(ruleName);
-                    validationMessages.Add($"must be greater or equal to ${{min}}");
-                    translocoVariables.AddRange(["min"]);
-                    translationTags.Add("NumberRangeMin");
-                }
+                ruleNames.Add(ruleName);
+                validationMessages.Add($"must be greater or equal to ${{min}}");
+                translocoVariables.AddRange(["min"]);
+                translationTags.Add("NumberRangeMin");
             }
 
-            if (rules.Contains("NotHaveWhiteSpace"))
+            if (rule.ValidationRuleParts.Any(x => x.Name == "NotHaveWhiteSpace"))
             {
                 string ruleName = "notHaveWhiteSpaceRule";
                 ruleStatements.Add($$"""
-        const {{ruleName}} = !/\\s/.test(value);
+            const {{ruleName}} = !/\\s/.test(value);
 """);
                 ruleNames.Add(ruleName);
                 validationMessages.Add("must not contain whitespace");
                 translationTags.Add("NotHaveWhiteSpace");
             }
 
-            if (rules.Contains("EmailAddress"))
+            if (rule.ValidationRuleParts.Any(x => x.Name == "EmailAddress"))
             {
                 string ruleName = "emailAddressRule";
                 ruleStatements.Add($$"""
-        const {{ruleName}} = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+            const {{ruleName}} = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 """);
                 ruleNames.Add(ruleName);
                 validationMessages.Add("must be a valid email address");
                 translationTags.Add("EmailAddress");
             }
 
-            if (rules.Contains("PrecisionScale"))
+            if (rule.ValidationRuleParts.Any(x => x.Name == "PrecisionScale"))
             {
-                Match precisionScaleMatch = Regex.Match(rules, @"PrecisionScale\((\d+),\s*(\d+),\s*(true|false)\)");
+                SpiderValidationRulePart rulePart = rule.ValidationRuleParts.SingleOrDefault(x => x.Name == "PrecisionScale");
+                Match precisionScaleMatch = Regex.Match(rulePart.MethodParametersBody, @"(\d+),\s*(\d+),\s*(true|false)");
+
                 if (precisionScaleMatch.Success)
                 {
                     string ruleName = "precisionScaleRule";
@@ -315,10 +340,10 @@ export class ValidatorServiceGenerated {
                     string ignoreTrailingZeros = precisionScaleMatch.Groups[3].Value;
 
                     ruleStatements.Add($$"""
-        const precision = {{precision}};
-        const scale = {{scale}};
-        const ignoreTrailingZeros = {{ignoreTrailingZeros}};
-        const {{ruleName}} = validatePrecisionScale(value, precision, scale, ignoreTrailingZeros) || (typeof value === 'undefined' || value === null || value === '');
+            const precision = {{precision}};
+            const scale = {{scale}};
+            const ignoreTrailingZeros = {{ignoreTrailingZeros}};
+            const {{ruleName}} = validatePrecisionScale(value, precision, scale, ignoreTrailingZeros) || (typeof value === 'undefined' || value === null || value === '');
 """);
                     ruleNames.Add(ruleName);
                     validationMessages.Add($"must have a total number of ${{precision}} digits, and the number of digits after the decimal point must not exceed ${{scale}}");
@@ -340,65 +365,7 @@ export class ValidatorServiceGenerated {
             }
         }
 
-        public static string GetAngularValidationCases(string DTOClassName, string validationClassConstructorBody)
-        {
-            string validationClassName = DTOClassName.Replace("DTO", "");
-
-            List<string> validationRulePropNames = ParseValidationParameters(validationClassConstructorBody);
-
-            StringBuilder validationCases = new StringBuilder();
-
-            foreach (string validationRulePropName in validationRulePropNames)
-            {
-                string validationRulePropNameFirstLower = AdjustManyToOnePropertyNameForValidation(validationRulePropName);
-
-                validationCases.AppendLine($$"""
-        case '{{validationRulePropNameFirstLower}}{{validationClassName}}':
-            return this.{{validationRulePropNameFirstLower}}{{validationClassName}}Validator(formControl);
-""");
-            }
-
-            return validationCases.ToString();
-        }
-
-        private static string AdjustManyToOnePropertyNameForValidation(string validationRulePropName)
-        {
-            string validationRulePropNameFirstLower = validationRulePropName.FirstCharToLower();
-
-            //if (validationRulePropNameFirstLower.EndsWith("Id") && validationRulePropNameFirstLower.Length > 2)
-            //{
-            //    validationRulePropNameFirstLower = validationRulePropNameFirstLower.Substring(0, validationRulePropNameFirstLower.Length - 2);
-            //}
-            //else if (validationRulePropNameFirstLower.EndsWith("DisplayName"))
-            //{
-            //    validationRulePropNameFirstLower = validationRulePropNameFirstLower.Replace("DisplayName", "");
-            //}
-
-            return validationRulePropNameFirstLower;
-        }
-
-        private static string GetValidationClassConstructorBody(List<SpiderProperty> DTOProperties, List<SpiderAttribute> DTOAttributes, SpiderClass entityClass, List<SpiderClass> entityClasses)
-        {
-            return $"{string.Join("\n\t\t\t", FluentValidationGenerator.GetValidationRules(DTOProperties, DTOAttributes, entityClass, entityClasses))}";
-        }
-
-        /// <summary>
-        /// RuleFor(x => x.Username).....; -> Username
-        /// </summary>
-        /// <param name="input">Body of the fluent validation DTO constructor</param>
-        /// <returns></returns>
-        static List<string> ParseValidationParameters(string body)
-        {
-            List<string> parameters = new List<string>();
-            string pattern = @"x\.([a-zA-Z0-9_]+)";
-
-            foreach (Match match in Regex.Matches(body, pattern))
-            {
-                parameters.Add(match.Groups[1].Value);
-            }
-
-            return parameters;
-        }
+        #endregion
 
     }
 }

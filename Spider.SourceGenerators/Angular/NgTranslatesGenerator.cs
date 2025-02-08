@@ -59,6 +59,9 @@ namespace Spider.SourceGenerators.Angular
             if (classes.Count <= 1) 
                 return;
 
+            if (callingProjectDirectory.Contains(".WebAPI") == false)
+                return;
+
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\services\translates
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", @"\Angular\src\app\business\services\translates");
 

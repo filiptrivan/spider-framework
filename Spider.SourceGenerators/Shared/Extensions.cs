@@ -400,6 +400,11 @@ namespace Spider.SourceGenerators.Shared
             return result.ToString();
         }
 
+        public static List<string> Split(this string input, string splitter)
+        {
+            return input.Split([splitter], StringSplitOptions.None).ToList();
+        }
+
         #endregion
 
         #region IsType
@@ -795,7 +800,7 @@ namespace Spider.SourceGenerators.Shared
             int index = source.IndexOf(keyForReplace, StringComparison.Ordinal);
 
             if (index == -1)
-                return source;
+                throw new InvalidOperationException();
 
             // Get the part before the key and append the new value.
             return $"{source.Substring(0, index)}{valueToInsert}";

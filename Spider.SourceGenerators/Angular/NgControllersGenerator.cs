@@ -60,6 +60,9 @@ namespace Spider.SourceGenerators.Angular
             if (classes.Count <= 1)
                 return; // FT: one because of config settings
 
+            if (callingProjectDirectory.Contains(".WebAPI") == false)
+                return;
+
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\services\api\api.service.generated.ts
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", @"\Angular\src\app\business\services\api\api.service.generated.ts");
 

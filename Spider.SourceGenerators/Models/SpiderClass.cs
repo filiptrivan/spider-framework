@@ -27,7 +27,6 @@ namespace Spider.SourceGenerators.Models
 
         public List<SpiderProperty> Properties { get; set; } = new();
 
-
         public List<SpiderAttribute> Attributes { get; set; } = new();
 
         public List<SpiderMethod> Methods { get; set; } = new();
