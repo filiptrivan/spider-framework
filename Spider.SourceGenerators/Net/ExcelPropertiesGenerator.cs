@@ -22,7 +22,7 @@ namespace Spider.SourceGenerators.Net
             //                Debugger.Launch();
             //            }
             //#endif
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
                     NamespaceExtensionCodes.DTO,
@@ -44,20 +44,20 @@ namespace Spider.SourceGenerators.Net
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectClasses, SourceProductionContext context)
         {
-            if (classes.Count <= 1) return;
+            if (classes.Count <= 1) 
+                return;
 
             List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
             List<SpiderClass> allClasses = currentProjectClasses.Concat(referencedProjectClasses).ToList();
             List<SpiderClass> currentProjectDTOClasses = Helpers.GetDTOClasses(currentProjectClasses, allClasses);
 
-            ClassDeclarationSyntax mapperClass = Helpers.GetManualyWrittenMapperClass(classes);
+            SpiderClass customMapperClass = Helpers.GetManualyWrittenMapperClass(currentProjectClasses);
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
-            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(classes[0]);
-
-            string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Spider.Security
-            string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
+            string namespaceValue = currentProjectClasses[0].Namespace;
+            string basePartOfNamespace = Helpers.GetBasePartOfNamespace(namespaceValue);
+            string projectName = Helpers.GetProjectName(namespaceValue);
 
             sb.AppendLine($$"""
 using Spider.Shared.Excel.DTO;
@@ -74,12 +74,15 @@ namespace {{basePartOfNamespace}}.ExcelProperties
         public static string[] GetHeadersToExclude({{DTOClassGroup.Key}} _)
         {
 """);
-                IList<string> propertyNames = new List<string>();
 
-                foreach (SpiderProperty prop in GetPropsToExcludeFromExcelExport(DTOClassGroup.Key, currentProjectDTOClasses, mapperClass))
-                {
-                    propertyNames.Add($"\"{prop.Name}\"");
-                }
+                List<SpiderProperty> DTOProperties = new();
+                foreach (SpiderClass DTOClass in DTOClassGroup)
+                    DTOProperties.AddRange(DTOClass.Properties);
+
+                List<string> propertyNames = new();
+
+                foreach (string propertyName in GetPropertiesToExcludeFromExcelExport(DTOClassGroup.Key, DTOProperties, customMapperClass))
+                    propertyNames.Add($"\"{propertyName}\"");
 
                 sb.AppendLine($$"""
             return new string[] { {{string.Join(", ", propertyNames)}} };
@@ -94,44 +97,33 @@ namespace {{basePartOfNamespace}}.ExcelProperties
             context.AddSource("ExcelPropertiesToExclude.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
-        private static List<SpiderProperty> GetPropsToExcludeFromExcelExport(string className, IList<SpiderClass> DTOClasses, ClassDeclarationSyntax mapperClass)
+        private static List<string> GetPropertiesToExcludeFromExcelExport(string DTOClassName, List<SpiderProperty> DTOProperties, SpiderClass customMapperClass)
         {
-            List<SpiderProperty> DTOClassProperties = new List<SpiderProperty>();
+            List<string> DTOClassPropertiesToExclude = new();
 
-            // FT: I dont know why did i add here this, if im overriding it down.
-            //List<SpiderClass> pairDTOClasses = DTOClasses.Where(x => x.Name == className).ToList(); // There will be 2, partial generated and partial manual
-            //foreach (SpiderClass classDTO in pairDTOClasses) // It's only two here
-            //    DTOClassProperties.AddRange(classDTO.Properties);
+            SpiderMethod excelMethod = customMapperClass.Methods
+                .Where(x => x.ReturnType == DTOClassName && x.Name == "ExcelProjectTo")
+                .SingleOrDefault();
 
-            MethodDeclarationSyntax excelMethod = mapperClass?.Members.OfType<MethodDeclarationSyntax>()
-               .Where(x => x.ReturnType.ToString() == className && x.Identifier.ToString() == $"{Helpers.MethodNameForExcelExportMapping}")
-               .SingleOrDefault();
+            List<SpiderAttribute> excludePropertyAttributes = new();
 
-            IList<SpiderAttribute> excludePropAttributes = new List<SpiderAttribute>();
-
-            DTOClassProperties = DTOClassProperties // excluding enumerables from the excel
+            DTOClassPropertiesToExclude = DTOProperties // FT: Excluding Enumerables from the excel
                 .Where(prop => prop.Type.IsEnumerable())
+                .Select(x => x.Name)
                 .ToList();
 
-            // ubacivanje atributa gde vidimo koje propertije treba da preskocimo u Excelu
             if (excelMethod != null)
             {
-                foreach (AttributeListSyntax item in excelMethod.AttributeLists)
+                foreach (SpiderAttribute attribute in excelMethod.Attributes)
                 {
-                    foreach (AttributeSyntax attribute in item.Attributes)
+                    if (attribute.Name == "MapperIgnoreTarget")
                     {
-                        string attributeName = attribute.Name.ToString();
-                        if (attributeName != null && attributeName == $"{Helpers.MapperlyIgnoreAttribute}")
-                        {
-                            string propNameInsideBrackets = attribute.ArgumentList.Arguments.FirstOrDefault().ToString().Split('.').Last().Replace(")", "").Replace("\"", "");
-                            //excludePropAttributes.Add(new SpiderAttribute() { Name = attribute.Name.ToString(), PropNameInsideBrackets = propNameInsideBrackets }); // FT: i don't need this if i don't know which prop type it is
-                            DTOClassProperties.Add(new SpiderProperty { Name = propNameInsideBrackets });
-                        }
+                        DTOClassPropertiesToExclude.Add(attribute.Value);
                     }
                 }
             }
 
-            return DTOClassProperties;
+            return DTOClassPropertiesToExclude;
         }
     }
 }

@@ -24,7 +24,7 @@ namespace Spider.SourceGenerators.Net
 //                Debugger.Launch();
 //            }
 //#endif
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
                 });
@@ -88,7 +88,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static List<string> GetBusinessServiceMethods(List<SpiderClass> entityClasses, List<SpiderClass> allEntityClasses, string projectName)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderClass entity in entityClasses)
             {
@@ -336,7 +336,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static List<string> GetPopulateDTOWithBlobParts(List<SpiderProperty> propertiesEntityClass)
         {
-            List<string> blobParts = new List<string>();
+            List<string> blobParts = new();
 
             List<SpiderProperty> blobProperies = Helpers.GetBlobProperties(propertiesEntityClass);
 
@@ -465,7 +465,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static List<string> GetOrderedOneToManyUpdateVariables(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
             {
@@ -481,7 +481,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static List<string> GetOrderedOneToManySaveBodyDTOVariables(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
             {
@@ -497,7 +497,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static List<string> GetOrderedOneToManyUpdateMethods(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
             {
@@ -552,7 +552,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static List<string> GetManyToManyMultiControlTypesUpdateMethods(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties.Where(x => x.HasExcludeServiceMethodsFromGenerationAttribute() == false))
             {
@@ -570,7 +570,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static List<string> GetSimpleManyToManyTableLazyLoad(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties)
             {
@@ -591,7 +591,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static List<string> GetSimpleManyToManyTableLazyLoadGetAllQueryHook(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties)
             {
@@ -615,7 +615,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         static List<string> GetManyToOneInstancesForSave(SpiderClass entityClass, List<SpiderClass> allEntityClasses)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             List<SpiderProperty> properties = entityClass.Properties
                 .Where(prop => prop.Type.IsManyToOneType())
@@ -663,7 +663,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static List<string> GetNonActiveDeleteBlobMethods(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             List<SpiderProperty> blobProperies = Helpers.GetBlobProperties(entity.Properties);
 
@@ -679,7 +679,7 @@ namespace {{basePartOfTheNamespace}}.Services
 
         private static List<string> GetUploadBlobMethods(SpiderClass entity, List<SpiderClass> allEntityClasses)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             string entityIdType = entity.GetIdType(allEntityClasses);
 
@@ -733,7 +733,7 @@ namespace {{basePartOfTheNamespace}}.Services
             if (entity.IsAbstract || entity.IsReadonlyObject())
                 return new List<string>();
 
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             result.Add(GetDeleteEntityData(entity, allEntities));
 
@@ -803,7 +803,7 @@ namespace {{basePartOfTheNamespace}}.Services
             if (deleteIterator > 5000)
                 return new List<string> { "You made cascade delete infinite loop." };
 
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             List<SpiderProperty> manyToOneRequiredProperties = Helpers.GetManyToOneRequiredProperties(entity.Name, allEntities);
 
@@ -851,7 +851,7 @@ namespace {{basePartOfTheNamespace}}.Services
         {
             string entityIdType = entity.GetIdType(entities);
 
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty oneToManyProperty in entity.Properties.Where(prop => prop.Type.IsOneToManyType())) // List<Role> Roles
             {

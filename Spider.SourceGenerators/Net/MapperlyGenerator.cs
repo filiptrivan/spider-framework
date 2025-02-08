@@ -22,30 +22,40 @@ namespace Spider.SourceGenerators.Net
             //                Debugger.Launch();
             //            }
             //#endif
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
                     NamespaceExtensionCodes.DataMappers,
                 });
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-                static (spc, source) => Execute(source, spc));
+            IncrementalValueProvider<List<SpiderClass>> referencedProjectClasses = Helpers.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.DataMappers,
+                });
+
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectClasses, SourceProductionContext context)
         {
             if (classes.Count <= 1) return;
 
-            List<ClassDeclarationSyntax> entityClasses = Helpers.GetEntityClasses(classes);
+            List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
+            List<SpiderClass> allClasses = currentProjectClasses.Concat(referencedProjectClasses).ToList();
+            List<SpiderClass> currentProjectEntities = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
 
-            ClassDeclarationSyntax mapperClass = Helpers.GetManualyWrittenMapperClass(classes);
+            SpiderClass customMapperClass = Helpers.GetManualyWrittenMapperClass(currentProjectClasses);
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
-            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(classes[0]);
-
-            string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Spider.Security
-            string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
+            string namespaceValue = currentProjectEntities[0].Namespace;
+            string basePartOfNamespace = Helpers.GetBasePartOfNamespace(namespaceValue);
+            string projectName = Helpers.GetProjectName(namespaceValue);
 
             sb.AppendLine($$"""
 using Mapster;
@@ -58,19 +68,19 @@ namespace {{basePartOfNamespace}}.DataMappers
     public static partial class Mapper
     {
 """);
-            foreach (ClassDeclarationSyntax entityClass in entityClasses)
+            foreach (SpiderClass entity in currentProjectEntities)
             {
                 sb.AppendLine($$"""
 
-        #region {{entityClass.Identifier.Text}}
+        #region {{entity.Name}}
 
-{{(entityClass.IsAbstract() ? "" : GetMapperToEntity($"{entityClass.Identifier.Text}DTOToEntityConfig", mapperClass, entityClass, entityClasses))}}
+{{(entity.IsAbstract ? "" : GetMapperToEntity($"{entity.Name}DTOToEntityConfig", customMapperClass, entity, currentProjectEntities))}}
 
-{{GetMapperToDTO($"{entityClass.Identifier.Text}ToDTOConfig", mapperClass, entityClass, entityClasses)}}
+{{GetMapperToDTO($"{entity.Name}ToDTOConfig", customMapperClass, entity, currentProjectEntities)}}
 
-{{GetMapperToDTO($"{entityClass.Identifier.Text}ProjectToConfig", mapperClass, entityClass, entityClasses)}}
+{{GetMapperToDTO($"{entity.Name}ProjectToConfig", customMapperClass, entity, currentProjectEntities)}}
 
-{{GetMapperToDTO($"{entityClass.Identifier.Text}ExcelProjectToConfig", mapperClass, entityClass, entityClasses)}}
+{{GetMapperToDTO($"{entity.Name}ExcelProjectToConfig", customMapperClass, entity, currentProjectEntities)}}
 
         #endregion
 
@@ -87,15 +97,15 @@ namespace {{basePartOfNamespace}}.DataMappers
 
         #region To Entity
 
-        public static string GetMapperToEntity(string methodName, ClassDeclarationSyntax mapperClass, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        public static string GetMapperToEntity(string methodName, SpiderClass customMapperClass, SpiderClass entity, List<SpiderClass> entities)
         {
-            if (mapperClass == null)
+            if (customMapperClass == null)
                 return "You didn't define DataMappers";
 
-            if (HasNonGeneratedPair(mapperClass, methodName))
+            if (HasCustomPair(customMapperClass, methodName))
                 return "";
 
-            List<string> mappers = GetFromDTOToEntityConfig(entityClass, entityClasses);
+            List<string> mappers = GetFromDTOToEntityConfig(entity, entities);
 
             string result = $$"""
         public static TypeAdapterConfig {{methodName}}()
@@ -103,8 +113,8 @@ namespace {{basePartOfNamespace}}.DataMappers
             TypeAdapterConfig config = new TypeAdapterConfig();
 
             config
-                .NewConfig<{{entityClass.Identifier.Text}}DTO, {{entityClass.Identifier.Text}}>()
-                {{string.Join("\n\t\t\t\t", mappers)}}
+                .NewConfig<{{entity.Name}}DTO, {{entity.Name}}>()
+{{string.Join("\n", mappers)}}
                 ;
 
             return config;
@@ -114,22 +124,16 @@ namespace {{basePartOfNamespace}}.DataMappers
             return result;
         }
 
-        private static List<string> GetFromDTOToEntityConfig(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        private static List<string> GetFromDTOToEntityConfig(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
-            List<SpiderProperty> entityProperties = Helpers.GetAllPropertiesOfTheClass(entityClass, entityClasses, new List<SpiderClass>());
-
-            foreach (SpiderProperty entityProp in entityProperties)
+            foreach (SpiderProperty property in entity.Properties)
             {
-                string entityPropType = entityProp.Type;
-                string entityPropName = entityProp.Name;
-
-                if (entityPropType == "byte[]")
-                    result.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName} == null ? null : Convert.FromBase64String(src.{entityPropName}))");
-
-                //if (Helper.GetGenericBaseType(entityClass) == null && entityPropName.EndsWith("Id")) // FT: I don't know why i did this for M2M
-                //    result.Add($".Ignore(dest => dest.{entityPropName})");
+                if (property.Type == "byte[]")
+                    result.Add($$"""
+                .Map(dest => dest.{{property.Name}}, src => src.{{property.Name}} == null ? null : Convert.FromBase64String(src.{{property.Name}}))
+""");
             }
 
             return result;
@@ -139,15 +143,15 @@ namespace {{basePartOfNamespace}}.DataMappers
 
         #region To DTO
 
-        public static string GetMapperToDTO(string methodName, ClassDeclarationSyntax mapperClass, ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        public static string GetMapperToDTO(string methodName, SpiderClass mapperClass, SpiderClass entity, List<SpiderClass> entities)
         {
             if (mapperClass == null)
                 return "You didn't define DataMappers";
 
-            if (HasNonGeneratedPair(mapperClass, methodName))
+            if (HasCustomPair(mapperClass, methodName))
                 return "";
 
-            List<string> manyToOneMappers = GetConfigForManyToOneClass(entityClass, entityClasses);
+            List<string> manyToOneMappers = GetConfigForManyToOneClass(entity, entities);
 
             return $$"""
         public static TypeAdapterConfig {{methodName}}()
@@ -155,7 +159,7 @@ namespace {{basePartOfNamespace}}.DataMappers
             TypeAdapterConfig config = new TypeAdapterConfig();
 
             config
-                .NewConfig<{{entityClass.Identifier.Text}}, {{entityClass.Identifier.Text}}DTO>()
+                .NewConfig<{{entity.Name}}, {{entity.Name}}DTO>()
                 {{string.Join("\n\t\t\t\t", manyToOneMappers)}}
                 ;
 
@@ -164,62 +168,48 @@ namespace {{basePartOfNamespace}}.DataMappers
 """;
         }
 
-        public static List<string> GetConfigForManyToOneClass(ClassDeclarationSyntax entityClass, IList<ClassDeclarationSyntax> entityClasses)
+        public static List<string> GetConfigForManyToOneClass(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<SpiderProperty> entityProperties = Helpers.GetAllPropertiesOfTheClass(entityClass, entityClasses, new List<SpiderClass>());
+            List<string> manyToOneAttributeMappers = new();
 
-            List<string> manyToOneAttributeMappers = new List<string>();
-
-            foreach (SpiderProperty entityProp in entityProperties)
+            foreach (SpiderProperty property in entity.Properties)
             {
-                string entityPropType = entityProp.Type;
-                string entityPropName = entityProp.Name;
-
-                if (entityPropType.IsManyToOneType())
+                if (property.Type.IsManyToOneType())
                 {
-                    ClassDeclarationSyntax manyToOneEntityClass = entityClasses
-                        .Where(x => x.Identifier.Text == entityPropType)
+                    SpiderClass manyToOneEntity = entities
+                        .Where(x => x.Name == property.Type)
                         .SingleOrDefault();
 
-                    if (manyToOneEntityClass == null)
+                    if (manyToOneEntity == null)
                         continue;
 
-                    string displayNamePropOfManyToOne = Helpers.GetDisplayNamePropForClass(manyToOneEntityClass, entityClasses);
-                    displayNamePropOfManyToOne = displayNamePropOfManyToOne.Replace(".ToString()", "");
+                    string manyToOneEntityDisplayName = Helpers.GetDisplayNameProperty(manyToOneEntity);
+                    manyToOneEntityDisplayName = manyToOneEntityDisplayName.Replace(".ToString()", "");
 
-                    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}Id, src => src.{entityPropName}.Id)"); // "dest.TierId", "src.Tier.Id"
-                    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}DisplayName, src => src.{entityPropName}.{displayNamePropOfManyToOne})"); // "dest.TierDisplayName", "src.Tier.Name"
+                    manyToOneAttributeMappers.Add($".Map(dest => dest.{property.Name}Id, src => src.{property.Name}.Id)"); // "dest.TierId", "src.Tier.Id"
+                    manyToOneAttributeMappers.Add($".Map(dest => dest.{property.Name}DisplayName, src => src.{property.Name}.{manyToOneEntityDisplayName})"); // "dest.TierDisplayName", "src.Tier.Name"
                 }
 
-                if (entityPropType.IsOneToManyType())
+                if (property.Type.IsOneToManyType())
                 {
-                    string entityPropTypeInsideListBrackets = Helpers.ExtractTypeFromGenericType(entityPropType);
+                    SpiderClass extractedEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
 
-                    ClassDeclarationSyntax enumerableEntityClass = entityClasses
-                        .Where(x => x.Identifier.Text == entityPropTypeInsideListBrackets)
-                        .SingleOrDefault();
-
-                    if (enumerableEntityClass == null)
+                    if (extractedEntity == null)
                         continue;
 
-                    string displayNamePropOfEnumerable = Helpers.GetDisplayNamePropForClass(enumerableEntityClass, entityClasses);
-                    displayNamePropOfEnumerable = displayNamePropOfEnumerable.Replace(".ToString()", "");
+                    string extractedEntityDisplayName = Helpers.GetDisplayNameProperty(extractedEntity);
+                    extractedEntityDisplayName = extractedEntityDisplayName.Replace(".ToString()", "");
 
-                    if (entityProp.Attributes.Any(x => x.Name == "GenerateCommaSeparatedDisplayName"))
+                    if (property.HasGenerateCommaSeparatedDisplayNameAttribute())
                     {
-                        // FT: eg.                      ".Map(dest => dest.SegmentationItemsCommaSeparated, src => string.Join(", ", src.CheckedSegmentationItems.Select(x => x.Name)))"
-                        manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}CommaSeparated, src => string.Join(\", \", src.{entityPropName}.Select(x => x.{displayNamePropOfEnumerable})))");
+                        // FT: eg. ".Map(dest => dest.SegmentationItemsCommaSeparated, src => string.Join(", ", src.CheckedSegmentationItems.Select(x => x.Name)))"
+                        manyToOneAttributeMappers.Add($".Map(dest => dest.{property.Name}CommaSeparated, src => string.Join(\", \", src.{property.Name}.Select(x => x.{extractedEntityDisplayName})))");
                     }
-
-                    //if (entityProp.Attributes.Any(x => x.Name == "IncludeInDTO"))
-                    //{
-                    //    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName}.Adapt<List<{entityPropTypeInsideListBrackets}>>())");
-                    //}
                 }
 
-                if (entityPropType == "byte[]")
+                if (property.Type == "byte[]")
                 {
-                    manyToOneAttributeMappers.Add($".Map(dest => dest.{entityPropName}, src => src.{entityPropName} == null ? null : Convert.ToBase64String(src.{entityPropName}))");
+                    manyToOneAttributeMappers.Add($".Map(dest => dest.{property.Name}, src => src.{property.Name} == null ? null : Convert.ToBase64String(src.{property.Name}))");
                 }
             }
 
@@ -230,11 +220,9 @@ namespace {{basePartOfNamespace}}.DataMappers
 
         #region Helpers
 
-        private static bool HasNonGeneratedPair(ClassDeclarationSyntax mapperClass, string methodName)
+        private static bool HasCustomPair(SpiderClass customMapperClass, string methodName)
         {
-            List<MethodDeclarationSyntax> nonGeneratedMethods = mapperClass?.Members.OfType<MethodDeclarationSyntax>().ToList();
-
-            if (nonGeneratedMethods.Any(x => x.Identifier.Text == methodName))
+            if (customMapperClass.Methods.Any(x => x.Name == methodName))
                 return true;
 
             return false;

@@ -25,19 +25,13 @@ namespace Spider.SourceGenerators.Shared
 {
     public static class Helpers
     {
-        public static readonly string DisplayNameAttribute = "DisplayName";
-        public static readonly string MethodNameForExcelExportMapping = "ExcelMap"; // Change to ExcelProjectTo
-        public static readonly string MapperlyIgnoreAttribute = "MapperIgnoreTarget";
+        public static string DisplayNameAttribute { get; set; } = "DisplayName";
+        public static string BusinessObject { get; set; } = "BusinessObject";
+        public static string ReadonlyObject { get; set; } = "ReadonlyObject";
+        public static string EntitiesNamespaceEnding { get; set; } = "Entities";
+        public static string DTONamespaceEnding { get; set; } = "DTO";
 
-        public static readonly string BusinessObject = "BusinessObject";
-        public static readonly string ReadonlyObject = "ReadonlyObject";
-
-        public static readonly string EntitiesNamespaceEnding = "Entities";
-        public static readonly string DTONamespaceEnding = "DTO";
-        public static readonly string ValidationNamespaceEnding = "ValidationRules";
-        public static readonly string MapperNamespaceEnding = "DataMappers";
-
-        public static readonly List<string> BaseClassNames = new List<string>
+        public static List<string> BaseClassNames { get; set; } = new()
         {
             "TableFilter",
             "TableResponse",
@@ -414,7 +408,7 @@ namespace Spider.SourceGenerators.Shared
 
         #region Syntax and Semantic targets
 
-        public static IncrementalValuesProvider<ClassDeclarationSyntax> GetClassInrementalValuesProvider(SyntaxValueProvider syntaxValueProvider, List<NamespaceExtensionCodes> namespaceExtensions)
+        public static IncrementalValuesProvider<ClassDeclarationSyntax> GetClassIncrementalValuesProvider(SyntaxValueProvider syntaxValueProvider, List<NamespaceExtensionCodes> namespaceExtensions)
         {
             return syntaxValueProvider
                 .CreateSyntaxProvider(
@@ -1239,7 +1233,7 @@ namespace Spider.SourceGenerators.Shared
         /// </summary>
         public static List<string> GetAngularImports(List<SpiderProperty> properties, string projectName = null, bool generateClassImports = false, string importPath = null)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty prop in properties)
             {
@@ -1382,43 +1376,17 @@ namespace Spider.SourceGenerators.Shared
             return enumMembers;
         }
 
-        public static List<string> GetPermissionCodesForEntites(List<ClassDeclarationSyntax> entityClasses)
+        public static List<string> GetPermissionCodesForEntites(List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
-            foreach (ClassDeclarationSyntax c in entityClasses)
+            foreach (SpiderClass entity in entities)
             {
-                // FT: Maybe continue on readonly properties
-                string className = c.Identifier.Text;
-                result.Add($"Read{className}");
-                result.Add($"Edit{className}");
-                result.Add($"Insert{className}");
-                result.Add($"Delete{className}");
+                result.Add($"Read{entity.Name}");
+                result.Add($"Edit{entity.Name}");
+                result.Add($"Insert{entity.Name}");
+                result.Add($"Delete{entity.Name}");
             }
-
-            if (entityClasses.Select(x => x.Identifier.Text).Contains("UserExtended") == false) // FT: Hack for security project
-            {
-                result.Add($"ReadUserExtended");
-                result.Add($"EditUserExtended");
-                result.Add($"InsertUserExtended");
-                result.Add($"DeleteUserExtended");
-            }
-
-            if (entityClasses.Select(x => x.Identifier.Text).Contains("Role") == false) // FT: Hack for other projects
-            {
-                result.Add($"ReadRole");
-                result.Add($"EditRole");
-                result.Add($"InsertRole");
-                result.Add($"DeleteRole");
-            }
-
-            //if (entityClasses.Select(x => x.Identifier.Text).Contains("Notification") == false) // FT: Hack for other projects
-            //{
-            //    result.Add($"ReadNotification");
-            //    result.Add($"EditNotification");
-            //    result.Add($"InsertNotification");
-            //    result.Add($"DeleteNotification");
-            //}
 
             return result;
         }
@@ -1430,31 +1398,11 @@ namespace Spider.SourceGenerators.Shared
         /// <summary>
         /// Getting non generated partial mapper class.
         /// </summary>
-        public static ClassDeclarationSyntax GetManualyWrittenMapperClass(IList<ClassDeclarationSyntax> classes)
+        public static SpiderClass GetManualyWrittenMapperClass(List<SpiderClass> classes)
         {
-            ClassDeclarationSyntax mapperClass = classes
-                .Where(x =>
-                {
-                    string namespaceName = x.Ancestors().OfType<NamespaceDeclarationSyntax>()
-                        .Select(ns => ns.Name.ToString())
-                        .FirstOrDefault(ns => ns.EndsWith($".{MapperNamespaceEnding}"));
-
-                    List<SpiderAttribute> classAttributes = GetAllAttributesOfTheClass(x, classes, new List<SpiderClass>());
-
-                    bool hasCustomMapperAttribute = classAttributes.Any(x => x.Name == "CustomMapper");
-
-                    if (namespaceName != null && hasCustomMapperAttribute)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                })
-                .SingleOrDefault(); // FT: It should allways be only one
-
-            return mapperClass;
+            return classes
+                .Where(x => x.Namespace == ".DataMappers" && x.Attributes.Any(x => x.Name == "CustomMapper"))
+                .SingleOrDefault(); // FT: It should allways be only one or none
         }
 
         #endregion

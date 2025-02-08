@@ -65,8 +65,8 @@ namespace Spider.SourceGenerators.Angular
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\services\translates
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", @"\Angular\src\app\business\services\translates");
 
-            StringBuilder sbClassNames = new StringBuilder();
-            StringBuilder sbLabels = new StringBuilder();
+            StringBuilder sbClassNames = new();
+            StringBuilder sbLabels = new();
             List<SpiderProperty> DTOProperties = new List<SpiderProperty>();
 
             referencedClassesDTO = referencedClassesDTO.OrderBy(x => x.Name).ToList();
@@ -132,7 +132,7 @@ export class TranslateLabelsGeneratedService {
 
         private static List<string> GetCasesForLabelTranslate(List<SpiderProperty> DTOProperties)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
             
             foreach (SpiderProperty DTOProperty in DTOProperties)
             {
@@ -161,7 +161,7 @@ export class TranslateLabelsGeneratedService {
 
         private static List<string> GetCasesForClassNameTranslate(IList<SpiderClass> DTOclasses)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (string className in DTOclasses.DistinctBy(x => x.Name).Select(x => x.Name.Replace("DTO", "")))
             {

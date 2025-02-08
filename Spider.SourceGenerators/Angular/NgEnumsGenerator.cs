@@ -32,7 +32,13 @@ namespace Spider.SourceGenerators.Angular
                     transform: static (ctx, _) => Helpers.GetEnumSemanticTargetForGeneration(ctx))
                 .Where(static c => c is not null);
 
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                });
+
+            IncrementalValueProvider<List<SpiderClass>> referencedProjectClasses = Helpers.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
                 });
@@ -41,31 +47,32 @@ namespace Spider.SourceGenerators.Angular
 
             var combined = enumDeclarations.Collect()
                 .Combine(classDeclarations.Collect())
+                .Combine(referencedProjectClasses)
                 .Combine(callingProjectDirectory);
 
             context.RegisterImplementationSourceOutput(combined, static (spc, source) =>
             {
-                var (enumsAndClasses, callingPath) = source;
-                var (enums, classDeclarations) = enumsAndClasses;
+                var (((enums, classDeclarations), referencedProjectClasses), callingPath) = source;
 
-                Execute(enums, classDeclarations, callingPath, spc);
+                Execute(enums, classDeclarations, referencedProjectClasses, callingPath, spc);
             });
         }
 
-        private static void Execute(IList<EnumDeclarationSyntax> enums, IList<ClassDeclarationSyntax> classes, string callingProjectDirectory, SourceProductionContext context)
+        private static void Execute(IList<EnumDeclarationSyntax> enums, IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntityClasses, string callingProjectDirectory, SourceProductionContext context)
         {
             if (enums.Count == 0) 
                 return;
 
-            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(classes[0]);
-            string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
+            List<SpiderClass> currentProjectEntities = Helpers.GetSpiderClasses(classes, referencedProjectEntityClasses);
+            List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntityClasses).ToList();
+            
+            string namespaceValue = currentProjectEntities[0].Namespace;
+            string projectName = Helpers.GetProjectName(namespaceValue);
 
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\enums\{projectName}-enums.ts
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\enums\{projectName.FromPascalToKebabCase()}-enums.generated.ts");
 
-            List<ClassDeclarationSyntax> entityClasses = Helpers.GetEntityClasses(classes);
-
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
             foreach (EnumDeclarationSyntax enume in enums.OrderBy(x => x.Identifier.Text).ToList())
             {
@@ -73,15 +80,15 @@ namespace Spider.SourceGenerators.Angular
                 List<SpiderEnum> enumMembers = Helpers.GetEnumMembers(enume);
                 List<string> angularEnumMemberValuePairs = GetAngularEnumMemberValuePairs(enumMembers);
 
-                List<string> entityPermissionCodes = new List<string>();
+                List<string> permissionCodes = new();
                 if (enumName == "PermissionCodes")
-                    entityPermissionCodes = Helpers.GetPermissionCodesForEntites(entityClasses);
+                    permissionCodes = Helpers.GetPermissionCodesForEntites(currentProjectEntities);
 
                 sb.AppendLine($$"""
 export enum {{enumName}}
 {
     {{string.Join("\n\t", angularEnumMemberValuePairs)}}
-    {{string.Join(",\n\t", entityPermissionCodes)}}
+    {{string.Join(",\n\t", permissionCodes)}}
 }
 
 """);
@@ -92,7 +99,7 @@ export enum {{enumName}}
 
         private static List<string> GetAngularEnumMemberValuePairs(List<SpiderEnum> enumMembers)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderEnum enume in enumMembers)
             {

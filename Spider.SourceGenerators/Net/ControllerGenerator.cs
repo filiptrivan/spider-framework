@@ -59,11 +59,9 @@ namespace Spider.SourceGenerators.Net
             List<SpiderClass> referencedProjectServices = referencedProjectEntityClassesAndServices.Where(x => x.Namespace.EndsWith(".Services")).ToList();
             List<SpiderClass> allEntities = currentProjectClasses.Concat(referencedProjectEntities).ToList();
 
-            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(currentProjectClasses[0].Namespace);
-
-            string basePartOfTheNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. PlayertyLoyals.Infrastructure
-            //string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Infrastructure
-            string projectName = namespacePartsWithoutLastElement[0]; // eg. PlayertyLoyals
+            string namespaceValue = currentProjectClasses[0].Namespace;
+            string basePartOfNamespace = Helpers.GetBasePartOfNamespace(namespaceValue);
+            string appName = namespaceValue.Split('.')[0]; // eg. PlayertyLoyals
 
             string result = $$"""
 using Microsoft.EntityFrameworkCore;
@@ -75,24 +73,24 @@ using Spider.Infrastructure;
 using Spider.Shared.Helpers;
 using Spider.Shared.Attributes;
 using Spider.Shared.Interfaces;
-using {{projectName}}.Shared.Resources;
-using {{projectName}}.Business.Entities;
-using {{projectName}}.Business.DTO;
+using {{appName}}.Shared.Resources;
+using {{appName}}.Business.Entities;
+using {{appName}}.Business.DTO;
 {{string.Join("\n", Helpers.GetEntityClassesUsings(allEntities))}}
 {{string.Join("\n", Helpers.GetDTOClassesUsings(allEntities))}}
 
-namespace {{basePartOfTheNamespace}}.Controllers
+namespace {{basePartOfNamespace}}.Controllers
 {
 {{string.Join("\n\n", GetControllerClasses(referencedProjectEntities, referencedProjectServices))}}
 }
 """;
 
-            context.AddSource($"{projectName}BaseControllers.generated", SourceText.From(result, Encoding.UTF8));
+            context.AddSource($"{appName}BaseControllers.generated", SourceText.From(result, Encoding.UTF8));
         }
 
         public static List<string> GetControllerClasses(List<SpiderClass> referencedProjectEntityClasses, List<SpiderClass> referencedProjectServices)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (IGrouping<string, SpiderClass> referencedProjectEntityGroupedClasses in referencedProjectEntityClasses.GroupBy(x => x.ControllerName))
             {
@@ -135,7 +133,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
 
         private static List<string> GetControllerMethods(List<SpiderClass> referencedProjectEntityGroupedClasses, List<SpiderClass> referencedProjectEntityClasses, string servicesNamespace, string businessServiceName)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderClass referencedProjectEntityClass in referencedProjectEntityGroupedClasses)
             {
@@ -221,7 +219,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
 
         private static List<string> GetManyToManyControllerMethods(SpiderClass referencedProjectEntityClass, List<SpiderClass> referencedProjectEntityClasses, string businessServiceName)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in referencedProjectEntityClass.Properties)
             {
@@ -285,7 +283,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
 
         private static List<string> GetOrderedOneToManyControllerMethods(SpiderClass entity, List<SpiderClass> entities, string businessServiceName)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             List<SpiderProperty> uiOrderedOneToManyProperties = Helpers.GetUIOrderedOneToManyProperties(entity);
 
@@ -336,7 +334,7 @@ namespace {{basePartOfTheNamespace}}.Controllers
 
         private static List<string> GetUploadBlobControllerMethods(SpiderClass entity, List<SpiderClass> entities, string businessServiceName)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             List<SpiderProperty> blobProperies = Helpers.GetBlobProperties(entity.Properties);
 

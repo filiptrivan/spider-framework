@@ -28,7 +28,7 @@ namespace Spider.SourceGenerators.Angular
 //                Debugger.Launch();
 //            }
 //#endif
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Controllers,
                 });
@@ -105,7 +105,7 @@ export class ApiGeneratedService extends ApiSecurityService {
 
         private static List<string> GetAngularHttpMethods(List<SpiderClass> controllerClasses, List<SpiderClass> entities, List<SpiderClass> referencedDTOClasses)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
             HashSet<string> alreadyAddedMethods = new HashSet<string>();
             HashSet<string> entityNamesForGeneration = new HashSet<string>();
 
@@ -142,7 +142,7 @@ export class ApiGeneratedService extends ApiSecurityService {
 
         private static List<string> GetImports(List<SpiderClass> DTOClasses)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             result.Add($$"""
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -285,7 +285,7 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
         private static List<string> GetFormDataAppends(SpiderClass dto)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in dto.Properties)
             {
@@ -315,7 +315,7 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
         private static List<string> GetBaseOrderedOneToManyAngularControllerMethods(SpiderClass entity, List<SpiderClass> entities, HashSet<string> alreadyAddedMethods)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             List<SpiderProperty> uiOrderedOneToManyProperties = Helpers.GetUIOrderedOneToManyProperties(entity);
 
@@ -347,7 +347,7 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
         private static List<string> GetBaseManyToManyAngularControllerMethods(SpiderClass entity, List<SpiderClass> entities, HashSet<string> alreadyAddedMethods)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties)
             {
@@ -446,7 +446,7 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
         private static List<string> GetBaseUploadBlobAngularControllerMethods(SpiderClass entity, List<SpiderClass> entities, HashSet<string> alreadyAddedMethods)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             List<SpiderProperty> blobProperies = Helpers.GetBlobProperties(entity.Properties);
 

@@ -25,35 +25,43 @@ namespace Spider.SourceGenerators.Net
             //                Debugger.Launch();
             //            }
             //#endif
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                });
+            
+            IncrementalValueProvider<List<SpiderClass>> referencedProjectClasses = Helpers.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
                 });
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-                static (spc, source) => Execute(source, spc));
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntityClasses, SourceProductionContext context)
         {
             if (classes.Count <= 1) 
                 return;
 
-            List<ClassDeclarationSyntax> entityClasses = Helpers.GetEntityClasses(classes);
+            List<SpiderClass> currentProjectEntities = Helpers.GetSpiderClasses(classes, referencedProjectEntityClasses);
+            List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntityClasses).ToList();
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
-            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(entityClasses[0]);
-
-            string basePartOfTheNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Spider.Security
-            string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
+            string namespaceValue = currentProjectEntities[0].Namespace;
+            string basePartOfNamespace = Helpers.GetBasePartOfNamespace(namespaceValue);
+            string projectName = Helpers.GetProjectName(namespaceValue);
 
             bool generateAuthorizationMethods = projectName != "Security";
 
             sb.AppendLine($$"""
-{{GetUsings(basePartOfTheNamespace)}}
+{{GetUsings(basePartOfNamespace)}}
 
-namespace {{basePartOfTheNamespace}}.Services
+namespace {{basePartOfNamespace}}.Services
 {
     public class AuthorizationBusinessServiceGenerated : AuthorizationService
     {
@@ -67,106 +75,102 @@ namespace {{basePartOfTheNamespace}}.Services
             _authenticationService = authenticationService;
         }
 """);
-            foreach (ClassDeclarationSyntax entityClass in entityClasses)
+            foreach (SpiderClass entity in currentProjectEntities)
             {
-                string baseType = entityClass.GetBaseType();
-
-                if (baseType == null) // FT: Handling many to many, maybe you should do something else in the future
+                if (entity.BaseType == null) // FT: Handling many to many, maybe you should do something else in the future
                     continue;
 
-                string nameOfTheEntityClass = entityClass.Identifier.Text;
-                string nameOfTheEntityClassFirstLower = entityClass.Identifier.Text.FirstCharToLower();
-                string idTypeOfTheEntityClass = Helpers.GetIdType(entityClass, entityClasses);
+                string idTypeOfTheEntityClass = entity.GetIdType(allEntities);
 
                 sb.AppendLine($$"""
-        #region {{nameOfTheEntityClass}}
+        #region {{entity.Name}}
 
 """);
 
                 sb.AppendLine($$"""
-        public virtual async Task {{nameOfTheEntityClass}}SingleReadAuthorize({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
+        public virtual async Task {{entity.Name}}SingleReadAuthorize({{idTypeOfTheEntityClass}} {{entity.Name.FirstCharToLower()}}Id)
         {
 {{(generateAuthorizationMethods ? $$"""
             await _context.WithTransactionAsync(async () =>
             {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{{nameOfTheEntityClass}});
+                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{{entity.Name}});
             });
 """
             : "")}}
         }
 
-        public virtual async Task {{nameOfTheEntityClass}}SingleUpdateAuthorize({{nameOfTheEntityClass}}DTO {{nameOfTheEntityClassFirstLower}}DTO) // FT: Save
+        public virtual async Task {{entity.Name}}SingleUpdateAuthorize({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO) // FT: Save
         {
 {{(generateAuthorizationMethods ? $$"""
             await _context.WithTransactionAsync(async () =>
             {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Edit{{nameOfTheEntityClass}});
+                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Edit{{entity.Name}});
             });
 """
             : "")}}
         }
 
-        public virtual async Task {{nameOfTheEntityClass}}SingleUpdateAuthorize({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id) // FT: Blob
+        public virtual async Task {{entity.Name}}SingleUpdateAuthorize({{idTypeOfTheEntityClass}} {{entity.Name.FirstCharToLower()}}Id) // FT: Blob
         {
 {{(generateAuthorizationMethods ? $$"""
             await _context.WithTransactionAsync(async () =>
             {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Edit{{nameOfTheEntityClass}});
+                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Edit{{entity.Name}});
             });
 """
             : "")}}
         }
 
-        public virtual async Task {{nameOfTheEntityClass}}SingleInsertAuthorize({{nameOfTheEntityClass}}DTO {{nameOfTheEntityClassFirstLower}}DTO) // FT: Save
+        public virtual async Task {{entity.Name}}SingleInsertAuthorize({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO) // FT: Save
         {
 {{(generateAuthorizationMethods ? $$"""
             await _context.WithTransactionAsync(async () =>
             {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Insert{{nameOfTheEntityClass}});
+                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Insert{{entity.Name}});
             });
 """
             : "")}}
         }
 
-        public virtual async Task {{nameOfTheEntityClass}}SingleInsertAuthorize() // FT: Blob, the id will always be 0, so we don't need to pass it.
+        public virtual async Task {{entity.Name}}SingleInsertAuthorize() // FT: Blob, the id will always be 0, so we don't need to pass it.
         {
 {{(generateAuthorizationMethods ? $$"""
             await _context.WithTransactionAsync(async () =>
             {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Insert{{nameOfTheEntityClass}});
+                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Insert{{entity.Name}});
             });
 """
             : "")}}
         }
 
-        public virtual async Task {{nameOfTheEntityClass}}ListReadAuthorize() // FT: Same for table, excel, autocomplete, dropdown
+        public virtual async Task {{entity.Name}}ListReadAuthorize() // FT: Same for table, excel, autocomplete, dropdown
         {
 {{(generateAuthorizationMethods ? $$"""
             await _context.WithTransactionAsync(async () =>
             {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{{nameOfTheEntityClass}});
+                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{{entity.Name}});
             });
 """
             : "")}}
         }
 
-        public virtual async Task {{nameOfTheEntityClass}}DeleteAuthorize({{idTypeOfTheEntityClass}} {{nameOfTheEntityClassFirstLower}}Id)
+        public virtual async Task {{entity.Name}}DeleteAuthorize({{idTypeOfTheEntityClass}} {{entity.Name.FirstCharToLower()}}Id)
         {
 {{(generateAuthorizationMethods ? $$"""
             await _context.WithTransactionAsync(async () =>
             {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Delete{{nameOfTheEntityClass}});
+                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Delete{{entity.Name}});
             });
 """
             : "")}}
         }
 
-        public virtual async Task {{nameOfTheEntityClass}}ListDeleteAuthorize(List<{{idTypeOfTheEntityClass}}> {{nameOfTheEntityClassFirstLower}}ListToDelete)
+        public virtual async Task {{entity.Name}}ListDeleteAuthorize(List<{{idTypeOfTheEntityClass}}> {{entity.Name.FirstCharToLower()}}ListToDelete)
         {
 {{(generateAuthorizationMethods ? $$"""
             await _context.WithTransactionAsync(async () =>
             {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Delete{{nameOfTheEntityClass}});
+                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Delete{{entity.Name}});
             });
 """
             : "")}}

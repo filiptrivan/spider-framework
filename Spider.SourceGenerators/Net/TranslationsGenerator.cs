@@ -126,7 +126,7 @@ namespace Spider.SourceGenerators.Net
 
         private static List<string> GetJsonElementsFromDictionaryList(Dictionary<string, string> data)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
             Dictionary<string, string> alreadyAddedKeyValuePairs = new Dictionary<string, string>();
 
             foreach (KeyValuePair<string, string> keyValuePair in data)

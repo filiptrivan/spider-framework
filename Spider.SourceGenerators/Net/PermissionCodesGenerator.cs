@@ -5,6 +5,8 @@ using System.Text;
 using Microsoft.CodeAnalysis.Text;
 using Spider.SourceGenerators.Shared;
 using Spider.SourceGenerators.Enums;
+using Spider.SourceGenerators.Models;
+using System.Linq;
 
 namespace Spider.SourceGenerators.Net
 {
@@ -19,28 +21,38 @@ namespace Spider.SourceGenerators.Net
             //                Debugger.Launch();
             //            }
             //#endif
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
                 });
 
-            context.RegisterImplementationSourceOutput(classDeclarations.Collect(),
-                static (spc, source) => Execute(source, spc));
+            IncrementalValueProvider<List<SpiderClass>> referencedProjectClasses = Helpers.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
+                new List<NamespaceExtensionCodes>
+                {
+                    NamespaceExtensionCodes.Entities,
+                });
+
+            var allClasses = classDeclarations.Collect()
+                .Combine(referencedProjectClasses);
+
+            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntityClasses, SourceProductionContext context)
         {
-            if (classes.Count <= 1) return;
+            if (classes.Count <= 1)
+                return;
 
-            List<ClassDeclarationSyntax> entities = Helpers.GetEntityClasses(classes);
+            List<SpiderClass> currentProjectEntities = Helpers.GetSpiderClasses(classes, referencedProjectEntityClasses);
+            List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntityClasses).ToList();
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
-            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(entities[0]);
-            string basePartOfNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Spider.Security
-            string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
+            string namespaceValue = currentProjectEntities[0].Namespace;
+            string basePartOfNamespace = Helpers.GetBasePartOfNamespace(namespaceValue);
+            string projectName = Helpers.GetProjectName(namespaceValue);
 
-            List<string> enumHelper = Helpers.GetPermissionCodesForEntites(entities);
+            List<string> permissionCodes = Helpers.GetPermissionCodesForEntites(currentProjectEntities);
 
             sb.AppendLine($$"""
 using System;
@@ -53,7 +65,7 @@ namespace {{basePartOfNamespace}}.Enums
 {
     public enum PermissionCodes
     {
-        {{string.Join(",\n\t\t", enumHelper)}}
+        {{string.Join(",\n\t\t", permissionCodes)}}
     }
 }
 """);

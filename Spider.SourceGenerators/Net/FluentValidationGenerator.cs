@@ -25,7 +25,7 @@ namespace Spider.SourceGenerators.Net
 //                Debugger.Launch();
 //            }
 //#endif
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
                     NamespaceExtensionCodes.DTO,
@@ -50,7 +50,6 @@ namespace Spider.SourceGenerators.Net
 
             List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
             List<SpiderClass> allClasses = currentProjectClasses.Concat(referencedProjectClasses).ToList();
-
             List<SpiderClass> currentProjectDTOClasses = Helpers.GetDTOClasses(currentProjectClasses, allClasses);
             List<SpiderClass> currentProjectEntities = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
 

@@ -68,9 +68,6 @@ namespace Spider.SourceGenerators.Angular
             List<SpiderClass> entities = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
             List<SpiderClass> DTOClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
 
-            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(classes[0]);
-            string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
-
             List<string> switchCases = new();
             List<string> validationMethods = new();
 
@@ -148,7 +145,7 @@ export class ValidatorServiceGenerated {
         {
             string validationClassName = DTOClass.Name.Replace("DTO", "");
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
             foreach (SpiderValidationRule rule in rules)
                 sb.AppendLine(GenerateAngularValidationMethod(rule, validationClassName, DTOClass.Properties));

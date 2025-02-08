@@ -24,7 +24,7 @@ namespace Spider.SourceGenerators.Angular
             //                Debugger.Launch();
             //            }
             //#endif
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
                     NamespaceExtensionCodes.DTO
@@ -57,17 +57,17 @@ namespace Spider.SourceGenerators.Angular
             if (classes.Count <= 1)
                 return; // FT: one because of config settings
 
-            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(classes[0]);
-            string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
+            List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
+            List<SpiderClass> customDTOClasses = currentProjectClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
+            List<SpiderClass> currentProjectEntities = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SpiderClass> referencedProjectEntityClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntityClasses).ToList();
+
+            string namespaceValue = currentProjectClasses[0].Namespace;
+            string projectName = Helpers.GetProjectName(namespaceValue);
 
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\components\base-details\{projectName}.ts
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\components\base-details\{projectName.FromPascalToKebabCase()}-base-details.generated.ts");
-
-            List<SpiderClass> spiderClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
-            List<SpiderClass> customDTOClasses = spiderClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
-            List<SpiderClass> currentProjectEntities = spiderClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
-            List<SpiderClass> referencedProjectEntityClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
-            List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntityClasses).ToList();
 
             string result = $$"""
 {{GetImports(customDTOClasses, allEntities)}}
@@ -80,7 +80,7 @@ namespace Spider.SourceGenerators.Angular
 
         private static List<string> GetAngularBaseDetailsComponents(List<SpiderClass> customDTOClasses, List<SpiderClass> currentProjectEntities, List<SpiderClass> allEntities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderClass entity in currentProjectEntities
                 .Where(x => x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false)
@@ -246,7 +246,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetSimpleManyToManyMethods(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties.Where(x => x.HasSimpleManyToManyTableLazyLoadAttribute()))
             {
@@ -271,7 +271,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetSimpleManyToManyTableLazyLoadColsInitializations(SpiderClass entity, List<SpiderClass> entities, List<SpiderClass> customDTOClasses)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties.Where(x => x.HasSimpleManyToManyTableLazyLoadAttribute()))
             {
@@ -287,7 +287,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetSimpleManyToManyTableLazyLoadCols(SpiderProperty property, SpiderClass entity, List<SpiderClass> entities, List<SpiderClass> customDTOClasses)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (UITableColumn col in property.GetUITableColumns())
             {
@@ -384,7 +384,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetSimpleManyToManyTableLazyLoadSaveBodyAssignements(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties.Where(x => x.HasSimpleManyToManyTableLazyLoadAttribute()))
             {
@@ -401,7 +401,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetSimpleManyToManyTableLazyLoadVariables(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties.Where(x => x.HasSimpleManyToManyTableLazyLoadAttribute()))
             {
@@ -423,7 +423,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetManyToManyMultiSelectSaveBodyAssignements(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties.Where(x => x.IsMultiSelectControlType()))
             {
@@ -437,7 +437,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetManyToManyMultiAutocompleteSaveBodyAssignements(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties.Where(x => x.IsMultiAutocompleteControlType()))
             {
@@ -451,7 +451,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetManyToManyMultiSelectInitFormControls(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties.Where(x => x.IsMultiSelectControlType()))
             {
@@ -467,7 +467,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetManyToManyMultiAutocompleteInitFormControls(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties.Where(x => x.IsMultiAutocompleteControlType()))
             {
@@ -483,7 +483,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetManyToManyMultiSelectListForDropdownMethods(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties
                 .Where(x =>
@@ -506,7 +506,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetManyToManyMultiControlTypesForkJoinParameters(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties
                 .Where(x =>
@@ -523,7 +523,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetSpiderFormControls(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties)
             {
@@ -548,7 +548,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetOrderedOneToManyAddNewItemMethods(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
             {
@@ -570,7 +570,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetOrderedOneToManyInitFormArrayMethods(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
             {
@@ -609,7 +609,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetOrderedOneToManyForkJoinParameters(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
             {
@@ -623,7 +623,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetOrderedOneToManyInitFormGroupForExistingObject(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
             {
@@ -637,7 +637,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetOrderedOneToManyInitFormGroupForNonExistingObject(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
             {
@@ -651,7 +651,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetOrderedOneToManySaveBodyAssignements(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
             {
@@ -667,7 +667,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetOrderedOneToManyVariables(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
             {
@@ -732,7 +732,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetCustomOnChangeProperties(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in entity.Properties)
             {
@@ -747,7 +747,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetPrimengOptionVariables(List<SpiderProperty> properties, SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in properties.Where(x => x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false))
             {
@@ -785,7 +785,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetAutocompleteSearchMethods(List<SpiderProperty> properties, SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in properties.Where(x => x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false))
             {
@@ -826,7 +826,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetUploadImageMethods(List<SpiderProperty> properties, SpiderClass entity, List<SpiderClass> entities)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty property in properties.Where(x => x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false))
             {
@@ -866,7 +866,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
         private static List<string> GetForkJoinParameterNames(SpiderClass entity)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             result.Add(entity.Name.FirstCharToLower());
 
@@ -890,7 +890,7 @@ export class {{entity.Name}}BaseDetailsComponent {
             List<SpiderClass> customDTOClasses
         )
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             SpiderClass customDTOClass = customDTOClasses.Where(x => x.Name.Replace("DTO", "") == entity.Name).SingleOrDefault();
 
@@ -1186,7 +1186,7 @@ import { PrimengModule, SpiderControlsModule, CardSkeletonComponent, IndexCardCo
         /// </summary>
         private static List<string> GetDynamicNgImports(List<AngularImport> imports)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (var projectImports in imports.GroupBy(x => x.Namespace))
             {

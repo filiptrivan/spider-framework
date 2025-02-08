@@ -22,7 +22,7 @@ namespace Spider.SourceGenerators.Net
             //                Debugger.Launch();
             //            }
             //#endif
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
                     NamespaceExtensionCodes.DTO,
@@ -49,14 +49,13 @@ namespace Spider.SourceGenerators.Net
 
             List<SpiderClass> spiderClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
             List<SpiderClass> allClasses = spiderClasses.Concat(referencedProjectClasses).ToList();
-
             List<SpiderClass> currentProjectDTOClasses = Helpers.GetDTOClasses(spiderClasses, allClasses);
             List<SpiderClass> currentProjectEntities = spiderClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
             List<SpiderClass> allEntityClasses = allClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
 
-            StringBuilder sb = new StringBuilder();
-            List<string> usings = new List<string>();
-            StringBuilder sbUsings = new StringBuilder();
+            StringBuilder sb = new();
+            List<string> usings = new();
+            StringBuilder sbUsings = new();
 
             string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(currentProjectEntities[0].Namespace);
 

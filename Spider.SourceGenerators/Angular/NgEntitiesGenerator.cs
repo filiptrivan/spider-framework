@@ -26,7 +26,7 @@ namespace Spider.SourceGenerators.Angular
             //                Debugger.Launch();
             //            }
             //#endif
-            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassInrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
+            IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
                     NamespaceExtensionCodes.DTO,
@@ -60,18 +60,18 @@ namespace Spider.SourceGenerators.Angular
             if (classes.Count <= 1)
                 return; // FT: one because of config settings
 
-            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(classes[0]);
-            string projectName = namespacePartsWithoutLastElement.LastOrDefault() ?? "ERROR"; // eg. Security
-
-            // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\entities\{projectName}-entities.ts
-            string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\entities\{projectName.FromPascalToKebabCase()}-entities.generated.ts");
-
             List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
             List<SpiderClass> allClasses = currentProjectClasses.Concat(referencedProjectClasses).ToList();
             List<SpiderClass> currentProjectDTOClasses = Helpers.GetDTOClasses(currentProjectClasses, allClasses);
 
-            StringBuilder sb = new StringBuilder();
-            StringBuilder sbImports = new StringBuilder();
+            string namespaceValue = currentProjectClasses[0].Namespace;
+            string projectName = Helpers.GetProjectName(namespaceValue);
+
+            // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\entities\{projectName}-entities.ts
+            string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\entities\{projectName.FromPascalToKebabCase()}-entities.generated.ts");
+
+            StringBuilder sb = new();
+            StringBuilder sbImports = new();
             sbImports.Append($$"""
 import { BaseEntity, TableFilter, TableFilterContext, TableFilterSortMeta, MimeTypes } from '@playerty/spider';
 {{string.Join("\n", GetEnumPropertyImports(currentProjectDTOClasses, projectName))}}
@@ -120,7 +120,7 @@ export class {{angularClassIdentifier}} extends BaseEntity
 
         private static List<string> GetAllAngularPropertyDefinitions(List<SpiderProperty> DTOProperties)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty DTOProp in DTOProperties)
             {
@@ -135,7 +135,7 @@ export class {{angularClassIdentifier}} extends BaseEntity
 
         private static List<string> GetAngularPropertyAssignments(List<SpiderProperty> DTOProperties)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (SpiderProperty DTOProp in DTOProperties)
             {
@@ -148,7 +148,7 @@ export class {{angularClassIdentifier}} extends BaseEntity
 
         private static List<string> GetEnumPropertyImports(List<SpiderClass> DTOClasses, string projectName)
         {
-            List<string> result = new List<string>();
+            List<string> result = new();
 
             foreach (IGrouping<string, SpiderClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
             {
