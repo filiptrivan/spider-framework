@@ -60,8 +60,8 @@ namespace Spider.SourceGenerators.Angular
             List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
             List<SpiderClass> customDTOClasses = currentProjectClasses.Where(x => x.Namespace.EndsWith(".DTO")).ToList();
             List<SpiderClass> currentProjectEntities = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
-            List<SpiderClass> referencedProjectEntityClasses = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
-            List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntityClasses).ToList();
+            List<SpiderClass> referencedProjectEntities = referencedProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntities).ToList();
 
             string namespaceValue = currentProjectClasses[0].Namespace;
             string projectName = Helpers.GetProjectName(namespaceValue);

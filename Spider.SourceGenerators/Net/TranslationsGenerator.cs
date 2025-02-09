@@ -47,7 +47,7 @@ namespace Spider.SourceGenerators.Net
             });
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntityClasses, string callingProjectDirectory, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntities, string callingProjectDirectory, SourceProductionContext context)
         {
             if (classes.Count < 1)
                 return;
@@ -57,13 +57,13 @@ namespace Spider.SourceGenerators.Net
             if (shouldGenerate == false)
                 return;
 
-            referencedProjectEntityClasses = referencedProjectEntityClasses.OrderBy(x => x.Name).ToList();
+            referencedProjectEntities = referencedProjectEntities.OrderBy(x => x.Name).ToList();
 
-            Dictionary<string, string> dataEn = referencedProjectEntityClasses
+            Dictionary<string, string> dataEn = referencedProjectEntities
                 .Select(entity => GetTranslationData(entity, LanguageCodes.En))
                 .PrepareForTranslation();
 
-            Dictionary<string, string> dataSrLatnRS = referencedProjectEntityClasses
+            Dictionary<string, string> dataSrLatnRS = referencedProjectEntities
                 .Select(entity => GetTranslationData(entity, LanguageCodes.SrLatnRS))
                 .PrepareForTranslation();
 

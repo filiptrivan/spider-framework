@@ -46,20 +46,20 @@ namespace Spider.SourceGenerators.Net
             if (classes.Count <= 1)
                 return;
 
-            List<SpiderClass> entities = Helpers.GetSpiderEntities(classes, referencedProjectEntities);
-            List<SpiderClass> allEntities = entities.Concat(referencedProjectEntities).ToList();
+            List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectEntities);
+            List<SpiderClass> currentProjectEntities = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntities).ToList();
 
-            string[] namespacePartsWithoutLastElement = Helpers.GetNamespacePartsWithoutLastElement(entities[0].Namespace);
-
-            string basePartOfTheNamespace = string.Join(".", namespacePartsWithoutLastElement); // eg. Spider.Security
-            string projectName = namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
+            string namespaceValue = currentProjectEntities[0].Namespace;
+            string basePartOfNamespace = Helpers.GetBasePartOfNamespace(namespaceValue);
+            string projectName = Helpers.GetProjectName(namespaceValue);
 
             bool isSecurityProject = projectName == "Security";
 
             string result = $$"""
-{{GetUsings(basePartOfTheNamespace, projectName)}}
+{{GetUsings(basePartOfNamespace, projectName)}}
 
-namespace {{basePartOfTheNamespace}}.Services
+namespace {{basePartOfNamespace}}.Services
 {
     {{(isSecurityProject ? $"public class BusinessServiceGenerated<TUser> : BusinessServiceBase where TUser : class, IUser, new()" : $"public class BusinessServiceGenerated : BusinessServiceBase")}}
     {
@@ -77,7 +77,7 @@ namespace {{basePartOfTheNamespace}}.Services
             _blobContainerClient = blobContainerClient;
         }
 
-{{string.Join("\n\n", GetBusinessServiceMethods(entities, allEntities, projectName))}}
+{{string.Join("\n\n", GetBusinessServiceMethods(currentProjectEntities, allEntities, projectName))}}
 
     }
 }

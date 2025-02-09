@@ -152,35 +152,6 @@ namespace Spider.SourceGenerators.Shared
             return classes.Where(x => x.Identifier.Text == typeName).SingleOrDefault();
         }
 
-        public static ClassDeclarationSyntax GetClass(string type, IEnumerable<ClassDeclarationSyntax> classes)
-        {
-            return classes.Where(x => x.Identifier.Text == type).SingleOrDefault();
-        }
-
-        public static string GetIdType(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
-        {
-            if (c == null)
-                return "GetIdType.TheClassDoesNotExist";
-
-            TypeSyntax baseType = c.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
-
-            while (baseType is not GenericNameSyntax && baseType != null)
-            {
-                ClassDeclarationSyntax baseClass = classes.Where(x => x.Identifier.Text == baseType.ToString()).SingleOrDefault();
-
-                if (baseClass == null)
-                    return null;
-
-                baseType = baseClass.BaseList?.Types.FirstOrDefault()?.Type; //BaseClass<long>
-            }
-
-            if (baseType != null && baseType is GenericNameSyntax genericNameSyntax)
-                return genericNameSyntax.TypeArgumentList.Arguments.FirstOrDefault().ToString(); // long
-            else
-                return null; // FT: It doesn't, many to many doesn't
-                             //return "Every entity class needs to have the base class";
-        }
-
         /// <summary>
         /// FT: Without inherited
         /// </summary>
@@ -229,20 +200,6 @@ namespace Spider.SourceGenerators.Shared
             return methods;
         }
 
-        public static string GetDisplayNamePropForClass(ClassDeclarationSyntax c, IList<ClassDeclarationSyntax> classes)
-        {
-            List<SpiderProperty> props = GetAllPropertiesOfTheClass(c, classes, new List<SpiderClass>());
-            SpiderProperty displayNamePropForClass = props.Where(x => x.Attributes.Any(x => x.Name == DisplayNameAttribute)).SingleOrDefault();
-
-            if (displayNamePropForClass == null)
-                return $"Id.ToString()";
-
-            if (displayNamePropForClass.Type != "string")
-                return $"{displayNamePropForClass.Name}.ToString()";
-
-            return displayNamePropForClass.Name;
-        }
-
         public static string GetDisplayNameProperty(SpiderClass entity)
         {
             SpiderAttribute entityDisplayNameAttribute = entity.Attributes.Where(x => x.Name == "DisplayName").SingleOrDefault();
@@ -260,20 +217,6 @@ namespace Spider.SourceGenerators.Shared
                 return $"{displayNamePropForClass.Name}.ToString()";
 
             return displayNamePropForClass.Name;
-        }
-
-        public static string[] GetNamespacePartsWithoutLastElement(BaseTypeDeclarationSyntax b)
-        {
-            string domainModelNamespace = b
-                .Ancestors()
-                .OfType<NamespaceDeclarationSyntax>()
-                .Select(ns => ns.Name.ToString())
-                .FirstOrDefault();
-
-            string[] namespaceParts = domainModelNamespace.Split('.');
-            string[] namespacePartsWithoutLastElement = namespaceParts.Take(namespaceParts.Length - 1).ToArray();
-
-            return namespacePartsWithoutLastElement; // eg. Spider, Generator, Security
         }
 
         public static string[] GetNamespacePartsWithoutLastElement(string namespaceValue)
@@ -690,9 +633,9 @@ namespace Spider.SourceGenerators.Shared
             return methods;
         }
 
-        public static List<string> GetEntityClassesUsings(List<SpiderClass> referencedProjectEntityClasses)
+        public static List<string> GetEntityClassesUsings(List<SpiderClass> referencedProjectEntities)
         {
-            List<string> namespaces = referencedProjectEntityClasses
+            List<string> namespaces = referencedProjectEntities
                 .Where(x => x.Namespace.EndsWith(".Entities"))
                 .Select(x => $"using {x.Namespace};")
                 .Distinct()
@@ -701,9 +644,9 @@ namespace Spider.SourceGenerators.Shared
             return namespaces;
         }
 
-        public static List<string> GetDTOClassesUsings(List<SpiderClass> referencedProjectEntityClasses)
+        public static List<string> GetDTOClassesUsings(List<SpiderClass> referencedProjectEntities)
         {
-            List<string> namespaces = referencedProjectEntityClasses
+            List<string> namespaces = referencedProjectEntities
                 .Where(x => x.Namespace.EndsWith(".Entities"))
                 .Select(x => $"using {x.Namespace.Replace(".Entities", ".DTO")};")
                 .Distinct()
@@ -754,24 +697,6 @@ namespace Spider.SourceGenerators.Shared
             return shouldStart;
         }
 
-        public static List<ClassDeclarationSyntax> GetEntityClasses(IList<ClassDeclarationSyntax> classes)
-        {
-            return classes
-                .Where(x => x.Ancestors()
-                    .OfType<NamespaceDeclarationSyntax>()
-                    .Select(ns => ns.Name.ToString())
-                    .Any(ns => ns.EndsWith($".{EntitiesNamespaceEnding}")))
-                .OrderBy(x => x.Identifier.Text)
-                .ToList();
-        }
-
-        public static List<SpiderClass> GetSpiderEntities(IList<ClassDeclarationSyntax> currentProjectClasses, List<SpiderClass> referencedProjectsClasses)
-        {
-            return GetSpiderClasses(currentProjectClasses, referencedProjectsClasses)
-                .Where(x => x.Namespace.EndsWith(".Entities"))
-                .ToList();
-        }
-
         public static List<SpiderClass> GetSpiderClasses(IList<ClassDeclarationSyntax> currentProjectClasses, List<SpiderClass> referencedProjectsClasses)
         {
             return currentProjectClasses
@@ -781,8 +706,8 @@ namespace Spider.SourceGenerators.Shared
                     {
                         Name = x.Identifier.Text,
                         Namespace = x.Ancestors()
-                         .OfType<NamespaceDeclarationSyntax>()
-                         .FirstOrDefault()?.Name.ToString(),
+                            .OfType<NamespaceDeclarationSyntax>()
+                            .FirstOrDefault()?.Name.ToString(),
                         BaseType = x.GetBaseType(),
                         IsAbstract = x.IsAbstract(),
                         Properties = GetAllPropertiesOfTheClass(x, currentProjectClasses, referencedProjectsClasses),
@@ -927,29 +852,6 @@ namespace Spider.SourceGenerators.Shared
         #endregion
 
         #region Validation Rules
-
-        public static List<SpiderValidationRule> GetValidationRules(List<SpiderClass> DTOClasses, List<SpiderClass> entities)
-        {
-            List<SpiderValidationRule> result = new();
-
-            foreach (IGrouping<string, SpiderClass> DTOClassGroup in DTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
-            {
-                List<SpiderProperty> DTOProperties = new();
-                List<SpiderAttribute> DTOAttributes = new();
-
-                foreach (SpiderClass DTOClass in DTOClassGroup)
-                {
-                    DTOAttributes.AddRange(DTOClass.Attributes);
-                    DTOProperties.AddRange(DTOClass.Properties);
-                }
-
-                SpiderClass entity = entities.Where(x => DTOClassGroup.Key.Replace("DTO", "") == x.Name).SingleOrDefault(); // If it is null then we only made DTO, without entity class
-
-                result.AddRange(GetValidationRules(DTOProperties, DTOAttributes, entity));
-            }
-
-            return result;
-        }
 
         public static List<SpiderValidationRule> GetValidationRules(List<SpiderProperty> DTOProperties, List<SpiderAttribute> DTOAttributes, SpiderClass entity)
         {
@@ -1420,11 +1322,6 @@ namespace Spider.SourceGenerators.Shared
 
         #region Blobs
 
-        public static List<SpiderProperty> GetBlobProperties(SpiderClass c)
-        {
-            return c.Properties.Where(x => x.Attributes.Any(x => x.Name == "BlobName")).ToList();
-        }
-
         public static List<SpiderProperty> GetBlobProperties(List<SpiderProperty> properties)
         {
             return properties.Where(x => x.Attributes.Any(x => x.Name == "BlobName")).ToList();
@@ -1437,11 +1334,10 @@ namespace Spider.SourceGenerators.Shared
         private static List<SpiderAttribute> GetAllAttributesOfTheMember(MemberDeclarationSyntax prop)
         {
             List<SpiderAttribute> attributes = new List<SpiderAttribute>();
-            attributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
-            {
-                return GetSpiderAttribute(x);
-            })
-            .ToList();
+            attributes = prop.AttributeLists
+                .SelectMany(x => x.Attributes)
+                .Select(GetSpiderAttribute)
+                .ToList();
             return attributes;
         }
 
@@ -1519,18 +1415,6 @@ namespace Spider.SourceGenerators.Shared
         #endregion
 
         #region Helpers
-
-        /// <summary>
-        /// DeSerializes an object from JSON
-        /// </summary>
-        public static T DeserializeJson<T>(string json) where T : class
-        {
-            using (var stream = new MemoryStream(Encoding.Default.GetBytes(json)))
-            {
-                var serializer = new DataContractJsonSerializer(typeof(T));
-                return serializer.ReadObject(stream) as T;
-            }
-        }
 
         public static void WriteToTheFile(string data, string path)
         {
@@ -1620,20 +1504,6 @@ namespace Spider.SourceGenerators.Shared
             resourceWriter.Generate();
 
             resourceWriter.Close();
-        }
-
-        public static IEnumerable<T> SkipLast<T>(this IEnumerable<T> source)
-        {
-            using (var e = source.GetEnumerator())
-            {
-                if (e.MoveNext())
-                {
-                    for (var value = e.Current; e.MoveNext(); value = e.Current)
-                    {
-                        yield return value;
-                    }
-                }
-            }
         }
 
         #endregion

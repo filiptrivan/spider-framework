@@ -43,7 +43,7 @@ namespace Spider.SourceGenerators.Net
             context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntityClassesAndServices, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntitiesAndServices, SourceProductionContext context)
         {
             if (classes.Count < 1)
                 return;
@@ -53,10 +53,10 @@ namespace Spider.SourceGenerators.Net
             if (shouldGenerate == false)
                 return;
 
-            List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectEntityClassesAndServices);
+            List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectEntitiesAndServices);
             List<SpiderClass> customControllers = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Controllers")).ToList();
-            List<SpiderClass> referencedProjectEntities = referencedProjectEntityClassesAndServices.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
-            List<SpiderClass> referencedProjectServices = referencedProjectEntityClassesAndServices.Where(x => x.Namespace.EndsWith(".Services")).ToList();
+            List<SpiderClass> referencedProjectEntities = referencedProjectEntitiesAndServices.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SpiderClass> referencedProjectServices = referencedProjectEntitiesAndServices.Where(x => x.Namespace.EndsWith(".Services")).ToList();
             List<SpiderClass> allEntities = currentProjectClasses.Concat(referencedProjectEntities).ToList();
 
             string namespaceValue = currentProjectClasses[0].Namespace;
@@ -88,11 +88,11 @@ namespace {{basePartOfNamespace}}.Controllers
             context.AddSource($"{appName}BaseControllers.generated", SourceText.From(result, Encoding.UTF8));
         }
 
-        public static List<string> GetControllerClasses(List<SpiderClass> referencedProjectEntityClasses, List<SpiderClass> referencedProjectServices)
+        public static List<string> GetControllerClasses(List<SpiderClass> referencedProjectEntities, List<SpiderClass> referencedProjectServices)
         {
             List<string> result = new();
 
-            foreach (IGrouping<string, SpiderClass> referencedProjectEntityGroupedClasses in referencedProjectEntityClasses.GroupBy(x => x.ControllerName))
+            foreach (IGrouping<string, SpiderClass> referencedProjectEntityGroupedClasses in referencedProjectEntities.GroupBy(x => x.ControllerName))
             {
                 string servicesNamespace = referencedProjectEntityGroupedClasses.FirstOrDefault().Namespace.Replace(".Entities", ".Services");
                 SpiderClass businessServiceClass = referencedProjectServices
@@ -122,7 +122,7 @@ namespace {{basePartOfNamespace}}.Controllers
             _blobContainerClient = blobContainerClient;
         }
 
-{{string.Join("\n\n", GetControllerMethods(referencedProjectEntityGroupedClasses.ToList(), referencedProjectEntityClasses, servicesNamespace, businessServiceName))}}
+{{string.Join("\n\n", GetControllerMethods(referencedProjectEntityGroupedClasses.ToList(), referencedProjectEntities, servicesNamespace, businessServiceName))}}
 
     }
 """);
@@ -131,7 +131,7 @@ namespace {{basePartOfNamespace}}.Controllers
             return result;
         }
 
-        private static List<string> GetControllerMethods(List<SpiderClass> referencedProjectEntityGroupedClasses, List<SpiderClass> referencedProjectEntityClasses, string servicesNamespace, string businessServiceName)
+        private static List<string> GetControllerMethods(List<SpiderClass> referencedProjectEntityGroupedClasses, List<SpiderClass> referencedProjectEntities, string servicesNamespace, string businessServiceName)
         {
             List<string> result = new();
 
@@ -140,7 +140,7 @@ namespace {{basePartOfNamespace}}.Controllers
                 if (referencedProjectEntityClass.IsManyToMany()) // TODO FT: Do something with M2M entities
                     continue;
 
-                string referencedProjectEntityClassIdType = referencedProjectEntityClass.GetIdType(referencedProjectEntityClasses);
+                string referencedProjectEntityClassIdType = referencedProjectEntityClass.GetIdType(referencedProjectEntities);
 
                 result.Add($$"""
         #region {{referencedProjectEntityClass.Name}}
@@ -190,9 +190,9 @@ namespace {{basePartOfNamespace}}.Controllers
             return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}ListForDropdown(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
         }
 
-{{string.Join("\n\n", GetOrderedOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
+{{string.Join("\n\n", GetOrderedOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntities, businessServiceName))}}
 
-{{string.Join("\n\n", GetManyToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
+{{string.Join("\n\n", GetManyToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntities, businessServiceName))}}
 
         #endregion
 
@@ -200,13 +200,13 @@ namespace {{basePartOfNamespace}}.Controllers
 
 {{GetSaveControllerMethods(referencedProjectEntityClass, businessServiceName)}}
 
-{{string.Join("\n\n", GetUploadBlobControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName))}}
+{{string.Join("\n\n", GetUploadBlobControllerMethods(referencedProjectEntityClass, referencedProjectEntities, businessServiceName))}}
 
         #endregion
 
         #region Delete
 
-{{GetDeleteControllerMethods(referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName)}}
+{{GetDeleteControllerMethods(referencedProjectEntityClass, referencedProjectEntities, businessServiceName)}}
 
         #endregion
 
@@ -217,7 +217,7 @@ namespace {{basePartOfNamespace}}.Controllers
             return result;
         }
 
-        private static List<string> GetManyToManyControllerMethods(SpiderClass referencedProjectEntityClass, List<SpiderClass> referencedProjectEntityClasses, string businessServiceName)
+        private static List<string> GetManyToManyControllerMethods(SpiderClass referencedProjectEntityClass, List<SpiderClass> referencedProjectEntities, string businessServiceName)
         {
             List<string> result = new();
 
@@ -226,11 +226,11 @@ namespace {{basePartOfNamespace}}.Controllers
                 if (property.IsMultiSelectControlType() ||
                     property.IsMultiAutocompleteControlType())
                 {
-                    result.Add(GetManyToManySelectedEntitiesControllerMethod(property, referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName));
+                    result.Add(GetManyToManySelectedEntitiesControllerMethod(property, referencedProjectEntityClass, referencedProjectEntities, businessServiceName));
                 }
                 else if (property.HasSimpleManyToManyTableLazyLoadAttribute())
                 {
-                    result.Add(GetSimpleManyToManyTableLazyLoadControllerMethod(property, referencedProjectEntityClass, referencedProjectEntityClasses, businessServiceName));
+                    result.Add(GetSimpleManyToManyTableLazyLoadControllerMethod(property, referencedProjectEntityClass, referencedProjectEntities, businessServiceName));
                 }
             }
 

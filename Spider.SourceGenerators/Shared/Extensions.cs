@@ -131,180 +131,6 @@ namespace Spider.SourceGenerators.Shared
         }
 
         /// <summary>
-        /// Converts a given string to snake case.
-        /// </summary>
-        /// <param name="text">The string to be converted to snake case.</param>
-        /// <returns>The resulting snake case string.</returns>
-        public static string ToSnakeCase(this string text)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return text;
-            }
-
-            // Create a new instance of StringBuilder to store the output string with an estimated capacity
-            // Nullable UnicodeCategory variable to keep track of the previous category
-            StringBuilder builder = new(text.Length + Math.Min(2, text.Length / 5));
-            UnicodeCategory? previousCategory = default;
-
-            // Iterate over each character in the input string
-            for (int currentIndex = 0; currentIndex < text.Length; currentIndex++)
-            {
-                // Get the current character
-                char currentChar = text[currentIndex];
-
-                // If the current character is already an underscore, append it to the output string
-                if (currentChar == '_')
-                {
-                    builder.Append('_');
-                    previousCategory = null;
-                    continue;
-                }
-
-                // Get the Unicode category of the current character
-                UnicodeCategory currentCategory = char.GetUnicodeCategory(currentChar);
-
-                switch (currentCategory)
-                {
-                    // If the current character is an uppercase letter or titlecase letter
-                    case UnicodeCategory.UppercaseLetter:
-                    case UnicodeCategory.TitlecaseLetter:
-                        // If the previous character is a space, lowercase letter or decimal digit,
-                        // and the next character is a lowercase letter, append an underscore to the output string
-                        if (previousCategory == UnicodeCategory.SpaceSeparator ||
-                            previousCategory == UnicodeCategory.LowercaseLetter ||
-                            previousCategory != UnicodeCategory.DecimalDigitNumber &&
-                            previousCategory != null &&
-                            currentIndex > 0 &&
-                            currentIndex + 1 < text.Length &&
-                            char.IsLower(text[currentIndex + 1]))
-                        {
-                            builder.Append('_');
-                        }
-
-                        // Convert the current character to lowercase
-                        currentChar = char.ToLower(currentChar, CultureInfo.InvariantCulture);
-                        break;
-
-                    // If the current character is a lowercase letter or decimal digit
-                    case UnicodeCategory.LowercaseLetter:
-                    case UnicodeCategory.DecimalDigitNumber:
-                        // If the previous character is a space, append an underscore to the output string
-                        if (previousCategory == UnicodeCategory.SpaceSeparator)
-                        {
-                            builder.Append('_');
-                        }
-                        break;
-
-                    // If the current character is a separator, punctuation mark or symbol
-                    default:
-                        // If the previous category is not null, set it to a space separator
-                        if (previousCategory != null)
-                        {
-                            previousCategory = UnicodeCategory.SpaceSeparator;
-                        }
-                        continue;
-                }
-
-                // Append the current character to the output string
-                builder.Append(currentChar);
-
-                // Update the previous category to the current category
-                previousCategory = currentCategory;
-            }
-
-            // Return the resulting snake case string
-            return builder.ToString();
-        }
-
-        /// <summary>
-        /// Converts a given string to camel case.
-        /// </summary>
-        /// <param name="text">The string to be converted to camel case.</param>
-        /// <param name="removeWhitespace">Whether to remove whitespace or not.</param>
-        /// <param name="preserveLeadingUnderscore">Whether to preserve the leading underscore or not.</param>
-        /// <returns>The resulting camel case string.</returns>
-        public static string ToCamelCase(this string text, bool removeWhitespace = true, bool preserveLeadingUnderscore = false)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return text; // if text is null or empty, return it as it is.
-            }
-
-            if (text.IsAllUpper())
-            {
-                text = text.ToLower(); // if the text is all uppercase, convert it to lowercase
-            }
-
-            // Check if the leading underscore should be preserved
-            bool addLeadingUnderscore = preserveLeadingUnderscore && text.StartsWith("_");
-
-            // Create a new instance of StringBuilder to store the output string
-            StringBuilder result = new(text.Length);
-
-            // Flag to keep track of whether the current character should be uppercase or not
-            bool toUpper = false;
-
-            // Iterate over each character in the input string
-            foreach (char c in text)
-            {
-                // If the current character is a separator or whitespace and the whitespace is to be removed, set the flag to true
-                if (c == '-' || c == '_' || (removeWhitespace && char.IsWhiteSpace(c)))
-                {
-                    toUpper = true;
-                }
-                else
-                {
-                    // Append the current character to the output string in uppercase or lowercase based on the flag, and reset the flag to false
-                    result.Append(toUpper ? char.ToUpperInvariant(c) : c);
-                    toUpper = false;
-                }
-            }
-
-            if (result.Length > 0)
-            {
-                // Convert the first character to lowercase
-                result[0] = char.ToLowerInvariant(result[0]);
-            }
-
-            if (addLeadingUnderscore)
-            {
-                // Insert the leading underscore at the beginning of the string
-                result.Insert(0, '_');
-            }
-
-            // Return the resulting camel case string
-            return result.ToString();
-        }
-
-        /// <summary>
-        /// Extension method to check if all the letters in the input string are uppercase.
-        /// </summary>
-        /// <param name="input">The string to check for uppercase letters.</param>
-        /// <returns>True if all the letters in the input string are uppercase, otherwise false.</returns>
-        public static bool IsAllUpper(this string input)
-        {
-            // Return early if the input string is null or empty
-            if (string.IsNullOrEmpty(input))
-            {
-                return true;
-            }
-
-            // Iterate over each character in the input string
-            foreach (char c in input)
-            {
-                // If the current character is a letter and not uppercase, return false
-                if (char.IsLetter(c) && !char.IsUpper(c))
-                {
-                    return false;
-                }
-            }
-
-            // If all characters are either uppercase letters or non-letter characters, return true
-            return true;
-        }
-
-        /// <summary>
         /// Converts the specified string to PascalCase.
         /// </summary>
         /// <param name="text">The string to convert.</param>
@@ -398,11 +224,6 @@ namespace Spider.SourceGenerators.Shared
 
             // Return the resulting string with words separated by the specified separator
             return result.ToString();
-        }
-
-        public static List<string> Split(this string input, string splitter)
-        {
-            return input.Split([splitter], StringSplitOptions.None).ToList();
         }
 
         #endregion
@@ -870,6 +691,25 @@ namespace Spider.SourceGenerators.Shared
             }
 
             return alreadyAddedKeyValuePairs;
+        }
+
+        public static IEnumerable<T> SkipLast<T>(this IEnumerable<T> source)
+        {
+            using (var e = source.GetEnumerator())
+            {
+                if (e.MoveNext())
+                {
+                    for (var value = e.Current; e.MoveNext(); value = e.Current)
+                    {
+                        yield return value;
+                    }
+                }
+            }
+        }
+
+        public static List<string> Split(this string input, string splitter)
+        {
+            return input.Split([splitter], StringSplitOptions.None).ToList();
         }
 
         #endregion

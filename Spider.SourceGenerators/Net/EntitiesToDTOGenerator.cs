@@ -43,13 +43,13 @@ namespace Spider.SourceGenerators.Net
             //    static (spc, source) => Execute(source, spc));
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntityClasses, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntities, SourceProductionContext context)
         {
             if (classes.Count <= 1)
                 return;
 
-            List<SpiderClass> currentProjectEntities = Helpers.GetSpiderClasses(classes, referencedProjectEntityClasses);
-            List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntityClasses).ToList();
+            List<SpiderClass> currentProjectEntities = Helpers.GetSpiderClasses(classes, referencedProjectEntities);
+            List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntities).ToList();
             List<SpiderClass> currentProjectDTOClasses = Helpers.GetDTOClasses(currentProjectEntities, allEntities);
 
             string namespaceValue = currentProjectEntities[0].Namespace;
