@@ -43,7 +43,8 @@ namespace Spider.SourceGenerators.Net
             if (classes.Count <= 1)
                 return;
 
-            List<SpiderClass> currentProjectEntities = Helpers.GetSpiderClasses(classes, referencedProjectEntityClasses);
+            List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectEntityClasses);
+            List<SpiderClass> currentProjectEntities = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
             List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntityClasses).ToList();
 
             StringBuilder sb = new();
@@ -63,9 +64,9 @@ using System.Threading.Tasks;
 
 namespace {{basePartOfNamespace}}.Enums
 {
-    public enum PermissionCodes
+    public partial class PermissionCodes
     {
-        {{string.Join(",\n\t\t", permissionCodes)}}
+        {{string.Join("\n\t\t", permissionCodes.Select(x => $$"""public static string {{x}} { get; } = "{{x}}";"""))}}
     }
 }
 """);

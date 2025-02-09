@@ -192,11 +192,13 @@ namespace Spider.SourceGenerators.Shared
                     Type = prop.Type.ToString(),
                     Name = prop.Identifier.Text,
                     EntityName = c.Identifier.Text,
-                    Attributes = prop.AttributeLists.SelectMany(x => x.Attributes).Select(x =>
-                    {
-                        return GetSpiderAttribute(x);
-                    })
-                    .ToList()
+                    Attributes = prop.AttributeLists
+                        .SelectMany(x => x.Attributes)
+                        .Select(x =>
+                        {
+                            return GetSpiderAttribute(x);
+                        })
+                        .ToList()
                 })
                 .ToList();
 
@@ -346,7 +348,13 @@ namespace Spider.SourceGenerators.Shared
         private static SpiderProperty GetPropWithModifiedT(PropertyDeclarationSyntax prop, TypeSyntax typeGeneric, ClassDeclarationSyntax baseClass)
         {
             List<SpiderAttribute> attributes = GetAllAttributesOfTheMember(prop);
-            SpiderProperty newProp = new SpiderProperty() { Type = prop.Type.ToString(), Name = prop.Identifier.Text, Attributes = attributes, EntityName = baseClass.Identifier.Text };
+            SpiderProperty newProp = new SpiderProperty 
+            { 
+                Type = prop.Type.ToString(), 
+                Name = prop.Identifier.Text,
+                EntityName = baseClass.Identifier.Text,
+                Attributes = attributes, 
+            };
 
             if (prop.Type.ToString() == "T") // If some property has type of T, we change it to long for example
             {
@@ -580,10 +588,10 @@ namespace Spider.SourceGenerators.Shared
                     {
                         SpiderProperty property = new SpiderProperty
                         {
+                            Type = propertySymbol.Type.TypeToDisplayString(),
                             Name = member.Name,
                             EntityName = type.Name,
-                            Type = propertySymbol.Type.TypeToDisplayString(),
-                            Attributes = GetAttributesFromReferencedAssemblies(member)
+                            Attributes = GetAttributesFromReferencedAssemblies(member),
                         };
 
                         properties.Add(property);
@@ -835,7 +843,8 @@ namespace Spider.SourceGenerators.Shared
 
         private static List<SpiderProperty> GetSaveBodyDTOProperties(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<SpiderProperty> result = new List<SpiderProperty>();
+            List<SpiderProperty> result = new();
+
             result.Add(new SpiderProperty { Name = $"{entity.Name}DTO", Type = $"{entity.Name}DTO", EntityName = $"{entity.Name}SaveBodyDTO" });
 
             foreach (SpiderProperty property in entity.Properties)
@@ -1364,15 +1373,17 @@ namespace Spider.SourceGenerators.Shared
 
         #region Permissions
 
-        public static List<SpiderEnum> GetEnumMembers(EnumDeclarationSyntax enume)
+        public static List<SpiderEnumItem> GetEnumItems(EnumDeclarationSyntax enume)
         {
-            List<SpiderEnum> enumMembers = new List<SpiderEnum>();
+            List<SpiderEnumItem> enumMembers = new();
+
             foreach (EnumMemberDeclarationSyntax member in enume.Members)
             {
                 string name = member.Identifier.Text;
                 string value = member.EqualsValue != null ? member.EqualsValue.Value.ToString() : null;
-                enumMembers.Add(new SpiderEnum { Name = name, Value = value });
+                enumMembers.Add(new SpiderEnumItem { Name = name, Value = value });
             }
+
             return enumMembers;
         }
 
@@ -1401,7 +1412,7 @@ namespace Spider.SourceGenerators.Shared
         public static SpiderClass GetManualyWrittenMapperClass(List<SpiderClass> classes)
         {
             return classes
-                .Where(x => x.Namespace == ".DataMappers" && x.Attributes.Any(x => x.Name == "CustomMapper"))
+                .Where(x => x.Namespace.EndsWith(".DataMappers") && x.Attributes.Any(x => x.Name == "CustomMapper"))
                 .SingleOrDefault(); // FT: It should allways be only one or none
         }
 

@@ -35,12 +35,14 @@ namespace Spider.SourceGenerators.Angular
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.Enums, // FT HACK: Because we can't make partial enums we are doing this
                 });
 
             IncrementalValueProvider<List<SpiderClass>> referencedProjectClasses = Helpers.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
                 new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
+                    NamespaceExtensionCodes.Enums, // FT HACK: Because we can't make partial enums we are doing this
                 });
 
             IncrementalValueProvider<string> callingProjectDirectory = context.GetCallingPath();
@@ -58,50 +60,60 @@ namespace Spider.SourceGenerators.Angular
             });
         }
 
-        private static void Execute(IList<EnumDeclarationSyntax> enums, IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntityClasses, string callingProjectDirectory, SourceProductionContext context)
+        private static void Execute(IList<EnumDeclarationSyntax> currentProjectEnums, IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectClasses, string callingProjectDirectory, SourceProductionContext context)
         {
-            if (enums.Count == 0) 
+            if (currentProjectEnums.Count == 0) 
                 return;
 
-            List<SpiderClass> currentProjectEntities = Helpers.GetSpiderClasses(classes, referencedProjectEntityClasses);
-            List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntityClasses).ToList();
-            
+            List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
+            List<SpiderClass> currentProjectEntities = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
+            List<SpiderClass> currentProjectClassEnums = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Enums")).ToList();
+
             string namespaceValue = currentProjectEntities[0].Namespace;
             string projectName = Helpers.GetProjectName(namespaceValue);
 
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\enums\{projectName}-enums.ts
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\enums\{projectName.FromPascalToKebabCase()}-enums.generated.ts");
 
+            string result = GetAngularEnums(currentProjectEnums, currentProjectClassEnums, currentProjectEntities);
+
+            Helpers.WriteToTheFile(result, outputPath);
+        }
+
+        private static string GetAngularEnums(IList<EnumDeclarationSyntax> currentProjectEnums, List<SpiderClass> currentProjectClassEnums, List<SpiderClass> currentProjectEntities)
+        {
+            return $$"""
+{{GetAngularEnumsFromCurrentProjectEnums(currentProjectEnums)}}
+{{GetAngularEnumsFromCurrentProjectClassEnums(currentProjectClassEnums, currentProjectEntities)}}
+""";
+        }
+
+        private static string GetAngularEnumsFromCurrentProjectEnums(IList<EnumDeclarationSyntax> currentProjectEnums)
+        {
             StringBuilder sb = new();
 
-            foreach (EnumDeclarationSyntax enume in enums.OrderBy(x => x.Identifier.Text).ToList())
+            foreach (EnumDeclarationSyntax enume in currentProjectEnums.OrderBy(x => x.Identifier.Text).ToList())
             {
-                string enumName = enume.Identifier.Text;
-                List<SpiderEnum> enumMembers = Helpers.GetEnumMembers(enume);
-                List<string> angularEnumMemberValuePairs = GetAngularEnumMemberValuePairs(enumMembers);
-
-                List<string> permissionCodes = new();
-                if (enumName == "PermissionCodes")
-                    permissionCodes = Helpers.GetPermissionCodesForEntites(currentProjectEntities);
+                List<SpiderEnumItem> enumItems = Helpers.GetEnumItems(enume);
+                List<string> angularEnumItemNameValuePairs = GetAngularEnumItemNameValuePairs(enumItems);
 
                 sb.AppendLine($$"""
-export enum {{enumName}}
+export enum {{enume.Identifier.Text}}
 {
-    {{string.Join("\n\t", angularEnumMemberValuePairs)}}
-    {{string.Join(",\n\t", permissionCodes)}}
+    {{string.Join("\n\t", angularEnumItemNameValuePairs)}}
 }
 
 """);
             }
 
-            Helpers.WriteToTheFile(sb.ToString(), outputPath);
+            return sb.ToString();
         }
 
-        private static List<string> GetAngularEnumMemberValuePairs(List<SpiderEnum> enumMembers)
+        private static List<string> GetAngularEnumItemNameValuePairs(List<SpiderEnumItem> enumItems)
         {
             List<string> result = new();
 
-            foreach (SpiderEnum enume in enumMembers)
+            foreach (SpiderEnumItem enume in enumItems)
             {
                 if(enume.Value != null)
                     result.Add($"{enume.Name} = {enume.Value},");
@@ -110,6 +122,36 @@ export enum {{enumName}}
             }
 
             return result;
+        }
+
+        private static string GetAngularEnumsFromCurrentProjectClassEnums(List<SpiderClass> currentProjectClassEnums, List<SpiderClass> currentProjectEntities)
+        {
+            StringBuilder sb = new();
+
+            List<string> currentProjectEntitiesPermissionCodes = Helpers.GetPermissionCodesForEntites(currentProjectEntities);
+
+            foreach (SpiderClass classEnum in currentProjectClassEnums.OrderBy(x => x.Name).ToList())
+            {
+                List<string> angularEnumItemNameValuePairs = GetAngularEnumItemNameValuePairs(classEnum.Properties.Select(x => x.Name).ToList());
+
+                if (classEnum.Name == "PermissionCodes")
+                    angularEnumItemNameValuePairs.AddRange(GetAngularEnumItemNameValuePairs(currentProjectEntitiesPermissionCodes));
+
+                sb.AppendLine($$"""
+export enum {{classEnum.Name}}
+{
+    {{string.Join("\n\t", angularEnumItemNameValuePairs)}}
+}
+
+""");
+            }
+
+            return sb.ToString();
+        }
+
+        private static List<string> GetAngularEnumItemNameValuePairs(List<string> propertyNames)
+        {
+            return propertyNames.Select(x => $$"""{{x}} = "{{x}}",""").ToList();
         }
 
     }

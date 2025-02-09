@@ -23,7 +23,7 @@ namespace Spider.Security.Services
             _blobContainerClient = blobContainerClient;
         }
 
-        public async Task AuthorizeAndThrowAsync<TUser>(TUser user, Enum permissionCode) where TUser : class, IUser, new()
+        public async Task AuthorizeAndThrowAsync<TUser>(TUser user, string permissionCode) where TUser : class, IUser, new()
         {
             bool result = false;
 
@@ -35,13 +35,14 @@ namespace Spider.Security.Services
                 if (permissionCode == null)
                     throw new ArgumentNullException("Permission code is not provided.");
 
-                result = user.Roles.Any(role => role.Permissions.Any(permission => permission.Code == permissionCode.ToString()));
+                result = user.Roles.Any(role => role.Permissions.Any(permission => permission.Code == permissionCode));
             });
 
-            if (result == false) throw new UnauthorizedException();
+            if (result == false) 
+                throw new UnauthorizedException();
         }
 
-        public async Task<bool> IsAuthorizedAsync<TUser>(Enum permissionCode) where TUser : class, IUser, new()
+        public async Task<bool> IsAuthorizedAsync<TUser>(string permissionCode) where TUser : class, IUser, new()
         {
             bool result = false;
             long userId = _authenticationService.GetCurrentUserId();
@@ -53,16 +54,17 @@ namespace Spider.Security.Services
                 if (permissionCode == null)
                     throw new ArgumentNullException("Permission code is not provided.");
 
-                result = user.Roles.Any(role => role.Permissions.Any(permission => permission.Code == permissionCode.ToString()));
+                result = user.Roles.Any(role => role.Permissions.Any(permission => permission.Code == permissionCode));
             });
 
             return result;
         }
 
-        public async Task AuthorizeAndThrowAsync<TUser>(Enum permissionCode) where TUser : class, IUser, new()
+        public async Task AuthorizeAndThrowAsync<TUser>(string permissionCode) where TUser : class, IUser, new()
         {
             bool result = false;
             long userId = _authenticationService.GetCurrentUserId();
+
             await _context.WithTransactionAsync(async () =>
             {
                 TUser user = await GetInstanceAsync<TUser, long>(userId, null);
@@ -70,32 +72,11 @@ namespace Spider.Security.Services
                 if (permissionCode == null)
                     throw new ArgumentNullException("Permission code is not provided.");
 
-                result = user.Roles.Any(role => role.Permissions.Any(permission => permission.Code == permissionCode.ToString()));
+                result = user.Roles.Any(role => role.Permissions.Any(permission => permission.Code == permissionCode));
             });
 
-            if (result == false) throw new UnauthorizedException();
-        }
-
-        /// <summary>
-        /// Most frequent case is when checking SaveOrUpdate permissions
-        /// </summary>
-        public async Task AuthorizeAndThrowAsync<TUser>(Enum permissionCode1, Enum permissionCode2) where TUser : class, IUser, new()
-        {
-            bool result = false;
-            long userId = _authenticationService.GetCurrentUserId();
-            await _context.WithTransactionAsync(async () =>
-            {
-                TUser user = await GetInstanceAsync<TUser, long>(userId, null);
-
-                if (permissionCode1 == null || permissionCode2 == null)
-                    throw new ArgumentNullException("Permission code is not provided.");
-
-                result = user.Roles
-                    .Any(role => role.Permissions
-                        .Count(permission => permission.Code == permissionCode1.ToString() || permission.Code == permissionCode2.ToString()) == 2);
-            });
-
-            if (result == false) throw new UnauthorizedException();
+            if (result == false) 
+                throw new UnauthorizedException();
         }
 
         public async Task<List<string>> GetCurrentUserPermissionCodes<TUser>() where TUser : class, IUser, new()

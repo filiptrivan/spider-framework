@@ -12,8 +12,6 @@ namespace Spider.SourceGenerators.Models
         public string Name { get; set; }
         public string EntityName { get; set; } // TODO FT: Add to every case, you didn't finished this, but it works for now.
 
-
-        public List<SpiderAttribute> Attributes = new List<SpiderAttribute>();
-        public string Project { get; set; } // FT: Used only for ng controllers generator when we need to import classes from the different assebmlies
+        public List<SpiderAttribute> Attributes { get; set; } = new();
     }
 }

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Spider.SourceGenerators.Models
 {
-    public class SpiderEnum
+    public class SpiderEnumItem
     {
         public string Name { get; set; }
         public string Value { get; set; }

@@ -143,12 +143,12 @@ namespace {{basePartOfNamespace}}.DataMappers
 
         #region To DTO
 
-        public static string GetMapperToDTO(string methodName, SpiderClass mapperClass, SpiderClass entity, List<SpiderClass> entities)
+        public static string GetMapperToDTO(string methodName, SpiderClass customMapperClass, SpiderClass entity, List<SpiderClass> entities)
         {
-            if (mapperClass == null)
+            if (customMapperClass == null)
                 return "You didn't define DataMappers";
 
-            if (HasCustomPair(mapperClass, methodName))
+            if (HasCustomPair(customMapperClass, methodName))
                 return "";
 
             List<string> manyToOneMappers = GetConfigForManyToOneClass(entity, entities);
