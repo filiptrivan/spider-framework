@@ -182,7 +182,7 @@ namespace Spider.Security.Services
             });
 
             JwtAuthResultDTO jwtAuthResultDTO = GetJwtAuthResultWithRefreshDTO(user.Id, user.Email, verificationRequestDTO.BrowserId); // FT: User can't be null, it would throw earlier if he is
-            //await SaveLoginAndReturnDomainAsync(loginDTO); // FT: Is ipAddress == null is checked here // TODO FT: Log it
+            //await SaveLogin(loginDTO); // FT: Is ipAddress == null is checked here // TODO FT: Log it
 
             return GetAuthResultDTO(user.Id, user.Email, jwtAuthResultDTO);
         }

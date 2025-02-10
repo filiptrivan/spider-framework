@@ -1,25 +1,16 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Spider.SourceGenerators.Angular;
 using Spider.SourceGenerators.Enums;
 using Spider.SourceGenerators.Models;
-using Spider.SourceGenerators.Shared;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Data;
 using System.IO;
 using System.Linq;
-using System.Reflection.Metadata;
 using System.Resources.NetStandard;
-using System.Runtime.InteropServices;
-using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace Spider.SourceGenerators.Shared
 {
@@ -1283,12 +1274,22 @@ namespace Spider.SourceGenerators.Shared
             foreach (SpiderClass entity in entities)
             {
                 result.Add($"Read{entity.Name}");
-                result.Add($"Edit{entity.Name}");
+                result.Add($"Update{entity.Name}");
                 result.Add($"Insert{entity.Name}");
                 result.Add($"Delete{entity.Name}");
             }
 
             return result;
+        }
+
+        public static string GetAuthorizeEntityMethodName(string entityName, CrudCodes crudCode)
+        {
+            return $"Authorize{entityName}{crudCode}AndThrow";
+        }
+
+        public static string GetAuthorizeEntityListMethodName(string entityName, CrudCodes crudCode)
+        {
+            return $"Authorize{entityName}List{crudCode}AndThrow";
         }
 
         #endregion
@@ -1425,7 +1426,7 @@ namespace Spider.SourceGenerators.Shared
 
         public static void UpdateResourceFile(Dictionary<string, string> data, string path)
         {
-            Dictionary<string, string> resourceEntries = new Dictionary<string, string>();
+            Dictionary<string, string> resourceEntries = new();
 
             if (File.Exists(path))
             {
@@ -1475,7 +1476,7 @@ namespace Spider.SourceGenerators.Shared
             if (File.Exists(path) == false)
                 return;
 
-            Dictionary<string, string> resourceEntries = new Dictionary<string, string>();
+            Dictionary<string, string> resourceEntries = new();
 
             foreach (KeyValuePair<string, string> entry in data)
             {

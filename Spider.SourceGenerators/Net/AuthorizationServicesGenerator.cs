@@ -29,7 +29,7 @@ namespace Spider.SourceGenerators.Net
                 {
                     NamespaceExtensionCodes.Entities,
                 });
-            
+
             IncrementalValueProvider<List<SpiderClass>> referencedProjectClasses = Helpers.GetIncrementalValueProviderClassesFromReferencedAssemblies(context,
                 new List<NamespaceExtensionCodes>
                 {
@@ -44,7 +44,7 @@ namespace Spider.SourceGenerators.Net
 
         private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntities, SourceProductionContext context)
         {
-            if (classes.Count <= 1) 
+            if (classes.Count <= 1)
                 return;
 
             List<SpiderClass> currentProjectEntities = Helpers.GetSpiderClasses(classes, referencedProjectEntities);
@@ -58,7 +58,7 @@ namespace Spider.SourceGenerators.Net
 
             bool generateAuthorizationMethods = projectName != "Security";
 
-            sb.AppendLine($$"""
+            string result = $$"""
 {{GetUsings(basePartOfNamespace)}}
 
 namespace {{basePartOfNamespace}}.Services
@@ -74,7 +74,20 @@ namespace {{basePartOfNamespace}}.Services
             _context = context;
             _authenticationService = authenticationService;
         }
-""");
+
+{{GetAuthorizeRegions(currentProjectEntities, allEntities)}}
+
+    }
+}
+""";
+
+            context.AddSource($"AuthorizationBusinessService.generated", SourceText.From(result, Encoding.UTF8));
+        }
+
+        public static string GetAuthorizeRegions(List<SpiderClass> currentProjectEntities, List<SpiderClass> allEntities)
+        {
+            StringBuilder sb = new();
+
             foreach (SpiderClass entity in currentProjectEntities)
             {
                 if (entity.BaseType == null) // FT: Handling many to many, maybe you should do something else in the future
@@ -85,111 +98,53 @@ namespace {{basePartOfNamespace}}.Services
                 sb.AppendLine($$"""
         #region {{entity.Name}}
 
-""");
+{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Read, $"{idTypeOfTheEntityClass} {entity.Name.FirstCharToLower()}Id")}}
 
-                sb.AppendLine($$"""
-        public virtual async Task {{entity.Name}}SingleReadAuthorize({{idTypeOfTheEntityClass}} {{entity.Name.FirstCharToLower()}}Id)
-        {
-{{(generateAuthorizationMethods ? $$"""
-            await _context.WithTransactionAsync(async () =>
-            {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{{entity.Name}});
-            });
-"""
-            : "")}}
-        }
+        // FT: Same for table, excel, autocomplete, dropdown
+{{GetAuthorizeEntityListMethod(entity.Name, CrudCodes.Read, "")}}
 
-        public virtual async Task {{entity.Name}}SingleUpdateAuthorize({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO) // FT: Save
-        {
-{{(generateAuthorizationMethods ? $$"""
-            await _context.WithTransactionAsync(async () =>
-            {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Edit{{entity.Name}});
-            });
-"""
-            : "")}}
-        }
+{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Update, $"{entity.Name}DTO {entity.Name.FirstCharToLower()}DTO")}}
 
-        public virtual async Task {{entity.Name}}SingleUpdateAuthorize({{idTypeOfTheEntityClass}} {{entity.Name.FirstCharToLower()}}Id) // FT: Blob
-        {
-{{(generateAuthorizationMethods ? $$"""
-            await _context.WithTransactionAsync(async () =>
-            {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Edit{{entity.Name}});
-            });
-"""
-            : "")}}
-        }
+{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Update, $"{idTypeOfTheEntityClass} {entity.Name.FirstCharToLower()}Id")}}
 
-        public virtual async Task {{entity.Name}}SingleInsertAuthorize({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO) // FT: Save
-        {
-{{(generateAuthorizationMethods ? $$"""
-            await _context.WithTransactionAsync(async () =>
-            {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Insert{{entity.Name}});
-            });
-"""
-            : "")}}
-        }
+{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Insert, $"{entity.Name}DTO {entity.Name.FirstCharToLower()}DTO")}}
 
-        public virtual async Task {{entity.Name}}SingleInsertAuthorize() // FT: Blob, the id will always be 0, so we don't need to pass it.
-        {
-{{(generateAuthorizationMethods ? $$"""
-            await _context.WithTransactionAsync(async () =>
-            {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Insert{{entity.Name}});
-            });
-"""
-            : "")}}
-        }
+        // FT: Blob, the id will always be 0, so we don't need to pass it.
+{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Insert, "")}}
 
-        public virtual async Task {{entity.Name}}ListReadAuthorize() // FT: Same for table, excel, autocomplete, dropdown
-        {
-{{(generateAuthorizationMethods ? $$"""
-            await _context.WithTransactionAsync(async () =>
-            {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Read{{entity.Name}});
-            });
-"""
-            : "")}}
-        }
+{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Delete, $"{idTypeOfTheEntityClass} {entity.Name.FirstCharToLower()}Id")}}
 
-        public virtual async Task {{entity.Name}}DeleteAuthorize({{idTypeOfTheEntityClass}} {{entity.Name.FirstCharToLower()}}Id)
-        {
-{{(generateAuthorizationMethods ? $$"""
-            await _context.WithTransactionAsync(async () =>
-            {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Delete{{entity.Name}});
-            });
-"""
-            : "")}}
-        }
+{{GetAuthorizeEntityListMethod(entity.Name, CrudCodes.Delete, $"List<{idTypeOfTheEntityClass}> {entity.Name.FirstCharToLower()}ListToDelete")}}
 
-        public virtual async Task {{entity.Name}}ListDeleteAuthorize(List<{{idTypeOfTheEntityClass}}> {{entity.Name.FirstCharToLower()}}ListToDelete)
-        {
-{{(generateAuthorizationMethods ? $$"""
-            await _context.WithTransactionAsync(async () =>
-            {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.Delete{{entity.Name}});
-            });
-"""
-            : "")}}
-        }
-
-""");
-
-                sb.AppendLine($$"""
         #endregion
 
 """);
             }
 
-            sb.AppendLine($$"""
-    }
-}
-""");
+            return sb.ToString();
+        }
 
-            context.AddSource($"AuthorizationBusinessService.generated", SourceText.From(sb.ToString(), Encoding.UTF8));
+        private static string GetAuthorizeEntityMethod(string entityName, CrudCodes crudCode, string parametersBody)
+        {
+            return GetAuthorizeMethod(Helpers.GetAuthorizeEntityMethodName(entityName, crudCode), parametersBody, crudCode, entityName);
+        }
+
+        private static string GetAuthorizeEntityListMethod(string entityName, CrudCodes crudCode, string parametersBody)
+        {
+            return GetAuthorizeMethod(Helpers.GetAuthorizeEntityListMethodName(entityName, crudCode), parametersBody, crudCode, entityName);
+        }
+
+        private static string GetAuthorizeMethod(string methodName, string parametersBody, CrudCodes permissionCodePrefix, string entityName)
+        {
+            return $$"""
+        public virtual async Task {{methodName}}({{parametersBody}})
+        {
+            await _context.WithTransactionAsync(async () =>
+            {
+                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.{{permissionCodePrefix}}{{entityName}});
+            });
+        }
+""";
         }
 
         private static string GetUsings(string basePartOfTheNamespace)

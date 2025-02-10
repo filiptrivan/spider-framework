@@ -30,7 +30,7 @@ namespace Spider.Security.Services
             });
         }
 
-        public override async Task RoleSingleUpdateAuthorize(RoleDTO roleDTO) // FT: Save
+        public override async Task RoleAuthorizeUpdateAndThrow(RoleDTO roleDTO) // FT: Save
         {
             await _context.WithTransactionAsync(async () =>
             {
@@ -38,7 +38,7 @@ namespace Spider.Security.Services
             });
         }
 
-        public override async Task RoleSingleUpdateAuthorize(int roleId) // FT: Blob
+        public override async Task RoleAuthorizeUpdateAndThrow(int roleId) // FT: Blob
         {
             await _context.WithTransactionAsync(async () =>
             {
@@ -85,7 +85,7 @@ namespace Spider.Security.Services
             });
         }
 
-        public override async Task PermissionSingleUpdateAuthorize(PermissionDTO permissionDTO) // FT: Save
+        public override async Task PermissionAuthorizeUpdateAndThrow(PermissionDTO permissionDTO) // FT: Save
         {
             await _context.WithTransactionAsync(async () =>
             {
@@ -93,7 +93,7 @@ namespace Spider.Security.Services
             });
         }
 
-        public override async Task PermissionSingleUpdateAuthorize(int permissionId) // FT: Blob
+        public override async Task PermissionAuthorizeUpdateAndThrow(int permissionId) // FT: Blob
         {
             await _context.WithTransactionAsync(async () =>
             {

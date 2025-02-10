@@ -153,12 +153,15 @@ namespace {{basePartOfNamespace}}.Services
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                if (authorize) 
+                if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}SingleReadAuthorize(id);
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
                 }
 
-                var dto = await _context.DbSet<{{entity.Name}}>().AsNoTracking().Where(x => x.Id == id).ProjectToType<{{entity.Name}}DTO>(Mapper.{{entity.Name}}ProjectToConfig()).SingleOrDefaultAsync();
+                var dto = await _context.DbSet<{{entity.Name}}>()
+                    .AsNoTracking()
+                    .Where(x => x.Id == id).ProjectToType<{{entity.Name}}DTO>(Mapper.{{entity.Name}}ProjectToConfig())
+                    .SingleOrDefaultAsync();
 
                 if (dto == null)
                     throw new BusinessException(SharedTerms.EntityDoesNotExistInDatabase);
@@ -179,14 +182,14 @@ namespace {{basePartOfNamespace}}.Services
 
         public async virtual Task<TableResponseDTO<{{entity.Name}}DTO>> Get{{entity.Name}}TableData(TableFilterDTO tableFilterPayload, IQueryable<{{entity.Name}}> query, bool authorize = true)
         {
-            var paginationResult = new PaginationResult<{{entity.Name}}>();
+            PaginationResult<{{entity.Name}}> paginationResult = new();
             List<{{entity.Name}}DTO> data = null;
 
             await _context.WithTransactionAsync(async () =>
             {
                 if (authorize) 
                 {
-                    await _authorizationService.{{entity.Name}}ListReadAuthorize();
+                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
                 }
 
                 paginationResult = await Get{{entity.Name}}ListForPagination(tableFilterPayload, query);
@@ -203,14 +206,14 @@ namespace {{basePartOfNamespace}}.Services
 
         public async Task<byte[]> Export{{entity.Name}}TableDataToExcel(TableFilterDTO tableFilterPayload, IQueryable<{{entity.Name}}> query, bool authorize = true)
         {
-            var paginationResult = new PaginationResult<{{entity.Name}}>();
+            PaginationResult<{{entity.Name}}> paginationResult = new();
             List<{{entity.Name}}DTO> data = null;
 
             await _context.WithTransactionAsync(async () =>
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}ListReadAuthorize();
+                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
                 }
 
                 paginationResult = await Get{{entity.Name}}ListForPagination(tableFilterPayload, query);
@@ -228,7 +231,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}ListReadAuthorize();
+                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
                 }
 
                 if (!string.IsNullOrEmpty(query))
@@ -252,7 +255,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}ListReadAuthorize();
+                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
                 }
 
                 return await {{entity.Name.FirstCharToLower()}}Query
@@ -272,7 +275,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}ListReadAuthorize();
+                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
                 }
 
                 return await {{entity.Name.FirstCharToLower()}}Query
@@ -286,7 +289,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}ListReadAuthorize();
+                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
                 }
 
                 var dtoList = await {{entity.Name.FirstCharToLower()}}Query
@@ -371,13 +374,13 @@ namespace {{basePartOfNamespace}}.Services
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                var poco = await Save{{entity.Name}}AndReturnDomainAsync({{entity.Name.FirstCharToLower()}}DTO, authorizeUpdate, authorizeInsert);
+                var poco = await Save{{entity.Name}}({{entity.Name.FirstCharToLower()}}DTO, authorizeUpdate, authorizeInsert);
 
                 return poco.Adapt<{{entity.Name}}DTO>(Mapper.{{entity.Name}}ToDTOConfig());
             });
         }
 
-        public async Task<{{entity.Name}}> Save{{entity.Name}}AndReturnDomainAsync({{entity.Name}}DTO dto, bool authorizeUpdate = true, bool authorizeInsert = true)
+        public async Task<{{entity.Name}}> Save{{entity.Name}}({{entity.Name}}DTO dto, bool authorizeUpdate = true, bool authorizeInsert = true)
         {
             {{entity.Name}}DTOValidationRules validationRules = new {{entity.Name}}DTOValidationRules();
             validationRules.ValidateAndThrow(dto);
@@ -392,7 +395,7 @@ namespace {{basePartOfNamespace}}.Services
                 {
                     if (authorizeUpdate)
                     {
-                        await _authorizationService.{{entity.Name}}SingleUpdateAuthorize(dto);
+                        {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Update, "dto")}}
                     }
 
                     poco = await GetInstanceAsync<{{entity.Name}}, {{entityIdType}}>(dto.Id, dto.Version);
@@ -404,7 +407,7 @@ namespace {{basePartOfNamespace}}.Services
                 {
                     if (authorizeInsert)
                     {
-                        await _authorizationService.{{entity.Name}}SingleInsertAuthorize(dto);
+                        {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Insert, "dto")}}
                     }
 
                     poco = dto.Adapt<{{entity.Name}}>(Mapper.{{entity.Name}}DTOToEntityConfig());
@@ -435,7 +438,9 @@ namespace {{basePartOfNamespace}}.Services
             return await _context.WithTransactionAsync(async () =>
             {
                 await OnBeforeSave{{entity.Name}}AndReturnSaveBodyDTO(saveBodyDTO);
+
                 var savedDTO = await Save{{entity.Name}}AndReturnDTOAsync(saveBodyDTO.{{entity.Name}}DTO, authorizeUpdate, authorizeInsert);
+
                 await OnAfterSave{{entity.Name}}AndReturnSaveBodyDTO(savedDTO, saveBodyDTO);
 
 {{string.Join("\n", GetOrderedOneToManyUpdateVariables(entity, entities))}}
@@ -698,14 +703,14 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorizeUpdate)
                 {
-                    await _authorizationService.{{entity.Name}}SingleUpdateAuthorize({{entity.Name.FirstCharToLower()}}Id);
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Update, $"{entity.Name.FirstCharToLower()}Id")}}
                 }
             }
             else
             {
                 if (authorizeInsert)
                 {
-                    await _authorizationService.{{entity.Name}}SingleInsertAuthorize();
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Insert, "")}}
                 }
             }
 
@@ -756,7 +761,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}DeleteAuthorize(id);
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Delete, "id")}}
                 }
 
                 await OnBefore{{entity.Name}}AsyncDelete(id);
@@ -785,7 +790,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}ListDeleteAuthorize(listForDelete_{{deleteIterator}});
+                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Delete, $"listForDelete_{deleteIterator}")}}
                 }
 
                 await OnBefore{{entity.Name}}ListAsyncDelete(listForDelete_{{deleteIterator}});
@@ -886,7 +891,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}SingleReadAuthorize(id);
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
                 }
 
                 return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
@@ -907,7 +912,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}SingleReadAuthorize(id);
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
                 }
 
                 return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
@@ -1001,7 +1006,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}SingleReadAuthorize(id);
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
                 }
 
                 return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
@@ -1023,7 +1028,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 if (authorize)
                 {
-                    await _authorizationService.{{entity.Name}}SingleReadAuthorize(id);
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
                 }
 
                 return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
@@ -1227,6 +1232,21 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.AspNetCore.Http;
 """;
+        }
+
+        private static string GetAuthorizeEntityMethodCall(string entityName, CrudCodes crudCode, string parametersBody)
+        {
+            return GetAuthorizeMethodCall(Helpers.GetAuthorizeEntityMethodName(entityName, crudCode), parametersBody);
+        }
+
+        private static string GetAuthorizeEntityListMethodCall(string entityName, CrudCodes crudCode, string parametersBody)
+        {
+            return GetAuthorizeMethodCall(Helpers.GetAuthorizeEntityListMethodName(entityName, crudCode), parametersBody);
+        }
+
+        private static string GetAuthorizeMethodCall(string methodName, string parametersBody)
+        {
+            return $"await _authorizationService.{methodName}({parametersBody});";
         }
 
         #endregion
