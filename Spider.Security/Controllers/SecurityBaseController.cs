@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Spider.Security.DTO;
 using Spider.Security.Entities;
-using Spider.Security.Interface;
+using Spider.Security.Interfaces;
 using Spider.Security.Services;
 using Spider.Shared.Attributes;
 using Spider.Shared.Attributes.EF.UI;

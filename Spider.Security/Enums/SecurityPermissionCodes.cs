@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Spider.Security.Enums
 {
-    public static partial class PermissionCodes
+    public static partial class SecurityPermissionCodes
     {
         public static string ReadUserExtended { get; } = "ReadUserExtended";
         public static string EditUserExtended { get; } = "EditUserExtended";

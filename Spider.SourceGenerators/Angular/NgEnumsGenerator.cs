@@ -75,16 +75,20 @@ namespace Spider.SourceGenerators.Angular
             // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\enums\{projectName}-enums.ts
             string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\enums\{projectName.FromPascalToKebabCase()}-enums.generated.ts");
 
-            string result = GetAngularEnums(currentProjectEnums, currentProjectClassEnums, currentProjectEntities);
+            string result = GetAngularEnums(currentProjectEnums, currentProjectClassEnums, currentProjectEntities, projectName);
 
             Helpers.WriteToTheFile(result, outputPath);
         }
 
-        private static string GetAngularEnums(IList<EnumDeclarationSyntax> currentProjectEnums, List<SpiderClass> currentProjectClassEnums, List<SpiderClass> currentProjectEntities)
+        private static string GetAngularEnums(
+            IList<EnumDeclarationSyntax> currentProjectEnums, 
+            List<SpiderClass> currentProjectClassEnums, 
+            List<SpiderClass> currentProjectEntities, 
+            string projectName)
         {
             return $$"""
 {{GetAngularEnumsFromCurrentProjectEnums(currentProjectEnums)}}
-{{GetAngularEnumsFromCurrentProjectClassEnums(currentProjectClassEnums, currentProjectEntities)}}
+{{GetAngularEnumsFromCurrentProjectClassEnums(currentProjectClassEnums, currentProjectEntities, projectName)}}
 """;
         }
 
@@ -124,7 +128,7 @@ export enum {{enume.Identifier.Text}}
             return result;
         }
 
-        private static string GetAngularEnumsFromCurrentProjectClassEnums(List<SpiderClass> currentProjectClassEnums, List<SpiderClass> currentProjectEntities)
+        private static string GetAngularEnumsFromCurrentProjectClassEnums(List<SpiderClass> currentProjectClassEnums, List<SpiderClass> currentProjectEntities, string projectName)
         {
             StringBuilder sb = new();
 
@@ -134,7 +138,7 @@ export enum {{enume.Identifier.Text}}
             {
                 List<string> angularEnumItemNameValuePairs = GetAngularEnumItemNameValuePairs(classEnum.Properties.Select(x => x.Name).ToList());
 
-                if (classEnum.Name == "PermissionCodes")
+                if (classEnum.Name == $"{projectName}PermissionCodes")
                     angularEnumItemNameValuePairs.AddRange(GetAngularEnumItemNameValuePairs(currentProjectEntitiesPermissionCodes));
 
                 sb.AppendLine($$"""

@@ -64,7 +64,7 @@ using System.Threading.Tasks;
 
 namespace {{basePartOfNamespace}}.Enums
 {
-    public partial class PermissionCodes
+    public partial class {{projectName}}PermissionCodes
     {
         {{string.Join("\n\t\t", permissionCodes.Select(x => $$"""public static string {{x}} { get; } = "{{x}}";"""))}}
     }

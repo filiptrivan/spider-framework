@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using Spider.Security.DTO;
 using System.Net;
 
-namespace Spider.Security.Interface
+namespace Spider.Security.Interfaces
 {
     // TODO FT: Sort the arguments of the methods
     public interface IJwtAuthManager

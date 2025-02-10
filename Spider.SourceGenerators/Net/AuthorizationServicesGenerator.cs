@@ -50,20 +50,18 @@ namespace Spider.SourceGenerators.Net
             List<SpiderClass> currentProjectEntities = Helpers.GetSpiderClasses(classes, referencedProjectEntities);
             List<SpiderClass> allEntities = currentProjectEntities.Concat(referencedProjectEntities).ToList();
 
-            StringBuilder sb = new();
-
             string namespaceValue = currentProjectEntities[0].Namespace;
             string basePartOfNamespace = Helpers.GetBasePartOfNamespace(namespaceValue);
             string projectName = Helpers.GetProjectName(namespaceValue);
 
-            bool generateAuthorizationMethods = projectName != "Security";
+            bool isSecurityProject = projectName == "Security";
 
             string result = $$"""
 {{GetUsings(basePartOfNamespace)}}
 
 namespace {{basePartOfNamespace}}.Services
 {
-    public class AuthorizationBusinessServiceGenerated : AuthorizationService
+    {{(isSecurityProject ? $"public class AuthorizationBusinessServiceGenerated<TUser> : AuthorizationService where TUser : class, IUser, new()" : $"public class AuthorizationBusinessServiceGenerated : AuthorizationService")}}
     {
         private readonly IApplicationDbContext _context;
         private readonly AuthenticationService _authenticationService;
@@ -75,7 +73,7 @@ namespace {{basePartOfNamespace}}.Services
             _authenticationService = authenticationService;
         }
 
-{{GetAuthorizeRegions(currentProjectEntities, allEntities)}}
+{{GetAuthorizeRegions(currentProjectEntities, allEntities, projectName, isSecurityProject)}}
 
     }
 }
@@ -84,7 +82,7 @@ namespace {{basePartOfNamespace}}.Services
             context.AddSource($"AuthorizationBusinessService.generated", SourceText.From(result, Encoding.UTF8));
         }
 
-        public static string GetAuthorizeRegions(List<SpiderClass> currentProjectEntities, List<SpiderClass> allEntities)
+        public static string GetAuthorizeRegions(List<SpiderClass> currentProjectEntities, List<SpiderClass> allEntities, string projectName, bool isSecurityProject)
         {
             StringBuilder sb = new();
 
@@ -98,23 +96,23 @@ namespace {{basePartOfNamespace}}.Services
                 sb.AppendLine($$"""
         #region {{entity.Name}}
 
-{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Read, $"{idTypeOfTheEntityClass} {entity.Name.FirstCharToLower()}Id")}}
+{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Read, $"{idTypeOfTheEntityClass} {entity.Name.FirstCharToLower()}Id", projectName, isSecurityProject)}}
 
         // FT: Same for table, excel, autocomplete, dropdown
-{{GetAuthorizeEntityListMethod(entity.Name, CrudCodes.Read, "")}}
+{{GetAuthorizeEntityListMethod(entity.Name, CrudCodes.Read, "", projectName, isSecurityProject)}}
 
-{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Update, $"{entity.Name}DTO {entity.Name.FirstCharToLower()}DTO")}}
+{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Update, $"{entity.Name}DTO {entity.Name.FirstCharToLower()}DTO", projectName, isSecurityProject)}}
 
-{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Update, $"{idTypeOfTheEntityClass} {entity.Name.FirstCharToLower()}Id")}}
+{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Update, $"{idTypeOfTheEntityClass} {entity.Name.FirstCharToLower()}Id", projectName, isSecurityProject)}}
 
-{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Insert, $"{entity.Name}DTO {entity.Name.FirstCharToLower()}DTO")}}
+{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Insert, $"{entity.Name}DTO {entity.Name.FirstCharToLower()}DTO", projectName, isSecurityProject)}}
 
         // FT: Blob, the id will always be 0, so we don't need to pass it.
-{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Insert, "")}}
+{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Insert, "", projectName, isSecurityProject)}}
 
-{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Delete, $"{idTypeOfTheEntityClass} {entity.Name.FirstCharToLower()}Id")}}
+{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Delete, $"{idTypeOfTheEntityClass} {entity.Name.FirstCharToLower()}Id", projectName, isSecurityProject)}}
 
-{{GetAuthorizeEntityListMethod(entity.Name, CrudCodes.Delete, $"List<{idTypeOfTheEntityClass}> {entity.Name.FirstCharToLower()}ListToDelete")}}
+{{GetAuthorizeEntityListMethod(entity.Name, CrudCodes.Delete, $"List<{idTypeOfTheEntityClass}> {entity.Name.FirstCharToLower()}ListToDelete", projectName, isSecurityProject)}}
 
         #endregion
 
@@ -124,24 +122,24 @@ namespace {{basePartOfNamespace}}.Services
             return sb.ToString();
         }
 
-        private static string GetAuthorizeEntityMethod(string entityName, CrudCodes crudCode, string parametersBody)
+        private static string GetAuthorizeEntityMethod(string entityName, CrudCodes crudCode, string parametersBody, string projectName, bool isSecurityProject)
         {
-            return GetAuthorizeMethod(Helpers.GetAuthorizeEntityMethodName(entityName, crudCode), parametersBody, crudCode, entityName);
+            return GetAuthorizeMethod(Helpers.GetAuthorizeEntityMethodName(entityName, crudCode), parametersBody, crudCode, entityName, projectName, isSecurityProject);
         }
 
-        private static string GetAuthorizeEntityListMethod(string entityName, CrudCodes crudCode, string parametersBody)
+        private static string GetAuthorizeEntityListMethod(string entityName, CrudCodes crudCode, string parametersBody, string projectName, bool isSecurityProject)
         {
-            return GetAuthorizeMethod(Helpers.GetAuthorizeEntityListMethodName(entityName, crudCode), parametersBody, crudCode, entityName);
+            return GetAuthorizeMethod(Helpers.GetAuthorizeEntityListMethodName(entityName, crudCode), parametersBody, crudCode, entityName, projectName, isSecurityProject);
         }
 
-        private static string GetAuthorizeMethod(string methodName, string parametersBody, CrudCodes permissionCodePrefix, string entityName)
+        private static string GetAuthorizeMethod(string methodName, string parametersBody, CrudCodes permissionCodePrefix, string entityName, string projectName, bool isSecurityProject)
         {
             return $$"""
         public virtual async Task {{methodName}}({{parametersBody}})
         {
             await _context.WithTransactionAsync(async () =>
             {
-                await AuthorizeAndThrowAsync<UserExtended>(PermissionCodes.{{permissionCodePrefix}}{{entityName}});
+                await AuthorizeAndThrowAsync<{{(isSecurityProject ? "TUser" : "UserExtended")}}>({{projectName}}PermissionCodes.{{permissionCodePrefix}}{{entityName}});
             });
         }
 """;
@@ -155,6 +153,7 @@ using {{basePartOfTheNamespace}}.Enums;
 using {{basePartOfTheNamespace}}.DTO;
 using Azure.Storage.Blobs;
 using Spider.Security.Services;
+using Spider.Security.Interfaces;
 using Spider.Shared.Extensions;
 using Spider.Shared.Interfaces;
 """;

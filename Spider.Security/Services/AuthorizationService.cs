@@ -3,7 +3,7 @@ using System.Linq.Dynamic.Core;
 using Spider.Shared.Services;
 using Spider.Shared.Extensions;
 using Spider.Shared.Exceptions;
-using Spider.Security.Interface;
+using Spider.Security.Interfaces;
 using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
 

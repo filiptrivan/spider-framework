@@ -6,7 +6,7 @@ using System.Reflection;
 using OfficeOpenXml.FormulaParsing.Excel.Functions.DateTime;
 using Spider.Shared.Helpers;
 using Spider.Shared.Enums;
-using Spider.Security.Interface;
+using Spider.Security.Interfaces;
 using Spider.Security.Entities;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Spider.Shared.Attributes;

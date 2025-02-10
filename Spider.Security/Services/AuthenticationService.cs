@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Spider.Security.Entities;
-using Spider.Security.Interface;
+using Spider.Security.Interfaces;
 using Spider.Shared.Interfaces;
 using Spider.Shared.Services;
 using Spider.Shared.Extensions;

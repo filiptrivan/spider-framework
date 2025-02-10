@@ -1,6 +1,6 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using Spider.Security.DTO;
-using Spider.Security.Interface;
+using Spider.Security.Interfaces;
 using Spider.Shared.Exceptions;
 using Spider.Shared.Resources;
 using System.Collections.Concurrent;

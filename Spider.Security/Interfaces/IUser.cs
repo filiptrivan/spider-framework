@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Spider.Security.Interface
+namespace Spider.Security.Interfaces
 {
     public interface IUser : IBusinessObject<long>
     {

@@ -6,7 +6,7 @@ using Spider.Shared.Interfaces;
 using Spider.Shared.Exceptions;
 using System.Linq.Dynamic.Core;
 using Google.Apis.Auth;
-using Spider.Security.Interface;
+using Spider.Security.Interfaces;
 using Spider.Shared.Extensions;
 using Spider.Security.ValidationRules;
 using FluentValidation;
@@ -414,7 +414,7 @@ namespace Spider.Security.Services
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                await _authorizationService.AuthorizeAndThrowAsync<TUser>(PermissionCodes.ReadUserExtended);
+                await _authorizationService.AuthorizeAndThrowAsync<TUser>(SecurityPermissionCodes.ReadRole);
 
                 return await _context.DbSet<TUser>()
                     .AsNoTracking()
@@ -434,7 +434,7 @@ namespace Spider.Security.Services
             {
                 if (authorize)
                 {
-                    await _authorizationService.AuthorizeAndThrowAsync<TUser>(PermissionCodes.ReadRole);
+                    await _authorizationService.AuthorizeAndThrowAsync<TUser>((string)SecurityPermissionCodes.ReadRole);
                 }
 
                 return await _context.DbSet<TUser>()

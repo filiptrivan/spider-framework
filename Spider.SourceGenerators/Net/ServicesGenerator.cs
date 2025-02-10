@@ -1218,7 +1218,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Data;
 using FluentValidation;
 using Spider.Security.Services;
-using Spider.Security.Interface;
+using Spider.Security.Interfaces;
 using Spider.Shared.Excel;
 using Spider.Shared.Interfaces;
 using Spider.Shared.Services;

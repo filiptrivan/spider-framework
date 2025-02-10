@@ -18,12 +18,12 @@ namespace Spider.SourceGenerators.Net
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//#if DEBUG
-//            if (!Debugger.IsAttached)
-//            {
-//                Debugger.Launch();
-//            }
-//#endif
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helpers.IsSyntaxTargetForGenerationEveryClass(s),
@@ -103,10 +103,10 @@ namespace {{basePartOfNamespace}}.Controllers
             {
                 string servicesNamespace = referencedProjectEntityGroupedClasses.FirstOrDefault().Namespace.Replace(".Entities", ".Services");
                 SpiderClass businessServiceClass = referencedProjectServices
-                    .Where(x => x.BaseType != null && 
-                                x.Namespace != null && 
-                                x.Namespace == servicesNamespace && 
-                                x.BaseType.Contains("BusinessServiceGenerated") && 
+                    .Where(x => x.BaseType != null &&
+                                x.Namespace != null &&
+                                x.Namespace == servicesNamespace &&
+                                x.BaseType.Contains("BusinessServiceGenerated") &&
                                 x.BaseType.Contains("AuthorizationBusinessServiceGenerated") == false)
                     .SingleOrDefault();
 
@@ -158,14 +158,14 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<TableResponseDTO<{{referencedProjectEntityClass.Name}}DTO>> Get{{referencedProjectEntityClass.Name}}TableData(TableFilterDTO tableFilterDTO)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntityClass)}});
         }
 
         [HttpPost]
         [AuthGuard]
         public virtual async Task<IActionResult> Export{{referencedProjectEntityClass.Name}}TableDataToExcel(TableFilterDTO tableFilterDTO)
         {
-            byte[] fileContent = await _{{businessServiceName.FirstCharToLower()}}.Export{{referencedProjectEntityClass.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+            byte[] fileContent = await _{{businessServiceName.FirstCharToLower()}}.Export{{referencedProjectEntityClass.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{referencedProjectEntityClass.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntityClass)}});
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"{TermsGenerated.{{referencedProjectEntityClass.Name}}ExcelExportName}.xlsx"));
         }
 
@@ -173,14 +173,14 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<List<{{referencedProjectEntityClass.Name}}DTO>> Get{{referencedProjectEntityClass.Name}}List()
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}DTOList(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}DTOList(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntityClass)}});
         }
 
         [HttpGet]
         [AuthGuard]
         public virtual async Task<{{referencedProjectEntityClass.Name}}DTO> Get{{referencedProjectEntityClass.Name}}({{referencedProjectEntityClassIdType}} id)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}DTOAsync(id, false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}DTOAsync(id, {{ShouldAuthorizeEntity(referencedProjectEntityClass)}});
         }
 
         [HttpGet]
@@ -194,7 +194,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<List<NamebookDTO<{{referencedProjectEntityClassIdType}}>>> Get{{referencedProjectEntityClass.Name}}ListForDropdown()
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}ListForDropdown(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntityClass.Name}}ListForDropdown(_context.DbSet<{{referencedProjectEntityClass.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntityClass)}});
         }
 
 {{string.Join("\n\n", GetOrderedOneToManyControllerMethods(referencedProjectEntityClass, referencedProjectEntities, businessServiceName))}}
@@ -222,6 +222,11 @@ namespace {{basePartOfNamespace}}.Controllers
             }
 
             return result;
+        }
+
+        private static string ShouldAuthorizeEntity(SpiderClass entity)
+        {
+            return entity.HasAuthorizeAttribute().ToString().ToLower();
         }
 
         private static List<string> GetManyToManyControllerMethods(SpiderClass referencedProjectEntityClass, List<SpiderClass> referencedProjectEntities, string businessServiceName)
@@ -319,7 +324,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task Delete{{entity.Name}}({{entity.GetIdType(entities)}} id)
         {
-            await _{{businessServiceName.FirstCharToLower()}}.Delete{{entity.Name}}Async(id, false);
+            await _{{businessServiceName.FirstCharToLower()}}.Delete{{entity.Name}}Async(id, {{ShouldAuthorizeEntity(entity)}});
         }
 """;
         }
@@ -334,7 +339,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<{{entity.Name}}SaveBodyDTO> Save{{entity.Name}}({{entity.Name}}SaveBodyDTO saveBodyDTO)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Save{{entity.Name}}AndReturnSaveBodyDTOAsync(saveBodyDTO, false, false);
+            return await _{{businessServiceName.FirstCharToLower()}}.Save{{entity.Name}}AndReturnSaveBodyDTOAsync(saveBodyDTO, {{ShouldAuthorizeEntity(entity)}}, {{ShouldAuthorizeEntity(entity)}});
         }
 """;
         }
