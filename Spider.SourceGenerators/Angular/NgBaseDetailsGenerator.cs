@@ -18,12 +18,12 @@ namespace Spider.SourceGenerators.Angular
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
@@ -66,8 +66,10 @@ namespace Spider.SourceGenerators.Angular
             string namespaceValue = currentProjectClasses[0].Namespace;
             string projectName = Helpers.GetProjectName(namespaceValue);
 
-            // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\components\base-details\{projectName}.ts
-            string outputPath = callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\components\base-details\{projectName.FromPascalToKebabCase()}-base-details.generated.ts");
+            string outputPath =
+                Helpers.GetGeneratorOutputPath(nameof(NgBaseDetailsGenerator), currentProjectClasses) ??
+                // ...\API\PlayertyLoyals.Business -> ...\Angular\src\app\business\components\base-details\{projectName}.ts
+                callingProjectDirectory.ReplaceEverythingAfter(@"\API\", $@"\Angular\src\app\business\components\base-details\{projectName.FromPascalToKebabCase()}-base-details.generated.ts");
 
             string result = $$"""
 {{GetImports(customDTOClasses, allEntities)}}
@@ -83,12 +85,13 @@ namespace Spider.SourceGenerators.Angular
             List<string> result = new();
 
             foreach (SpiderClass entity in currentProjectEntities
-                .Where(x => x.Attributes.Any(x => x.Name == "UIDoNotGenerate") == false)
+                .Where(x => 
+                    x.HasUIDoNotGenerateAttribute() == false &&
+                    x.IsReadonlyObject() == false &&
+                    x.IsManyToMany() == false
+                )
             )
             {
-                if (entity.IsManyToMany())
-                    continue;
-
                 result.Add($$"""
 @Component({
     selector: '{{entity.Name.FromPascalToKebabCase()}}-base-details',

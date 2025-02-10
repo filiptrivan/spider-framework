@@ -659,42 +659,29 @@ namespace Spider.SourceGenerators.Shared
 
         #region Class list filters
 
-        public static ClassDeclarationSyntax GetSettingsClass(IList<ClassDeclarationSyntax> classes)
+        public static string GetGeneratorOutputPath(string generatorName, List<SpiderClass> currentProjectClasses)
         {
-            return classes
-                .Where(x => x.Ancestors()
-                    .OfType<NamespaceDeclarationSyntax>()
-                    .Select(ns => ns.Name.ToString())
-                    .Any(ns => ns.EndsWith($".GeneratorSettings")))
-                .SingleOrDefault();
-        }
-
-        public static string GetGeneratorOutputPath(string generatorName, IList<ClassDeclarationSyntax> classes)
-        {
-            ClassDeclarationSyntax settingsClass = GetSettingsClass(classes);
+            SpiderClass settingsClass = GetSettingsClass(currentProjectClasses);
 
             if (settingsClass == null)
                 return null;
 
-            List<SpiderProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes, new List<SpiderClass>());
-            SpiderProperty p = properties?.Where(x => x.Name == generatorName)?.SingleOrDefault();
-            string outputPath = p?.Attributes?.Where(x => x.Name == "Output")?.SingleOrDefault()?.Value;
-            return outputPath;
+            SpiderProperty property = settingsClass.Properties.Where(x => x.Name == generatorName).SingleOrDefault();
+
+            if (property == null)
+                return null;
+
+            return property.Attributes
+                .Where(x => x.Name == "Output")
+                .Select(x => x.Value)
+                .SingleOrDefault();
         }
 
-        public static bool ShouldStartGenerator(string generatorName, IList<ClassDeclarationSyntax> classes)
+        public static SpiderClass GetSettingsClass(List<SpiderClass> classes)
         {
-            ClassDeclarationSyntax settingsClass = GetSettingsClass(classes);
-
-            if (settingsClass == null)
-                return false;
-
-            List<SpiderProperty> properties = GetAllPropertiesOfTheClass(settingsClass, classes, new List<SpiderClass>());
-            SpiderProperty p = properties?.Where(x => x.Name == generatorName)?.SingleOrDefault();
-
-            bool.TryParse(p?.Attributes?.Where(x => x.Name == "Output")?.SingleOrDefault()?.Value, out bool shouldStart);
-
-            return shouldStart;
+            return classes
+                .Where(x => x.Namespace.EndsWith($".GeneratorSettings"))
+                .SingleOrDefault();
         }
 
         public static List<SpiderClass> GetSpiderClasses(IList<ClassDeclarationSyntax> currentProjectClasses, List<SpiderClass> referencedProjectsClasses)

@@ -37,20 +37,27 @@ namespace Spider.SourceGenerators.Net
                     NamespaceExtensionCodes.Services
                 });
 
-            var allClasses = classDeclarations.Collect()
-                .Combine(referencedProjectClasses);
+            IncrementalValueProvider<string> callingProjectDirectory = context.GetCallingPath();
 
-            context.RegisterImplementationSourceOutput(allClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
+            var combined = classDeclarations.Collect()
+                .Combine(referencedProjectClasses)
+                .Combine(callingProjectDirectory);
+
+            context.RegisterImplementationSourceOutput(combined, static (spc, source) =>
+            {
+                var (classesAndEntities, callingPath) = source;
+                var (classes, referencedClasses) = classesAndEntities;
+
+                Execute(classes, referencedClasses, callingPath, spc);
+            });
         }
 
-        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntitiesAndServices, SourceProductionContext context)
+        private static void Execute(IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectEntitiesAndServices, string callingProjectDirectory, SourceProductionContext context)
         {
             if (classes.Count < 1)
                 return;
 
-            bool shouldGenerate = Helpers.ShouldStartGenerator(nameof(ControllerGenerator), classes);
-
-            if (shouldGenerate == false)
+            if (callingProjectDirectory.Contains(".WebAPI") == false)
                 return;
 
             List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectEntitiesAndServices);

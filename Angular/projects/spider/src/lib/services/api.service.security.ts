@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Namebook } from '../entities/namebook';
 import { TableFilter } from '../entities/table-filter';
-import { Login, Registration, RegistrationVerificationResult, RefreshTokenRequest, AuthResult, Role, User, ExternalProvider, VerificationTokenRequest } from '../entities/security-entities';
+import { Login, Registration, RegistrationVerificationResult, RefreshTokenRequest, AuthResult, Role, User, ExternalProvider, VerificationTokenRequest, RoleSaveBody } from '../entities/security-entities';
 import { ConfigBaseService } from './config-base.service';
 import { TableResponse } from '../entities/table-response';
 
@@ -62,6 +62,10 @@ export class ApiSecurityService {
         return this.http.get<string[]>(`${this.config.apiUrl}/Security/GetCurrentUserPermissionCodes`, this.config.httpSkipSpinnerOptions);
     }
 
+    getUserListForAutocomplete = (limit: number, query: string): Observable<Namebook[]> => {
+        return this.http.get<Namebook[]>(`${this.config.apiUrl}/Security/GetUserListForAutocomplete?limit=${limit}&query=${query}`, this.config.httpSkipSpinnerOptions);
+    }
+
     //#endregion
 
     //#region Role
@@ -82,7 +86,7 @@ export class ApiSecurityService {
         return this.http.get<Role>(`${this.config.apiUrl}/Security/GetRole?id=${id}`);
     }
 
-    saveRole = (dto: Role): Observable<Role> => { 
+    saveRole = (dto: RoleSaveBody): Observable<Role> => { 
         return this.http.put<Role>(`${this.config.apiUrl}/Security/SaveRole`, dto, this.config.httpOptions);
     }
 

@@ -1,6 +1,8 @@
 using Spider.Security.Interface;
 using Spider.Shared.Attributes.EF;
+using Spider.Shared.Attributes.EF.UI;
 using Spider.Shared.BaseEntities;
+using Spider.Shared.Enums;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -21,8 +23,10 @@ namespace Spider.Security.Entities
         [StringLength(400, MinimumLength = 1)]
         public string Description { get; set; }
 
+        //[UIControlType(nameof(UIControlTypeCodes.MultiAutocomplete))]
         //public virtual List<TUser> Users { get; set; }
 
-        public virtual List<Permission> Permissions { get; set; }
+        [UIControlType(nameof(UIControlTypeCodes.MultiSelect))]
+        public virtual List<Permission> Permissions { get; } = new();
     }
 }

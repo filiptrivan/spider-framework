@@ -22,6 +22,7 @@ export * from './lib/controls/spider-textarea/spider-textarea.component';
 export * from './lib/controls/spider-textbox/spider-textbox.component';
 export * from './lib/controls/spider-controls.module';
 
+export * from './lib/components/base-details/security-base-details.generated'
 export * from './lib/components/base-form/base-form copy';
 export * from './lib/components/card-skeleton/card-skeleton.component';
 export * from './lib/components/auth/partials/login-verification.component';

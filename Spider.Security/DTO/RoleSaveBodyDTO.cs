@@ -8,8 +8,6 @@ namespace Spider.Security.DTO
 {
     public partial class RoleSaveBodyDTO
     {
-        //public RoleDTO RoleDTO { get; set; }
-        public List<int> SelectedPermissionIds {  get; set; }
-        public List<long> SelectedUserIds { get; set; }
+        public List<long> SelectedUsersIds { get; set; }
     }
 }

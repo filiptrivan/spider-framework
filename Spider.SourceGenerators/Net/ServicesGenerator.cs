@@ -436,7 +436,7 @@ namespace {{basePartOfNamespace}}.Services
             {
                 await OnBeforeSave{{entity.Name}}AndReturnSaveBodyDTO(saveBodyDTO);
                 var savedDTO = await Save{{entity.Name}}AndReturnDTOAsync(saveBodyDTO.{{entity.Name}}DTO, authorizeUpdate, authorizeInsert);
-                await OnAfterSave{{entity.Name}}AndReturnSaveBodyDTO(savedDTO);
+                await OnAfterSave{{entity.Name}}AndReturnSaveBodyDTO(savedDTO, saveBodyDTO);
 
 {{string.Join("\n", GetOrderedOneToManyUpdateVariables(entity, entities))}}
 {{string.Join("\n", GetManyToManyMultiControlTypesUpdateMethods(entity, entities))}}
@@ -457,7 +457,7 @@ namespace {{basePartOfNamespace}}.Services
 
         protected virtual async Task OnBeforeSave{{entity.Name}}AndReturnSaveBodyDTO({{entity.Name}}SaveBodyDTO saveBodyDTO) { }
 
-        protected virtual async Task OnAfterSave{{entity.Name}}AndReturnSaveBodyDTO({{entity.Name}}DTO savedDTO) { }
+        protected virtual async Task OnAfterSave{{entity.Name}}AndReturnSaveBodyDTO({{entity.Name}}DTO savedDTO, {{entity.Name}}SaveBodyDTO saveBodyDTO) { }
 """;
         }
 

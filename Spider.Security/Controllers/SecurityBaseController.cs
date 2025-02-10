@@ -106,6 +106,13 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
             return await _authorizationService.GetCurrentUserPermissionCodes<TUser>();
         }
 
+        [HttpGet]
+        [AuthGuard]
+        public virtual async Task<List<NamebookDTO<long>>> GetUserListForAutocomplete(int limit, string query)
+        {
+            return await _securityBusinessService.GetUserListForAutocomplete(limit, query);
+        }
+
         #endregion
 
         #region Role
@@ -141,9 +148,9 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
 
         [HttpPut]
         [AuthGuard]
-        public async Task<RoleDTO> SaveRole(RoleSaveBodyDTO roleSaveBodyDTO)
+        public async Task<RoleSaveBodyDTO> SaveRole(RoleSaveBodyDTO saveBodyDTO)
         {
-            return await _securityBusinessService.SaveRoleAndReturnDTOExtendedAsync(roleSaveBodyDTO);
+            return await _securityBusinessService.SaveRoleAndReturnSaveBodyDTOAsync(saveBodyDTO);
         }
 
         [HttpGet]

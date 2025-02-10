@@ -52,9 +52,7 @@ namespace Spider.SourceGenerators.Net
             if (classes.Count < 1)
                 return;
 
-            bool shouldGenerate = Helpers.ShouldStartGenerator(nameof(TranslationsGenerator), classes);
-
-            if (shouldGenerate == false)
+            if (callingProjectDirectory.Contains(".WebAPI") == false)
                 return;
 
             referencedProjectEntities = referencedProjectEntities.OrderBy(x => x.Name).ToList();

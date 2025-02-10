@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Spider.Security.Interface;
 using Spider.Shared.Attributes.EF;
+using Spider.Shared.Attributes.EF.UI;
 using Spider.Shared.BaseEntities;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,7 @@ using System.Threading.Tasks;
 namespace Spider.Security.Entities
 {
     [Index(nameof(Code), IsUnique = true)]
+    [UIDoNotGenerate]
     public class Permission : ReadonlyObject<int>
     {
         [DisplayName]
@@ -33,8 +35,8 @@ namespace Spider.Security.Entities
 
         [Required]
         [StringLength(100, MinimumLength = 1)]
-        public string Code { get; set; } // TODO FT: Maybe put Code also inside ReadonlyObject?
+        public string Code { get; set; }
 
-        public virtual List<Role> Roles { get; set; }
+        public virtual List<Role> Roles { get; } = new();
     }
 }

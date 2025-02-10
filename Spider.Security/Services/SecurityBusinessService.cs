@@ -344,11 +344,40 @@ namespace Spider.Security.Services
             });
         }
 
+        public async Task<List<NamebookDTO<long>>> GetUserListForAutocomplete(int limit, string query)
+        {
+            IQueryable<TUser> userQuery = _context.DbSet<TUser>();
+
+            return await _context.WithTransactionAsync(async () =>
+            {
+                if (!string.IsNullOrEmpty(query))
+                    userQuery = userQuery.Where(x => x.Email.Contains(query));
+
+                return await userQuery
+                    .AsNoTracking()
+                    .Take(limit)
+                    .Select(x => new NamebookDTO<long>
+                    {
+                        Id = x.Id,
+                        DisplayName = x.Email,
+                    })
+                    .ToListAsync();
+            });
+        }
+
         #endregion
 
         #region Role
 
-        public async Task UpdateUserListForRole(int roleId, List<long> selectedUserIds)
+        protected override async Task OnAfterSaveRoleAndReturnSaveBodyDTO(RoleDTO savedDTO, RoleSaveBodyDTO saveBodyDTO) 
+        {
+            await _context.WithTransactionAsync(async () =>
+            {
+                await UpdateUsersForRole(savedDTO.Id, saveBodyDTO.SelectedUsersIds);
+            });
+        }
+
+        public async Task UpdateUsersForRole(int roleId, List<long> selectedUserIds)
         {
             if (selectedUserIds == null)
                 return;
@@ -417,19 +446,6 @@ namespace Spider.Security.Services
                         DisplayName = role.Name
                     }))
                     .ToListAsync();
-            });
-        }
-
-        public async Task<RoleDTO> SaveRoleAndReturnDTOExtendedAsync(RoleSaveBodyDTO roleSaveBodyDTO)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                RoleDTO savedRoleDTO = await SaveRoleAndReturnDTOAsync(roleSaveBodyDTO.RoleDTO);
-
-                await UpdateUserListForRole(savedRoleDTO.Id, roleSaveBodyDTO.SelectedUserIds);
-                await UpdatePermissionsForRole(savedRoleDTO.Id, roleSaveBodyDTO.SelectedPermissionIds);
-
-                return savedRoleDTO;
             });
         }
 

@@ -47,10 +47,12 @@ export class BaseFormService {
       
       if (updateOnChangeControls?.includes(formControlName as keyof T) ||
         (formControlName.endsWith('Id') && formControlName.length > 2)
-      )
+      ){
         formControl = new SpiderFormControl(formControlValue, { updateOn: 'change' });
-      else
+      }
+      else{
         formControl = new SpiderFormControl(formControlValue, { updateOn: 'blur' });
+      }
 
       formControl.label = formControlName;
       formControl.labelForDisplay = this.getTranslatedLabel(formControlName);

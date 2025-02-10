@@ -408,25 +408,25 @@ export class Role extends BaseEntity
 export class RoleSaveBody extends BaseEntity
 {
     roleDTO?: Role;
-	selectedPermissionIds?: number[];
-	selectedUserIds?: number[];
+	selectedPermissionsIds?: number[];
+	selectedUsersIds?: number[];
 
     constructor(
     {
         roleDTO,
-		selectedPermissionIds,
-		selectedUserIds
+		selectedPermissionsIds,
+		selectedUsersIds
     }:{
         roleDTO?: Role;
-		selectedPermissionIds?: number[];
-		selectedUserIds?: number[];     
+		selectedPermissionsIds?: number[];
+		selectedUsersIds?: number[];     
     } = {}
     ) {
         super('RoleSaveBody'); 
 
         this.roleDTO = roleDTO;
-		this.selectedPermissionIds = selectedPermissionIds;
-		this.selectedUserIds = selectedUserIds;
+		this.selectedPermissionsIds = selectedPermissionsIds;
+		this.selectedUsersIds = selectedUsersIds;
     }
 }
 
