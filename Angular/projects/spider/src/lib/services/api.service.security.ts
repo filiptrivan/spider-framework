@@ -62,10 +62,6 @@ export class ApiSecurityService {
         return this.http.get<string[]>(`${this.config.apiUrl}/Security/GetCurrentUserPermissionCodes`, this.config.httpSkipSpinnerOptions);
     }
 
-    getUserListForAutocomplete = (limit: number, query: string): Observable<Namebook[]> => {
-        return this.http.get<Namebook[]>(`${this.config.apiUrl}/Security/GetUserListForAutocomplete?limit=${limit}&query=${query}`, this.config.httpSkipSpinnerOptions);
-    }
-
     //#endregion
 
     //#region Role
@@ -94,24 +90,16 @@ export class ApiSecurityService {
         return this.http.get<Namebook[]>(`${this.config.apiUrl}/Security/GetUsersNamebookListForRole?roleId=${roleId}`, this.config.httpSkipSpinnerOptions);
     }
 
-    getRoleListForAutocomplete = (limit: number, query: string): Observable<Namebook[]> => {
-        return this.http.get<Namebook[]>(`${this.config.apiUrl}/Security/GetRoleListForAutocomplete?limit=${limit}&query=${query}`, this.config.httpSkipSpinnerOptions);
-    }
-
-    getRoleListForDropdown = (): Observable<Namebook[]> => {
-        return this.http.get<Namebook[]>(`${this.config.apiUrl}/Security/GetRoleListForDropdown`, this.config.httpSkipSpinnerOptions);
-    }
-
-    //#endregion
-
-    //#region Permission
-
-    getPermissionListForDropdown = (): Observable<Namebook[]> => {
-        return this.http.get<Namebook[]>(`${this.config.apiUrl}/Security/GetPermissionListForDropdown`, this.config.httpSkipSpinnerOptions);
+    getPermissionsDropdownListForRole = (): Observable<Namebook[]> => {
+        return this.http.get<Namebook[]>(`${this.config.apiUrl}/Security/GetPermissionsDropdownListForRole`, this.config.httpSkipSpinnerOptions);
     }
 
     getPermissionsNamebookListForRole = (roleId: number): Observable<Namebook[]> => {
         return this.http.get<Namebook[]>(`${this.config.apiUrl}/Security/GetPermissionsNamebookListForRole?roleId=${roleId}`, this.config.httpSkipSpinnerOptions);
+    }
+
+    getUsersAutocompleteListForRole = (limit: number, query: string): Observable<Namebook[]> => {
+        return this.http.get<Namebook[]>(`${this.config.apiUrl}/Security/GetUsersAutocompleteListForRole?limit=${limit}&query=${query}`, this.config.httpSkipSpinnerOptions);
     }
 
     //#endregion

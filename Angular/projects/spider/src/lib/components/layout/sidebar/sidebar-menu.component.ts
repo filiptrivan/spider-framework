@@ -1,5 +1,4 @@
 import { TranslocoService } from '@jsverse/transloco';
-import { Subscription } from 'rxjs';
 import { Input, OnInit } from '@angular/core';
 import { Component } from '@angular/core';
 import { MenuItem } from 'primeng/api';
@@ -24,8 +23,6 @@ export interface SpiderMenuItem extends MenuItem{
     ]
 })
 export class SidebarMenuComponent implements OnInit {
-    private partnerSubscription: Subscription | null = null;
-    
     @Input() menu: SpiderMenuItem[];
 
     constructor(
@@ -42,9 +39,7 @@ export class SidebarMenuComponent implements OnInit {
 
 
     ngOnDestroy(): void {
-        if (this.partnerSubscription) {
-          this.partnerSubscription.unsubscribe();
-        }
+
     }
 
 }

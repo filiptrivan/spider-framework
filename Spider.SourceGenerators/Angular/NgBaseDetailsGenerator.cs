@@ -301,20 +301,20 @@ export class {{entity.Name}}BaseDetailsComponent {
                 SpiderProperty extractedDTOProperty = extractedDTO?.Properties?.Where(x => x.Name == col.Field)?.SingleOrDefault();
 
                 result.Add($$"""
-                {name: this.translocoService.translate('{{col.TranslationKey}}'), filterType: '{{GetTableColFilterType(extractedEntityProperty ?? extractedDTOProperty)}}', field: '{{col.Field.FirstCharToLower()}}' {{GetTableColAdditionalProperties(extractedEntityProperty ?? extractedDTOProperty, entity, entities)}} }
+                {name: this.translocoService.translate('{{col.TranslationKey}}'), filterType: '{{GetTableColFilterType(extractedEntityProperty ?? extractedDTOProperty)}}', field: '{{col.Field.FirstCharToLower()}}' {{GetTableColAdditionalProperties(extractedEntityProperty ?? extractedDTOProperty, extractedEntity)}} }
 """);
             }
 
             return result;
         }
 
-        private static string GetTableColAdditionalProperties(SpiderProperty property, SpiderClass entity, List<SpiderClass> entities)
+        private static string GetTableColAdditionalProperties(SpiderProperty property, SpiderClass entity)
         {
             if (property.IsDropdownControlType())
-                return $", filterField: '{property.Name.FirstCharToLower()}Id', dropdownOrMultiselectValues: await firstValueFrom(getPrimengNamebookDropdownList(this.apiService.get{property.Name}DropdownListFor{entity.Name}))";
+                return $", filterField: '{property.Name.FirstCharToLower()}Id', dropdownOrMultiselectValues: await firstValueFrom(getPrimengDropdownNamebookOptions(this.apiService.get{property.Name}DropdownListFor{entity.Name}))";
 
             if (property.HasGenerateCommaSeparatedDisplayNameAttribute())
-                return $", dropdownOrMultiselectValues: await firstValueFrom(getPrimengNamebookDropdownList(this.apiService.get{property.Name}DropdownListFor{entity.Name}))";
+                return $", dropdownOrMultiselectValues: await firstValueFrom(getPrimengDropdownNamebookOptions(this.apiService.get{property.Name}DropdownListFor{entity.Name}))";
 
             switch (property.Type)
             {
@@ -493,7 +493,7 @@ export class {{entity.Name}}BaseDetailsComponent {
             )
             {
                 result.Add($$"""
-            getPrimengNamebookDropdownList(this.apiService.get{{property.Name}}DropdownListFor{{entity.Name}}).subscribe(po => {
+            getPrimengDropdownNamebookOptions(this.apiService.get{{property.Name}}DropdownListFor{{entity.Name}}).subscribe(po => {
                 this.{{property.Name.FirstCharToLower()}}OptionsFor{{entity.Name}} = po;
             });
 """);
@@ -809,7 +809,7 @@ export class {{entity.Name}}BaseDetailsComponent {
                 {
                     result.Add($$"""
     search{{property.Name}}For{{entity.Name}}(event: AutoCompleteCompleteEvent) {
-        getPrimengNamebookAutocompleteList(this.apiService.get{{property.Name}}AutocompleteListFor{{entity.Name}}, 50, event?.query ?? '').subscribe(po => {
+        getPrimengAutocompleteNamebookOptions(this.apiService.get{{property.Name}}AutocompleteListFor{{entity.Name}}, 50, event?.query ?? '').subscribe(po => {
             this.{{property.Name.FirstCharToLower()}}OptionsFor{{entity.Name}} = po;
         });
     }
@@ -982,19 +982,19 @@ export class {{entity.Name}}BaseDetailsComponent {
             }
             else if (controlType == UIControlTypeCodes.Dropdown)
             {
-                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\"";
+                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [options]=\"{property.Name.FirstCharToLower()}OptionsFor{entity.Name}\"";
             }
             else if (controlType == UIControlTypeCodes.Autocomplete)
             {
-                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" [displayName]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}DisplayName.getRawValue()\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\"";
+                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [options]=\"{property.Name.FirstCharToLower()}OptionsFor{entity.Name}\" [displayName]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}DisplayName.getRawValue()\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\"";
             }
             else if (controlType == UIControlTypeCodes.MultiSelect)
             {
-                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" [label]=\"t('{property.Name}')\"";
+                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [options]=\"{property.Name.FirstCharToLower()}OptionsFor{entity.Name}\" [label]=\"t('{property.Name}')\"";
             }
             else if (controlType == UIControlTypeCodes.MultiAutocomplete)
             {
-                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [options]=\"{property.Name.FirstCharToLower()}For{entity.Name}Options\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\" [label]=\"t('{property.Name}')\"";
+                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [options]=\"{property.Name.FirstCharToLower()}OptionsFor{entity.Name}\" (onTextInput)=\"search{property.Name}For{entity.Name}($event)\" [label]=\"t('{property.Name}')\"";
             }
             else if (controlType == UIControlTypeCodes.Table)
             {
@@ -1173,7 +1173,7 @@ import { AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { ActivatedRoute } from '@angular/router';
 import { firstValueFrom, forkJoin, Observable } from 'rxjs';
 import { MenuItem } from 'primeng/api';
-import { PrimengModule, SpiderControlsModule, CardSkeletonComponent, IndexCardComponent, SpiderDataTableComponent, SpiderFormArray, BaseEntity, LastMenuIconIndexClicked, SpiderFormGroup, SpiderButton, nameof, BaseFormService, getControl, Column, TableFilter, LazyLoadSelectedIdsResult, AllClickEvent, SpiderFileSelectEvent, getPrimengNamebookListForDropdown, PrimengOption, SpiderFormControl, getPrimengNamebookListForAutocomplete } from '@playerty/spider';
+import { PrimengModule, SpiderControlsModule, CardSkeletonComponent, IndexCardComponent, SpiderDataTableComponent, SpiderFormArray, BaseEntity, LastMenuIconIndexClicked, SpiderFormGroup, SpiderButton, nameof, BaseFormService, getControl, Column, TableFilter, LazyLoadSelectedIdsResult, AllClickEvent, SpiderFileSelectEvent, getPrimengDropdownNamebookOptions, PrimengOption, SpiderFormControl, getPrimengAutocompleteNamebookOptions } from '@playerty/spider';
 {{string.Join("\n", GetDynamicNgImports(imports))}}
 """;
         }

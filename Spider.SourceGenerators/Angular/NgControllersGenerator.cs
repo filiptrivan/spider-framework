@@ -500,7 +500,7 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
                     Dictionary<string, string> getAndDeleteParameters = new Dictionary<string, string> { { "limit", "number" }, { "filter", "string" } };
 
-                    sb.Append(GetAngularControllerMethod(methodName, getAndDeleteParameters, "Namebook[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsSkipSpinner));
+                    sb.AppendLine(GetAngularControllerMethod(methodName, getAndDeleteParameters, "Namebook[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsSkipSpinner));
                 }
             }
 
@@ -520,7 +520,7 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
                     if (alreadyAddedMethods.Contains(methodName))
                         continue;
 
-                    sb.Append(GetAngularControllerMethod(methodName, null, "Namebook[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsSkipSpinner));
+                    sb.AppendLine(GetAngularControllerMethod(methodName, null, "Namebook[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsSkipSpinner));
                 }
             }
 

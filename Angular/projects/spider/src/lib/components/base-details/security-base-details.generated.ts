@@ -13,7 +13,7 @@ import { BaseEntity } from '../../entities/base-entity';
 import { LastMenuIconIndexClicked } from '../../entities/last-menu-icon-index-clicked';
 import { Role, RoleSaveBody } from '../../entities/security-entities';
 import { SpiderButton } from '../../entities/spider-button';
-import { getControl, getPrimengNamebookListForAutocomplete, getPrimengNamebookListForDropdown, nameof } from '../../services/helper-functions';
+import { getControl, getPrimengAutocompleteNamebookOptions, getPrimengDropdownNamebookOptions, nameof } from '../../services/helper-functions';
 import { BaseFormService } from '../../services/base-form.service';
 import { ApiSecurityService } from '../../services/api.service.security';
 import { PrimengOption } from '../../entities/primeng-option';
@@ -111,7 +111,7 @@ export class RoleBaseDetailsComponent {
         this.route.params.subscribe(async (params) => {
             this.modelId = params['id'];
 
-            getPrimengNamebookListForDropdown(this.apiService.getPermissionListForDropdown).subscribe(po => {
+            getPrimengDropdownNamebookOptions(this.apiService.getPermissionsDropdownListForRole).subscribe(po => {
                 this.permissionsForRoleOptions = po;
             });
 
@@ -152,7 +152,7 @@ export class RoleBaseDetailsComponent {
     }
 
     searchUsersForRole(event: AutoCompleteCompleteEvent) {
-        getPrimengNamebookListForAutocomplete(this.apiService.getUserListForAutocomplete, 50, event?.query ?? '').subscribe(po => {
+        getPrimengAutocompleteNamebookOptions(this.apiService.getUsersAutocompleteListForRole, 50, event?.query ?? '').subscribe(po => {
             this.usersForRoleOptions = po;
         });
     }

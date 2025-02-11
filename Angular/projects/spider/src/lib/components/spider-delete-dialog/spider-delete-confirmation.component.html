@@ -9,7 +9,7 @@
     </div>
   
       <div style="display: flex; gap: 5px; justify-content: right; margin-top: 28px;">
-          <spider-button (click)="reject()" icon="pi pi-times" [label]="t('Cancle')" severity="secondary"></spider-button>
-          <spider-button (click)="accept()" icon="pi pi-check" [label]="t('Confirm')" styleClass="p-button-danger"></spider-button>
+          <spider-button (onClick)="reject()" icon="pi pi-times" [label]="t('Cancle')" severity="secondary"></spider-button>
+          <spider-button (onClick)="accept()" icon="pi pi-check" [label]="t('Confirm')" styleClass="p-button-danger"></spider-button>
       </div>
 </ng-container>

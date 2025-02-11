@@ -106,13 +106,6 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
             return await _authorizationService.GetCurrentUserPermissionCodes<TUser>();
         }
 
-        [HttpGet]
-        [AuthGuard]
-        public virtual async Task<List<NamebookDTO<long>>> GetUserAutocompleteList(int limit, string query)
-        {
-            return await _securityBusinessService.GetUserAutocompleteList(limit, query);
-        }
-
         #endregion
 
         #region Role
@@ -136,21 +129,21 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
         [AuthGuard]
         public async Task DeleteRole(int id)
         {
-            await _securityBusinessService.DeleteRoleAsync(id, true);
+            await _securityBusinessService.DeleteRole(id, true);
         }
 
         [HttpGet]
         [AuthGuard]
         public async Task<RoleDTO> GetRole(int id)
         {
-            return await _securityBusinessService.GetRoleDTOAsync(id);
+            return await _securityBusinessService.GetRoleDTO(id);
         }
 
         [HttpPut]
         [AuthGuard]
         public async Task<RoleSaveBodyDTO> SaveRole(RoleSaveBodyDTO saveBodyDTO)
         {
-            return await _securityBusinessService.SaveRoleAndReturnSaveBodyDTOAsync(saveBodyDTO);
+            return await _securityBusinessService.SaveRoleAndReturnSaveBodyDTO(saveBodyDTO);
         }
 
         [HttpGet]
@@ -162,28 +155,22 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> GetRoleAutocompleteList(int limit, string query)
+        public async Task<List<NamebookDTO<int>>> GetPermissionsDropdownListForRole()
         {
-            return await _securityBusinessService.GetRoleAutocompleteList(limit, query, _context.DbSet<Role>());
+            return await _securityBusinessService.GetPermissionsDropdownListForRole(_context.DbSet<Permission>());
         }
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> GetRoleDropdownList()
+        public virtual async Task<List<NamebookDTO<long>>> GetUsersAutocompleteListForRole(int limit, string query)
         {
-            return await _securityBusinessService.GetRoleDropdownList(_context.DbSet<Role>());
+            return await _securityBusinessService.GetUsersAutocompleteListForRole(limit, query);
         }
 
         #endregion
 
         #region Permission
 
-        [HttpGet]
-        [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> GetPermissionDropdownList()
-        {
-            return await _securityBusinessService.GetPermissionDropdownList(_context.DbSet<Permission>(), false); // FT: We don't have authorization of Permission, it will inherit from Role authorization
-        }
 
         [HttpGet]
         [AuthGuard]

@@ -148,7 +148,7 @@ namespace {{basePartOfNamespace}}.Services
             string entityIdType = entity.GetIdType(allEntities);
 
             return $$"""
-        public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTOAsync({{entityIdType}} id, bool authorize = true)
+        public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTO({{entityIdType}} id, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -381,7 +381,7 @@ namespace {{basePartOfNamespace}}.Services
             string dropdownDisplayName = Helpers.GetDisplayNameProperty(dropdownEntity);
 
             return $$"""
-        public async virtual Task<List<NamebookDTO<{{dropdownEntityIdType}}>>> Get{{property.Name}}DropdownListFor{{entity.Name}}(IQueryable<{{entity.Name}}> query, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{dropdownEntityIdType}}>>> Get{{property.Name}}DropdownListFor{{entity.Name}}(IQueryable<{{dropdownEntity.Name}}> query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -685,7 +685,7 @@ namespace {{basePartOfNamespace}}.Services
             return $$"""
 {{GetSaveAndReturnSaveBodyDTOData(entity, entities)}}
 
-        public async Task<{{entity.Name}}DTO> Save{{entity.Name}}AndReturnDTOAsync({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO, bool authorizeUpdate = true, bool authorizeInsert = true)
+        public async Task<{{entity.Name}}DTO> Save{{entity.Name}}AndReturnDTO({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO, bool authorizeUpdate = true, bool authorizeInsert = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -748,13 +748,13 @@ namespace {{basePartOfNamespace}}.Services
         private static string GetSaveAndReturnSaveBodyDTOData(SpiderClass entity, List<SpiderClass> entities)
         {
             return $$"""
-        public async Task<{{entity.Name}}SaveBodyDTO> Save{{entity.Name}}AndReturnSaveBodyDTOAsync({{entity.Name}}SaveBodyDTO saveBodyDTO, bool authorizeUpdate = true, bool authorizeInsert = true)
+        public virtual async Task<{{entity.Name}}SaveBodyDTO> Save{{entity.Name}}AndReturnSaveBodyDTO({{entity.Name}}SaveBodyDTO saveBodyDTO, bool authorizeUpdate = true, bool authorizeInsert = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
                 await OnBeforeSave{{entity.Name}}AndReturnSaveBodyDTO(saveBodyDTO);
 
-                var savedDTO = await Save{{entity.Name}}AndReturnDTOAsync(saveBodyDTO.{{entity.Name}}DTO, authorizeUpdate, authorizeInsert);
+                var savedDTO = await Save{{entity.Name}}AndReturnDTO(saveBodyDTO.{{entity.Name}}DTO, authorizeUpdate, authorizeInsert);
 
                 await OnAfterSave{{entity.Name}}AndReturnSaveBodyDTO(savedDTO, saveBodyDTO);
 
@@ -840,7 +840,7 @@ namespace {{basePartOfNamespace}}.Services
                 {
                     orderedItemsDTO[i].{{extractedEntity.GetManyToOnePropertyWithManyAttribute(entity.Name, property.Name)?.Name}}Id = id;
                     orderedItemsDTO[i].OrderNumber = i + 1;
-                    savedOrderedItemsDTO.Add(await Save{{extractedEntity.Name}}AndReturnDTOAsync(orderedItemsDTO[i], false, false));
+                    savedOrderedItemsDTO.Add(await Save{{extractedEntity.Name}}AndReturnDTO(orderedItemsDTO[i], false, false));
                 }
 
                 return savedOrderedItemsDTO;
@@ -1008,7 +1008,7 @@ namespace {{basePartOfNamespace}}.Services
             foreach (SpiderProperty property in blobProperies)
             {
                 result.Add($$"""
-        public async Task<string> Upload{{property.Name}}For{{entity.Name}}Async(IFormFile file, bool authorizeUpdate = true, bool authorizeInsert = true) // FT: It doesn't work without interface
+        public async Task<string> Upload{{property.Name}}For{{entity.Name}}(IFormFile file, bool authorizeUpdate = true, bool authorizeInsert = true) // FT: It doesn't work without interface
         {
             using Stream stream = file.OpenReadStream();
 
@@ -1068,9 +1068,9 @@ namespace {{basePartOfNamespace}}.Services
             int deleteIterator = 1;
 
             return $$"""
-        public virtual async Task OnBefore{{entity.Name}}AsyncDelete({{entityIdType}} id) { }
+        public virtual async Task OnBefore{{entity.Name}}Delete({{entityIdType}} id) { }
 
-        public async Task Delete{{entity.Name}}Async({{entityIdType}} id, bool authorize = true)
+        public async Task Delete{{entity.Name}}({{entityIdType}} id, bool authorize = true)
         {
             await _context.WithTransactionAsync(async () =>
             {
@@ -1079,7 +1079,7 @@ namespace {{basePartOfNamespace}}.Services
                     {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Delete, "id")}}
                 }
 
-                await OnBefore{{entity.Name}}AsyncDelete(id);
+                await OnBefore{{entity.Name}}Delete(id);
 
                 List<{{entityIdType}}> listForDelete_{{deleteIterator}} = id.StructToList();
 
@@ -1097,9 +1097,9 @@ namespace {{basePartOfNamespace}}.Services
             int deleteIterator = 1;
 
             return $$"""
-        public virtual async Task OnBefore{{entity.Name}}ListAsyncDelete(List<{{entityIdType}}> listForDelete) { }
+        public virtual async Task OnBefore{{entity.Name}}ListDelete(List<{{entityIdType}}> listForDelete) { }
 
-        public async Task Delete{{entity.Name}}ListAsync(List<{{entityIdType}}> listForDelete_{{deleteIterator}}, bool authorize = true)
+        public async Task Delete{{entity.Name}}List(List<{{entityIdType}}> listForDelete_{{deleteIterator}}, bool authorize = true)
         {
             await _context.WithTransactionAsync(async () =>
             {
@@ -1108,7 +1108,7 @@ namespace {{basePartOfNamespace}}.Services
                     {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Delete, $"listForDelete_{deleteIterator}")}}
                 }
 
-                await OnBefore{{entity.Name}}ListAsyncDelete(listForDelete_{{deleteIterator}});
+                await OnBefore{{entity.Name}}ListDelete(listForDelete_{{deleteIterator}});
 
 {{string.Join("\n\n", GetManyToOneDeleteQueries(entity, allEntities, "listForDelete", deleteIterator))}}
 
@@ -1268,6 +1268,7 @@ using System.Data;
 using FluentValidation;
 using Spider.Security.Services;
 using Spider.Security.Interfaces;
+using Spider.Security.Entities;
 using Spider.Shared.Excel;
 using Spider.Shared.Interfaces;
 using Spider.Shared.Services;

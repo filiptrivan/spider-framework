@@ -235,32 +235,32 @@ export function capitalizeFirstLetter(inputString: string): string {
     });
   }
 
-  export function getPrimengNamebookListForDropdown(getListForDropdownObservable: () => Observable<Namebook[]>): Observable<PrimengOption[]>{
-      return getListForDropdownObservable().pipe(
+  export function getPrimengDropdownNamebookOptions(getDropdownListObservable: () => Observable<Namebook[]>): Observable<PrimengOption[]>{
+      return getDropdownListObservable().pipe(
           map(res => {
               return res.map(x => ({ label: x.displayName, value: x.id }));
           })
       );
   }
 
-  export function getPrimengCodebookListForDropdown(getListForDropdownObservable: () => Observable<Codebook[]>): Observable<PrimengOption[]>{
-      return getListForDropdownObservable().pipe(
+  export function getPrimengDropdownCodebookOptions(getDropdownListObservable: () => Observable<Codebook[]>): Observable<PrimengOption[]>{
+      return getDropdownListObservable().pipe(
           map(res => {
               return res.map(x => ({ label: x.displayName, value: x.code }));
           })
       );
   }
 
-  export function getPrimengNamebookListForAutocomplete(getListForAutocompleteObservable: (limit: number, query: string) => Observable<Namebook[]>, limit: number, query: string): Observable<PrimengOption[]>{
-      return getListForAutocompleteObservable(limit, query).pipe(
+  export function getPrimengAutocompleteNamebookOptions(getAutocompleteListObservable: (limit: number, query: string) => Observable<Namebook[]>, limit: number, query: string): Observable<PrimengOption[]>{
+      return getAutocompleteListObservable(limit, query).pipe(
           map(res => {
               return res.map(x => ({ label: x.displayName, value: x.id }));
           })
       );
   }
 
-  export function getPrimengCodebookListForAutocomplete(getListForAutocompleteObservable: (limit: number, query: string) => Observable<Codebook[]>, limit: number, query: string): Observable<PrimengOption[]>{
-      return getListForAutocompleteObservable(limit, query).pipe(
+  export function getPrimengAutocompleteCodebookOptions(getAutocompleteListObservable: (limit: number, query: string) => Observable<Codebook[]>, limit: number, query: string): Observable<PrimengOption[]>{
+      return getAutocompleteListObservable(limit, query).pipe(
           map(res => {
               return res.map(x => ({ label: x.displayName, value: x.code }));
           })

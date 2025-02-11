@@ -18,12 +18,12 @@ namespace Spider.SourceGenerators.Net
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //#if DEBUG
-            //            if (!Debugger.IsAttached)
-            //            {
-            //                Debugger.Launch();
-            //            }
-            //#endif
+//#if DEBUG
+//            if (!Debugger.IsAttached)
+//            {
+//                Debugger.Launch();
+//            }
+//#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (s, _) => Helpers.IsSyntaxTargetForGenerationEveryClass(s),
@@ -64,7 +64,6 @@ namespace Spider.SourceGenerators.Net
             List<SpiderClass> customControllers = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Controllers")).ToList();
             List<SpiderClass> referencedProjectEntities = referencedProjectEntitiesAndServices.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
             List<SpiderClass> referencedProjectServices = referencedProjectEntitiesAndServices.Where(x => x.Namespace.EndsWith(".Services")).ToList();
-            List<SpiderClass> allEntities = currentProjectClasses.Concat(referencedProjectEntities).ToList();
 
             string namespaceValue = currentProjectClasses[0].Namespace;
             string basePartOfNamespace = Helpers.GetBasePartOfNamespace(namespaceValue);
@@ -83,8 +82,8 @@ using Spider.Shared.Interfaces;
 using {{appName}}.Shared.Resources;
 using {{appName}}.Business.Entities;
 using {{appName}}.Business.DTO;
-{{string.Join("\n", Helpers.GetEntityClassesUsings(allEntities))}}
-{{string.Join("\n", Helpers.GetDTOClassesUsings(allEntities))}}
+{{string.Join("\n", Helpers.GetEntityClassesUsings(referencedProjectEntities))}}
+{{string.Join("\n", Helpers.GetDTOClassesUsings(referencedProjectEntities))}}
 
 namespace {{basePartOfNamespace}}.Controllers
 {
@@ -180,7 +179,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<{{referencedProjectEntity.Name}}DTO> Get{{referencedProjectEntity.Name}}({{referencedProjectEntityClassIdType}} id)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntity.Name}}DTOAsync(id, {{ShouldAuthorizeEntity(referencedProjectEntity)}});
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntity.Name}}DTO(id, {{ShouldAuthorizeEntity(referencedProjectEntity)}});
         }
 
 {{GetManyToOneReadMethods(referencedProjectEntity, allEntities, businessServiceName)}}
@@ -242,7 +241,7 @@ namespace {{basePartOfNamespace}}.Controllers
 
         private static string GetAutocompleteMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> allEntities, string businessServiceName)
         {
-            SpiderClass manyToOneEntity = allEntities.Where(x => x.Name == property.Type).Single();
+            SpiderClass manyToOneEntity = allEntities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).Single();
             string manyToOneEntityIdType = manyToOneEntity.GetIdType(allEntities);
             string manyToOneDisplayName = Helpers.GetDisplayNameProperty(manyToOneEntity);
 
@@ -258,7 +257,7 @@ namespace {{basePartOfNamespace}}.Controllers
 
         private static string GetDropdownMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> allEntities, string businessServiceName)
         {
-            SpiderClass manyToOneEntity = allEntities.Where(x => x.Name == property.Type).Single();
+            SpiderClass manyToOneEntity = allEntities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).Single();
             string manyToOneEntityIdType = manyToOneEntity.GetIdType(allEntities);
             string manyToOneDisplayName = Helpers.GetDisplayNameProperty(manyToOneEntity);
 
@@ -379,7 +378,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task Delete{{entity.Name}}({{entity.GetIdType(entities)}} id)
         {
-            await _{{businessServiceName.FirstCharToLower()}}.Delete{{entity.Name}}Async(id, {{ShouldAuthorizeEntity(entity)}});
+            await _{{businessServiceName.FirstCharToLower()}}.Delete{{entity.Name}}(id, {{ShouldAuthorizeEntity(entity)}});
         }
 """;
         }
@@ -398,7 +397,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<{{entity.Name}}SaveBodyDTO> Save{{entity.Name}}({{entity.Name}}SaveBodyDTO saveBodyDTO)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Save{{entity.Name}}AndReturnSaveBodyDTOAsync(saveBodyDTO, {{ShouldAuthorizeEntity(entity)}}, {{ShouldAuthorizeEntity(entity)}});
+            return await _{{businessServiceName.FirstCharToLower()}}.Save{{entity.Name}}AndReturnSaveBodyDTO(saveBodyDTO, {{ShouldAuthorizeEntity(entity)}}, {{ShouldAuthorizeEntity(entity)}});
         }
 """;
         }
@@ -417,7 +416,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<string> Upload{{property.Name}}For{{entity.Name}}([FromForm] IFormFile file) // FT: It doesn't work without interface
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Upload{{property.Name}}For{{entity.Name}}Async(file); // TODO: Make authorization in business service with override
+            return await _{{businessServiceName.FirstCharToLower()}}.Upload{{property.Name}}For{{entity.Name}}(file); // TODO: Make authorization in business service with override
         }
 """
 );

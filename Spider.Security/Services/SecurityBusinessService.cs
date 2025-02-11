@@ -303,17 +303,19 @@ namespace Spider.Security.Services
             });
         }
 
-        public async Task<List<NamebookDTO<int>>> GetRolesNamebookListForUserExtended(long userId)
+        public async Task<List<NamebookDTO<int>>> GetRolesNamebookListForUserExtended(long userExtendedId, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                //await _authorizationService.AuthorizeAndThrowAsync<TUser>(Enums.PermissionCodes.ReadRole);
+                if (authorize)
+                {
+                    await _authorizationService.AuthorizeAndThrowAsync<TUser>(SecurityPermissionCodes.ReadUserExtended);
+                }
 
                 return await _context.DbSet<TUser>()
                     .AsNoTracking()
-                    .Where(x => x.Id == userId)
+                    .Where(x => x.Id == userExtendedId)
                     .SelectMany(x => x.Roles)
-                    .OfType<Role>()
                     .Select(role => new NamebookDTO<int>
                     {
                         Id = role.Id,
@@ -341,27 +343,6 @@ namespace Spider.Security.Services
 
                 user.Roles.AddRange(roleListToInsert);
                 await _context.SaveChangesAsync();
-            });
-        }
-
-        public async Task<List<NamebookDTO<long>>> GetUserAutocompleteList(int limit, string query)
-        {
-            IQueryable<TUser> userQuery = _context.DbSet<TUser>();
-
-            return await _context.WithTransactionAsync(async () =>
-            {
-                if (!string.IsNullOrEmpty(query))
-                    userQuery = userQuery.Where(x => x.Email.Contains(query));
-
-                return await userQuery
-                    .AsNoTracking()
-                    .Take(limit)
-                    .Select(x => new NamebookDTO<long>
-                    {
-                        Id = x.Id,
-                        DisplayName = x.Email,
-                    })
-                    .ToListAsync();
             });
         }
 
@@ -410,11 +391,14 @@ namespace Spider.Security.Services
             });
         }
 
-        public async Task<List<NamebookDTO<long>>> GetUsersNamebookListForRole(long roleId)
+        public async Task<List<NamebookDTO<long>>> GetUsersNamebookListForRole(long roleId, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                await _authorizationService.AuthorizeAndThrowAsync<TUser>(SecurityPermissionCodes.ReadRole);
+                if (authorize)
+                {
+                    await _authorizationService.AuthorizeAndThrowAsync<TUser>(SecurityPermissionCodes.ReadRole);
+                }
 
                 return await _context.DbSet<TUser>()
                     .AsNoTracking()
@@ -428,23 +412,28 @@ namespace Spider.Security.Services
             });
         }
 
-        public async Task<List<NamebookDTO<int>>> GetRolesNamebookListForUserExtended(long userExtendedId, bool authorize)
+        public async Task<List<NamebookDTO<long>>> GetUsersAutocompleteListForRole(int limit, string filter, bool authorize = true)
         {
+            IQueryable<TUser> query = _context.DbSet<TUser>();
+
             return await _context.WithTransactionAsync(async () =>
             {
                 if (authorize)
                 {
-                    await _authorizationService.AuthorizeAndThrowAsync<TUser>((string)SecurityPermissionCodes.ReadRole);
+                    await _authorizationService.AuthorizeAndThrowAsync<TUser>(SecurityPermissionCodes.ReadRole);
                 }
 
-                return await _context.DbSet<TUser>()
+                if (!string.IsNullOrEmpty(filter))
+                    query = query.Where(x => x.Email.Contains(filter));
+
+                return await query
                     .AsNoTracking()
-                    .Where(x => x.Id == userExtendedId)
-                    .SelectMany(x => x.Roles.Select(role => new NamebookDTO<int>
+                    .Take(limit)
+                    .Select(x => new NamebookDTO<long>
                     {
-                        Id = role.Id,
-                        DisplayName = role.Name
-                    }))
+                        Id = x.Id,
+                        DisplayName = x.Email,
+                    })
                     .ToListAsync();
             });
         }
