@@ -375,6 +375,16 @@ namespace Spider.SourceGenerators.Shared
             return result;
         }
 
+        public static bool ShouldGenerateDropdownControllerMethod(this SpiderProperty property)
+        {
+            return property.IsDropdownControlType() || property.IsMultiSelectControlType() || property.HasGenerateCommaSeparatedDisplayNameAttribute();
+        }
+
+        public static bool ShouldGenerateAutocompleteControllerMethod(this SpiderProperty property)
+        {
+            return property.IsAutocompleteControlType() || property.IsMultiAutocompleteControlType();
+        }
+
         #region Has Attribute
 
         public static bool HasUIDoNotGenerateAttribute(this SpiderClass entity)

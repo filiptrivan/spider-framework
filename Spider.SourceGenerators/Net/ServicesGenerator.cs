@@ -143,10 +143,9 @@ namespace {{basePartOfNamespace}}.Services
 
         #region Read
 
-        private static string GetReadBusinessServiceMethods(SpiderClass entity, List<SpiderClass> allEntityClasses, string projectName)
+        private static string GetReadBusinessServiceMethods(SpiderClass entity, List<SpiderClass> allEntities, string projectName)
         {
-            string entityIdType = entity.GetIdType(allEntityClasses);
-            string entityDisplayNameProperty = Helpers.GetDisplayNameProperty(entity);
+            string entityIdType = entity.GetIdType(allEntities);
 
             return $$"""
         public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTOAsync({{entityIdType}} id, bool authorize = true)
@@ -225,50 +224,6 @@ namespace {{basePartOfNamespace}}.Services
             return _excelService.FillReportTemplate<{{entity.Name}}DTO>(data, paginationResult.TotalRecords, excelPropertiesToExclude, {{GetTermsClassName(projectName)}}.ResourceManager).ToArray();
         }
 
-        public async virtual Task<List<NamebookDTO<{{entityIdType}}>>> Get{{entity.Name}}ListForAutocomplete(int limit, string query, IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
-                }
-
-                if (!string.IsNullOrEmpty(query))
-                    {{entity.Name.FirstCharToLower()}}Query = {{entity.Name.FirstCharToLower()}}Query.Where(x => x.{{entityDisplayNameProperty}}.Contains(query));
-
-                return await {{entity.Name.FirstCharToLower()}}Query
-                    .AsNoTracking()
-                    .Take(limit)
-                    .Select(x => new NamebookDTO<{{entityIdType}}>
-                    {
-                        Id = x.Id,
-                        DisplayName = x.{{entityDisplayNameProperty}},
-                    })
-                    .ToListAsync();
-            });
-        }
-
-        public async virtual Task<List<NamebookDTO<{{entityIdType}}>>> Get{{entity.Name}}ListForDropdown(IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
-                }
-
-                return await {{entity.Name.FirstCharToLower()}}Query
-                    .AsNoTracking()
-                    .Select(x => new NamebookDTO<{{entityIdType}}>
-                    {
-                        Id = x.Id,
-                        DisplayName = x.{{entityDisplayNameProperty}},
-                    })
-                    .ToListAsync();
-            });
-        }
-
         public async Task<List<{{entity.Name}}>> Get{{entity.Name}}List(IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
         {
             return await _context.WithTransactionAsync(async () =>
@@ -302,6 +257,8 @@ namespace {{basePartOfNamespace}}.Services
                 return dtoList;
             });
         }
+
+{{GetManyToOneReadMethods(entity, allEntities)}}
 """;
         }
 
@@ -354,6 +311,364 @@ namespace {{basePartOfNamespace}}.Services
             }
 
             return blobParts;
+        }
+
+        #region Many To One
+
+        public static string GetManyToOneReadMethods(SpiderClass entity, List<SpiderClass> allEntities)
+        {
+            StringBuilder sb = new();
+
+            foreach (SpiderProperty property in entity.Properties)
+            {
+                if (property.ShouldGenerateAutocompleteControllerMethod())
+                {
+                    sb.Append($$"""
+{{GetAutocompleteMethod(property, entity, allEntities)}}
+
+""");
+                }
+
+                if (property.ShouldGenerateDropdownControllerMethod())
+                {
+                    sb.Append($$"""
+{{GetDropdownMethod(property, entity, allEntities)}}
+
+""");
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        private static string GetAutocompleteMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> allEntities)
+        {
+            SpiderClass autocompleteEntity = allEntities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).Single();
+            string autocompleteEntityIdType = autocompleteEntity.GetIdType(allEntities);
+            string autocompleteEntityDisplayName = Helpers.GetDisplayNameProperty(autocompleteEntity);
+
+            return $$"""
+        public async virtual Task<List<NamebookDTO<{{autocompleteEntityIdType}}>>> Get{{property.Name}}AutocompleteListFor{{entity.Name}}(int limit, string filter, IQueryable<{{autocompleteEntity.Name}}> query, bool authorize = true)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
+                }
+
+                if (!string.IsNullOrEmpty(filter))
+                    query = query.Where(x => x.{{autocompleteEntityDisplayName}}.Contains(filter));
+
+                return await query
+                    .AsNoTracking()
+                    .Take(limit)
+                    .Select(x => new NamebookDTO<{{autocompleteEntityIdType}}>
+                    {
+                        Id = x.Id,
+                        DisplayName = x.{{autocompleteEntityDisplayName}},
+                    })
+                    .ToListAsync();
+            });
+        }
+""";
+        }
+
+        private static string GetDropdownMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> allEntities)
+        {
+            SpiderClass dropdownEntity = allEntities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).Single();
+            string dropdownEntityIdType = dropdownEntity.GetIdType(allEntities);
+            string dropdownDisplayName = Helpers.GetDisplayNameProperty(dropdownEntity);
+
+            return $$"""
+        public async virtual Task<List<NamebookDTO<{{dropdownEntityIdType}}>>> Get{{property.Name}}DropdownListFor{{entity.Name}}(IQueryable<{{entity.Name}}> query, bool authorize = true)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
+                }
+
+                return await query
+                    .AsNoTracking()
+                    .Select(x => new NamebookDTO<{{dropdownEntityIdType}}>
+                    {
+                        Id = x.Id,
+                        DisplayName = x.{{dropdownDisplayName}},
+                    })
+                    .ToListAsync();
+            });
+        }
+""";
+        }
+
+        #endregion
+
+        #endregion
+
+        #region One To Many
+
+        static List<string> GetOneToManyMethods(SpiderClass entity, List<SpiderClass> entities)
+        {
+            string entityIdType = entity.GetIdType(entities);
+
+            List<string> result = new();
+
+            foreach (SpiderProperty oneToManyProperty in entity.Properties.Where(prop => prop.Type.IsOneToManyType())) // List<Role> Roles
+            {
+                SpiderClass extractedPropertyEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(oneToManyProperty.Type)).Single(); // Role
+
+                string extractedPropertyEntityIdType = extractedPropertyEntity.GetIdType(entities); // int
+
+                if (extractedPropertyEntityIdType == null) // FT: M2M List, maybe do something else in the future.
+                    continue;
+
+                string extractedPropertyEntityDisplayName = Helpers.GetDisplayNameProperty(extractedPropertyEntity); // Name
+
+                SpiderProperty extractedEntityManyToManyProperty = Helpers.GetOppositeManyToManyProperty(oneToManyProperty, extractedPropertyEntity, entity, entities);
+                SpiderProperty manyToOneProperty = extractedPropertyEntity.GetManyToOnePropertyWithManyAttribute(entity.Name, oneToManyProperty.Name);
+
+                if (manyToOneProperty != null)
+                {
+                    result.Add($$"""
+{{GetOneToManyNamebookListForEntity(oneToManyProperty, extractedPropertyEntity, manyToOneProperty, entity, entities)}}
+
+{{GetOneToManyListForEntity(oneToManyProperty, extractedPropertyEntity, manyToOneProperty, entity, entities)}}
+
+{{GetOrderedOneToManyMethod(oneToManyProperty, entity, entities)}}
+""");
+                }
+                else if (extractedEntityManyToManyProperty != null)
+                {
+                    result.Add($$"""
+        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{oneToManyProperty.Name}}NamebookListFor{{entity.Name}}({{entityIdType}} id, bool authorize = true)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
+                }
+
+                return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
+                    .AsNoTracking()
+                    .Where(x => x.{{extractedEntityManyToManyProperty.Name}}.Any(x => x.Id == id))
+                    .Select(x => new NamebookDTO<{{extractedPropertyEntityIdType}}>
+                    {
+                        Id = x.Id,
+                        DisplayName = x.{{extractedPropertyEntityDisplayName}},
+                    })
+                    .ToListAsync();
+            });
+        }
+
+        public async Task<List<{{extractedPropertyEntity.Name}}>> Get{{oneToManyProperty.Name}}For{{entity.Name}}({{entityIdType}} id, bool authorize = true)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
+                }
+
+                return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
+                    .Where(x => x.{{extractedEntityManyToManyProperty.Name}}.Any(x => x.Id == id))
+                    .ToListAsync();
+            });
+        }
+
+        public async Task Update{{oneToManyProperty.Name}}For{{entity.Name}}({{entityIdType}} id, List<{{extractedPropertyEntityIdType}}> selectedIds)
+        {
+            if (selectedIds == null)
+                return;
+
+            List<{{extractedPropertyEntityIdType}}> selectedIdsHelper = selectedIds.ToList();
+
+            await _context.WithTransactionAsync(async () =>
+            {
+                // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
+
+                {{((entity.IsBusinessObject() || entity.IsReadonlyObject() == false)
+                ? $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id, null); // FT: Version will always be checked before or after this method"
+                : $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id);"
+                )}}
+                
+                foreach ({{extractedPropertyEntity.Name}} item in entity.{{oneToManyProperty.Name}}.ToList())
+                {
+                    if (selectedIdsHelper.Contains(item.Id))
+                        selectedIdsHelper.Remove(item.Id);
+                    else
+                        entity.{{oneToManyProperty.Name}}.Remove(item);
+                }
+
+                var listToInsert = await _context.DbSet<{{extractedPropertyEntity.Name}}>().Where(x => selectedIdsHelper.Contains(x.Id)).ToListAsync();
+
+                entity.{{oneToManyProperty.Name}}.AddRange(listToInsert);
+                await _context.SaveChangesAsync();
+            });
+        }
+
+        /// <summary>
+        /// It's mandatory to pass queryable ordered by the same field as the table data
+        /// </summary>
+        public async Task<LazyLoadSelectedIdsResultDTO<{{extractedPropertyEntityIdType}}>> LazyLoadSelected{{oneToManyProperty.Name}}IdsFor{{entity.Name}}(TableFilterDTO tableFilterDTO, IQueryable<{{extractedPropertyEntity.Name}}> query)
+        {
+            LazyLoadSelectedIdsResultDTO<{{extractedPropertyEntityIdType}}> lazyLoadSelectedIdsResultDTO = new();
+
+            query = query
+                .Skip(tableFilterDTO.First)
+                .Take(tableFilterDTO.Rows)
+                .Where(x => x.{{extractedEntityManyToManyProperty.Name}}
+                    .Any(x => x.Id == tableFilterDTO.{{extractedPropertyEntityIdType.GetTableFilterAdditionalFilterPropertyName()}}));
+
+            await _context.WithTransactionAsync(async () =>
+            {
+                var paginationResult = await Get{{extractedPropertyEntity.Name}}ListForPagination(tableFilterDTO, query);
+
+                lazyLoadSelectedIdsResultDTO.SelectedIds = await paginationResult.Query
+                    .Select(x => x.Id)
+                    .ToListAsync();
+
+                int count = await _context.DbSet<{{extractedPropertyEntity.Name}}>()
+                    .Where(x => x.{{extractedEntityManyToManyProperty.Name}}
+                        .Any(x => x.Id == tableFilterDTO.{{extractedPropertyEntityIdType.GetTableFilterAdditionalFilterPropertyName()}}))
+                    .CountAsync();
+
+                lazyLoadSelectedIdsResultDTO.TotalRecordsSelected = count;
+            });
+
+            return lazyLoadSelectedIdsResultDTO;
+        }
+
+{{GetSimpleManyToManyUpdateWithLazyTableSelectionMethod(oneToManyProperty, entity, entities)}}
+""");
+                }
+                else if (extractedPropertyEntity == null)
+                {
+                    result.Add("Invalid entity class, you can't have List<Entity> without List<AssociationEntity> or AssociationEntity on the other side."); // He can (User/Role example, many to many on the one side)
+                }
+
+            }
+
+            return result;
+        }
+
+        private static string GetOneToManyListForEntity(SpiderProperty oneToManyProperty, SpiderClass extractedPropertyEntity, SpiderProperty manyToOneProperty, SpiderClass entity, List<SpiderClass> entities)
+        {
+            return $$"""
+        public async Task<List<{{extractedPropertyEntity.Name}}>> Get{{oneToManyProperty.Name}}For{{entity.Name}}({{entity.GetIdType(entities)}} id, bool authorize = true)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
+                }
+
+                return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
+                    .Where(x => x.{{manyToOneProperty.Name}}.Id == id)
+                    .ToListAsync();
+            });
+        }
+""";
+        }
+
+        private static string GetOneToManyNamebookListForEntity(SpiderProperty oneToManyProperty, SpiderClass extractedPropertyEntity, SpiderProperty manyToOneProperty, SpiderClass entity, List<SpiderClass> entities)
+        {
+            string extractedPropertyEntityIdType = extractedPropertyEntity.GetIdType(entities); // int
+
+            return $$"""
+        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{oneToManyProperty.Name}}NamebookListFor{{entity.Name}}({{entity.GetIdType(entities)}} id, bool authorize = true)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
+                }
+
+                return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
+                    .AsNoTracking()
+                    .Where(x => x.{{manyToOneProperty.Name}}.Id == id)
+                    .Select(x => new NamebookDTO<{{extractedPropertyEntityIdType}}>
+                    {
+                        Id = x.Id,
+                        DisplayName = x.{{Helpers.GetDisplayNameProperty(extractedPropertyEntity)}},
+                    })
+                    .ToListAsync();
+            });
+        }
+""";
+        }
+
+        private static string GetSimpleManyToManyUpdateWithLazyTableSelectionMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> entities)
+        {
+            if (property.HasSimpleManyToManyTableLazyLoadAttribute() == false)
+                return null;
+
+            string entityIdType = entity.GetIdType(entities);
+            SpiderClass extractedPropertyEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).Single(); // Role
+
+            string extractedPropertyEntityIdType = extractedPropertyEntity.GetIdType(entities); // int
+
+            return $$"""
+        public async Task Update{{property.Name}}WithLazyTableSelectionFor{{entity.Name}}(IQueryable<{{extractedPropertyEntity.Name}}> query, {{entityIdType}} id, {{entity.Name}}SaveBodyDTO saveBodyDTO)
+        {
+            await _context.WithTransactionAsync(async () =>
+            {
+                List<{{extractedPropertyEntityIdType}}> listToInsert = null;
+
+                if (saveBodyDTO.AreAll{{property.Name}}Selected == true)
+                {
+                    listToInsert = await query.Where(x => saveBodyDTO.Unselected{{property.Name}}Ids.Contains(x.Id) == false).Select(x => x.Id).ToListAsync();
+                }
+                else if (saveBodyDTO.AreAll{{property.Name}}Selected == false)
+                {
+                    listToInsert = await query.Where(x => saveBodyDTO.Selected{{property.Name}}Ids.Contains(x.Id) == true).Select(x => x.Id).ToListAsync();
+                }
+                else if (saveBodyDTO.AreAll{{property.Name}}Selected == null)
+                {
+                    {{((entity.IsBusinessObject() || entity.IsReadonlyObject() == false)
+                    ? $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id, null); // FT: Version will always be checked before or after this method"
+                    : $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id);"
+                    )}}
+
+                    var alreadySelected = entity.{{property.Name}} == null ? new List<{{extractedPropertyEntityIdType}}>() : entity.{{property.Name}}.Select(x => x.Id).ToList();
+
+                    listToInsert = alreadySelected
+                        .Union(saveBodyDTO.Selected{{property.Name}}Ids)
+                        .Except(saveBodyDTO.Unselected{{property.Name}}Ids)
+                        .ToList();
+                }
+
+                await Update{{property.Name}}For{{entity.Name}}(id, listToInsert);
+            });
+        }
+""";
+        }
+
+        private static string GetOrderedOneToManyMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> entities)
+        {
+            if (property.HasOrderedOneToManyAttribute() == false)
+                return null;
+
+            SpiderClass extractedPropertyEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).Single();
+            SpiderProperty manyToOneProperty = extractedPropertyEntity.GetManyToOnePropertyWithManyAttribute(entity.Name, property.Name);
+
+            return $$"""
+        public async Task<List<{{extractedPropertyEntity.Name}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}({{entity.GetIdType(entities)}} id, bool authorize = true)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                var query = _context.DbSet<{{extractedPropertyEntity.Name}}>()
+                    .Where(x => x.{{manyToOneProperty.Name}}.Id == id)
+                    .OrderBy(x => x.OrderNumber);
+
+                return await Get{{extractedPropertyEntity.Name}}DTOList(query, authorize);
+            });
+        }
+""";
         }
 
         #endregion
@@ -846,272 +1161,6 @@ namespace {{basePartOfNamespace}}.Services
             }
 
             return result;
-        }
-
-        #endregion
-
-        #region One To Many
-
-        static List<string> GetOneToManyMethods(SpiderClass entity, List<SpiderClass> entities)
-        {
-            string entityIdType = entity.GetIdType(entities);
-
-            List<string> result = new();
-
-            foreach (SpiderProperty oneToManyProperty in entity.Properties.Where(prop => prop.Type.IsOneToManyType())) // List<Role> Roles
-            {
-                SpiderClass extractedPropertyEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(oneToManyProperty.Type)).Single(); // Role
-
-                string extractedPropertyEntityIdType = extractedPropertyEntity.GetIdType(entities); // int
-
-                if (extractedPropertyEntityIdType == null) // FT: M2M List, maybe do something else in the future.
-                    continue;
-
-                string extractedPropertyEntityDisplayName = Helpers.GetDisplayNameProperty(extractedPropertyEntity); // Name
-
-                SpiderProperty extractedEntityManyToManyProperty = Helpers.GetOppositeManyToManyProperty(oneToManyProperty, extractedPropertyEntity, entity, entities);
-                SpiderProperty manyToOneProperty = extractedPropertyEntity.GetManyToOnePropertyWithManyAttribute(entity.Name, oneToManyProperty.Name);
-
-                if (manyToOneProperty != null)
-                {
-                    result.Add($$"""
-{{GetOneToManyNamebookListForEntity(oneToManyProperty, extractedPropertyEntity, manyToOneProperty, entity, entities)}}
-
-{{GetOneToManyListForEntity(oneToManyProperty, extractedPropertyEntity, manyToOneProperty, entity, entities)}}
-
-{{GetOrderedOneToManyMethod(oneToManyProperty, entity, entities)}}
-""");
-                }
-                else if (extractedEntityManyToManyProperty != null)
-                {
-                    result.Add($$"""
-        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{oneToManyProperty.Name}}NamebookListFor{{entity.Name}}({{entityIdType}} id, bool authorize = true)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
-                }
-
-                return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
-                    .AsNoTracking()
-                    .Where(x => x.{{extractedEntityManyToManyProperty.Name}}.Any(x => x.Id == id))
-                    .Select(x => new NamebookDTO<{{extractedPropertyEntityIdType}}>
-                    {
-                        Id = x.Id,
-                        DisplayName = x.{{extractedPropertyEntityDisplayName}},
-                    })
-                    .ToListAsync();
-            });
-        }
-
-        public async Task<List<{{extractedPropertyEntity.Name}}>> Get{{oneToManyProperty.Name}}For{{entity.Name}}({{entityIdType}} id, bool authorize = true)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
-                }
-
-                return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
-                    .Where(x => x.{{extractedEntityManyToManyProperty.Name}}.Any(x => x.Id == id))
-                    .ToListAsync();
-            });
-        }
-
-        public async Task Update{{oneToManyProperty.Name}}For{{entity.Name}}({{entityIdType}} id, List<{{extractedPropertyEntityIdType}}> selectedIds)
-        {
-            if (selectedIds == null)
-                return;
-
-            List<{{extractedPropertyEntityIdType}}> selectedIdsHelper = selectedIds.ToList();
-
-            await _context.WithTransactionAsync(async () =>
-            {
-                // FT: Not doing authorization here, because we can not figure out here if we are updating while inserting object (eg. User), or updating object, we will always get the id which is not 0 here.
-
-                {{((entity.IsBusinessObject() || entity.IsReadonlyObject() == false)
-                ? $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id, null); // FT: Version will always be checked before or after this method"
-                : $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id);"
-                )}}
-                
-                foreach ({{extractedPropertyEntity.Name}} item in entity.{{oneToManyProperty.Name}}.ToList())
-                {
-                    if (selectedIdsHelper.Contains(item.Id))
-                        selectedIdsHelper.Remove(item.Id);
-                    else
-                        entity.{{oneToManyProperty.Name}}.Remove(item);
-                }
-
-                var listToInsert = await _context.DbSet<{{extractedPropertyEntity.Name}}>().Where(x => selectedIdsHelper.Contains(x.Id)).ToListAsync();
-
-                entity.{{oneToManyProperty.Name}}.AddRange(listToInsert);
-                await _context.SaveChangesAsync();
-            });
-        }
-
-        /// <summary>
-        /// It's mandatory to pass queryable ordered by the same field as the table data
-        /// </summary>
-        public async Task<LazyLoadSelectedIdsResultDTO<{{extractedPropertyEntityIdType}}>> LazyLoadSelected{{oneToManyProperty.Name}}IdsFor{{entity.Name}}(TableFilterDTO tableFilterDTO, IQueryable<{{extractedPropertyEntity.Name}}> query)
-        {
-            LazyLoadSelectedIdsResultDTO<{{extractedPropertyEntityIdType}}> lazyLoadSelectedIdsResultDTO = new();
-
-            query = query
-                .Skip(tableFilterDTO.First)
-                .Take(tableFilterDTO.Rows)
-                .Where(x => x.{{extractedEntityManyToManyProperty.Name}}
-                    .Any(x => x.Id == tableFilterDTO.{{extractedPropertyEntityIdType.GetTableFilterAdditionalFilterPropertyName()}}));
-
-            await _context.WithTransactionAsync(async () =>
-            {
-                var paginationResult = await Get{{extractedPropertyEntity.Name}}ListForPagination(tableFilterDTO, query);
-
-                lazyLoadSelectedIdsResultDTO.SelectedIds = await paginationResult.Query
-                    .Select(x => x.Id)
-                    .ToListAsync();
-
-                int count = await _context.DbSet<{{extractedPropertyEntity.Name}}>()
-                    .Where(x => x.{{extractedEntityManyToManyProperty.Name}}
-                        .Any(x => x.Id == tableFilterDTO.{{extractedPropertyEntityIdType.GetTableFilterAdditionalFilterPropertyName()}}))
-                    .CountAsync();
-
-                lazyLoadSelectedIdsResultDTO.TotalRecordsSelected = count;
-            });
-
-            return lazyLoadSelectedIdsResultDTO;
-        }
-
-{{GetSimpleManyToManyUpdateWithLazyTableSelectionMethod(oneToManyProperty, entity, entities)}}
-""");
-                }
-                else if (extractedPropertyEntity == null)
-                {
-                    result.Add("Invalid entity class, you can't have List<Entity> without List<AssociationEntity> or AssociationEntity on the other side."); // He can (User/Role example, many to many on the one side)
-                }
-
-            }
-
-            return result;
-        }
-
-        private static string GetOneToManyListForEntity(SpiderProperty oneToManyProperty, SpiderClass extractedPropertyEntity, SpiderProperty manyToOneProperty, SpiderClass entity, List<SpiderClass> entities)
-        {
-            return $$"""
-        public async Task<List<{{extractedPropertyEntity.Name}}>> Get{{oneToManyProperty.Name}}For{{entity.Name}}({{entity.GetIdType(entities)}} id, bool authorize = true)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
-                }
-
-                return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
-                    .Where(x => x.{{manyToOneProperty.Name}}.Id == id)
-                    .ToListAsync();
-            });
-        }
-""";
-        }
-
-        private static string GetOneToManyNamebookListForEntity(SpiderProperty oneToManyProperty, SpiderClass extractedPropertyEntity, SpiderProperty manyToOneProperty, SpiderClass entity, List<SpiderClass> entities)
-        {
-            string extractedPropertyEntityIdType = extractedPropertyEntity.GetIdType(entities); // int
-
-            return $$"""
-        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{oneToManyProperty.Name}}NamebookListFor{{entity.Name}}({{entity.GetIdType(entities)}} id, bool authorize = true)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
-                }
-
-                return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
-                    .AsNoTracking()
-                    .Where(x => x.{{manyToOneProperty.Name}}.Id == id)
-                    .Select(x => new NamebookDTO<{{extractedPropertyEntityIdType}}>
-                    {
-                        Id = x.Id,
-                        DisplayName = x.{{Helpers.GetDisplayNameProperty(extractedPropertyEntity)}},
-                    })
-                    .ToListAsync();
-            });
-        }
-""";
-        }
-
-        private static string GetSimpleManyToManyUpdateWithLazyTableSelectionMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> entities)
-        {
-            if (property.HasSimpleManyToManyTableLazyLoadAttribute() == false)
-                return null;
-
-            string entityIdType = entity.GetIdType(entities);
-            SpiderClass extractedPropertyEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).Single(); // Role
-
-            string extractedPropertyEntityIdType = extractedPropertyEntity.GetIdType(entities); // int
-
-            return $$"""
-        public async Task Update{{property.Name}}WithLazyTableSelectionFor{{entity.Name}}(IQueryable<{{extractedPropertyEntity.Name}}> query, {{entityIdType}} id, {{entity.Name}}SaveBodyDTO saveBodyDTO)
-        {
-            await _context.WithTransactionAsync(async () =>
-            {
-                List<{{extractedPropertyEntityIdType}}> listToInsert = null;
-
-                if (saveBodyDTO.AreAll{{property.Name}}Selected == true)
-                {
-                    listToInsert = await query.Where(x => saveBodyDTO.Unselected{{property.Name}}Ids.Contains(x.Id) == false).Select(x => x.Id).ToListAsync();
-                }
-                else if (saveBodyDTO.AreAll{{property.Name}}Selected == false)
-                {
-                    listToInsert = await query.Where(x => saveBodyDTO.Selected{{property.Name}}Ids.Contains(x.Id) == true).Select(x => x.Id).ToListAsync();
-                }
-                else if (saveBodyDTO.AreAll{{property.Name}}Selected == null)
-                {
-                    {{((entity.IsBusinessObject() || entity.IsReadonlyObject() == false)
-                    ? $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id, null); // FT: Version will always be checked before or after this method"
-                    : $"var entity = await GetInstanceAsync<{entity.Name}, {entityIdType}>(id);"
-                    )}}
-
-                    var alreadySelected = entity.{{property.Name}} == null ? new List<{{extractedPropertyEntityIdType}}>() : entity.{{property.Name}}.Select(x => x.Id).ToList();
-
-                    listToInsert = alreadySelected
-                        .Union(saveBodyDTO.Selected{{property.Name}}Ids)
-                        .Except(saveBodyDTO.Unselected{{property.Name}}Ids)
-                        .ToList();
-                }
-
-                await Update{{property.Name}}For{{entity.Name}}(id, listToInsert);
-            });
-        }
-""";
-        }
-
-        private static string GetOrderedOneToManyMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> entities)
-        {
-            if (property.HasOrderedOneToManyAttribute() == false)
-                return null;
-
-            SpiderClass extractedPropertyEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).Single();
-            SpiderProperty manyToOneProperty = extractedPropertyEntity.GetManyToOnePropertyWithManyAttribute(entity.Name, property.Name);
-
-            return $$"""
-        public async Task<List<{{extractedPropertyEntity.Name}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}({{entity.GetIdType(entities)}} id, bool authorize = true)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                var query = _context.DbSet<{{extractedPropertyEntity.Name}}>()
-                    .Where(x => x.{{manyToOneProperty.Name}}.Id == id)
-                    .OrderBy(x => x.OrderNumber);
-
-                return await Get{{extractedPropertyEntity.Name}}DTOList(query, authorize);
-            });
-        }
-""";
         }
 
         #endregion

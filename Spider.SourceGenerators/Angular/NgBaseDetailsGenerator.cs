@@ -301,23 +301,20 @@ export class {{entity.Name}}BaseDetailsComponent {
                 SpiderProperty extractedDTOProperty = extractedDTO?.Properties?.Where(x => x.Name == col.Field)?.SingleOrDefault();
 
                 result.Add($$"""
-                {name: this.translocoService.translate('{{col.TranslationKey}}'), filterType: '{{GetTableColFilterType(extractedEntityProperty ?? extractedDTOProperty)}}', field: '{{col.Field.FirstCharToLower()}}' {{GetTableColAdditionalProperties(extractedEntityProperty ?? extractedDTOProperty, entities)}} }
+                {name: this.translocoService.translate('{{col.TranslationKey}}'), filterType: '{{GetTableColFilterType(extractedEntityProperty ?? extractedDTOProperty)}}', field: '{{col.Field.FirstCharToLower()}}' {{GetTableColAdditionalProperties(extractedEntityProperty ?? extractedDTOProperty, entity, entities)}} }
 """);
             }
 
             return result;
         }
 
-        private static string GetTableColAdditionalProperties(SpiderProperty property, List<SpiderClass> entities)
+        private static string GetTableColAdditionalProperties(SpiderProperty property, SpiderClass entity, List<SpiderClass> entities)
         {
             if (property.IsDropdownControlType())
-                return $", filterField: '{property.Name.FirstCharToLower()}Id', dropdownOrMultiselectValues: await firstValueFrom(getPrimengNamebookListForDropdown(this.apiService.get{property.Type}ListForDropdown))";
+                return $", filterField: '{property.Name.FirstCharToLower()}Id', dropdownOrMultiselectValues: await firstValueFrom(getPrimengNamebookDropdownList(this.apiService.get{property.Name}DropdownListFor{entity.Name}))";
 
             if (property.HasGenerateCommaSeparatedDisplayNameAttribute())
-            {
-                SpiderClass extractedEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
-                return $", dropdownOrMultiselectValues: await firstValueFrom(getPrimengNamebookListForDropdown(this.apiService.get{extractedEntity.Name}ListForDropdown))";
-            }
+                return $", dropdownOrMultiselectValues: await firstValueFrom(getPrimengNamebookDropdownList(this.apiService.get{property.Name}DropdownListFor{entity.Name}))";
 
             switch (property.Type)
             {
@@ -495,11 +492,9 @@ export class {{entity.Name}}BaseDetailsComponent {
                 )
             )
             {
-                SpiderClass extractedEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
-
                 result.Add($$"""
-            getPrimengNamebookListForDropdown(this.apiService.get{{extractedEntity.Name}}ListForDropdown).subscribe(po => {
-                this.{{property.Name.FirstCharToLower()}}For{{entity.Name}}Options = po;
+            getPrimengNamebookDropdownList(this.apiService.get{{property.Name}}DropdownListFor{{entity.Name}}).subscribe(po => {
+                this.{{property.Name.FirstCharToLower()}}OptionsFor{{entity.Name}} = po;
             });
 """);
             }
@@ -777,7 +772,7 @@ export class {{entity.Name}}BaseDetailsComponent {
                     controlType == UIControlTypeCodes.MultiSelect)
                 {
                     result.Add($$"""
-    {{property.Name.FirstCharToLower()}}For{{entity.Name}}Options: PrimengOption[];
+    {{property.Name.FirstCharToLower()}}OptionsFor{{entity.Name}}: PrimengOption[];
 """);
 
                 }
@@ -814,8 +809,8 @@ export class {{entity.Name}}BaseDetailsComponent {
                 {
                     result.Add($$"""
     search{{property.Name}}For{{entity.Name}}(event: AutoCompleteCompleteEvent) {
-        getPrimengNamebookListForAutocomplete(this.apiService.get{{Helpers.ExtractTypeFromGenericType(property.Type)}}ListForAutocomplete, 50, event?.query ?? '').subscribe(po => {
-            this.{{property.Name.FirstCharToLower()}}For{{entity.Name}}Options = po;
+        getPrimengNamebookAutocompleteList(this.apiService.get{{property.Name}}AutocompleteListFor{{entity.Name}}, 50, event?.query ?? '').subscribe(po => {
+            this.{{property.Name.FirstCharToLower()}}OptionsFor{{entity.Name}} = po;
         });
     }
 """);

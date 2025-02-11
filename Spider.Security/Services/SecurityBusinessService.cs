@@ -344,7 +344,7 @@ namespace Spider.Security.Services
             });
         }
 
-        public async Task<List<NamebookDTO<long>>> GetUserListForAutocomplete(int limit, string query)
+        public async Task<List<NamebookDTO<long>>> GetUserAutocompleteList(int limit, string query)
         {
             IQueryable<TUser> userQuery = _context.DbSet<TUser>();
 

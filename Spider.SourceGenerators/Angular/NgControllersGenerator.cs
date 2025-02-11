@@ -252,9 +252,9 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
 {{GetBaseGetAngularControllerMethod(entity, alreadyAddedMethods)}}
 
-{{GetBaseGetListForAutocompleteAngularControllerMethod(entity, alreadyAddedMethods)}}
+{{GetBaseGetListForAutocompleteAngularControllerMethods(entity, alreadyAddedMethods)}}
 
-{{GetBaseGetListForDropdownAngularControllerMethod(entity, alreadyAddedMethods)}}
+{{GetBaseGetListForDropdownAngularControllerMethods(entity, alreadyAddedMethods)}}
 
 {{string.Join("\n\n", GetBaseOrderedOneToManyAngularControllerMethods(entity, entities, alreadyAddedMethods))}}
 
@@ -485,26 +485,46 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
             return GetAngularControllerMethod(methodName, postAndPutParameter, $"{entity.Name}SaveBody", HttpTypeCodes.Put, entity.ControllerName, Settings.HttpOptionsBase);
         }
 
-        private static string GetBaseGetListForDropdownAngularControllerMethod(SpiderClass entity, HashSet<string> alreadyAddedMethods)
+        private static string GetBaseGetListForAutocompleteAngularControllerMethods(SpiderClass entity, HashSet<string> alreadyAddedMethods)
         {
-            string methodName = $"Get{entity.Name}ListForDropdown";
+            StringBuilder sb = new();
 
-            if (alreadyAddedMethods.Contains(methodName))
-                return null;
+            foreach (SpiderProperty property in entity.Properties)
+            {
+                if (property.ShouldGenerateAutocompleteControllerMethod())
+                {
+                    string methodName = $"Get{property.Name}AutocompleteListFor{entity.Name}";
 
-            return GetAngularControllerMethod(methodName, null, "Namebook[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsSkipSpinner);
+                    if (alreadyAddedMethods.Contains(methodName))
+                        continue;
+
+                    Dictionary<string, string> getAndDeleteParameters = new Dictionary<string, string> { { "limit", "number" }, { "filter", "string" } };
+
+                    sb.Append(GetAngularControllerMethod(methodName, getAndDeleteParameters, "Namebook[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsSkipSpinner));
+                }
+            }
+
+            return sb.ToString();
         }
 
-        private static string GetBaseGetListForAutocompleteAngularControllerMethod(SpiderClass entity, HashSet<string> alreadyAddedMethods)
+        private static string GetBaseGetListForDropdownAngularControllerMethods(SpiderClass entity, HashSet<string> alreadyAddedMethods)
         {
-            string methodName = $"Get{entity.Name}ListForAutocomplete";
+            StringBuilder sb = new();
 
-            if (alreadyAddedMethods.Contains(methodName))
-                return null;
+            foreach (SpiderProperty property in entity.Properties)
+            {
+                if (property.ShouldGenerateDropdownControllerMethod())
+                {
+                    string methodName = $"Get{property.Name}DropdownListFor{entity.Name}";
 
-            Dictionary<string, string> getAndDeleteParameters = new Dictionary<string, string> { { "limit", "number" }, { "query", "string" } };
+                    if (alreadyAddedMethods.Contains(methodName))
+                        continue;
 
-            return GetAngularControllerMethod(methodName, getAndDeleteParameters, "Namebook[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsSkipSpinner);
+                    sb.Append(GetAngularControllerMethod(methodName, null, "Namebook[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsSkipSpinner));
+                }
+            }
+
+            return sb.ToString();
         }
 
         private static string GetBaseGetAngularControllerMethod(SpiderClass entity, HashSet<string> alreadyAddedMethods)

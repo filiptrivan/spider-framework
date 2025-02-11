@@ -108,9 +108,9 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
 
         [HttpGet]
         [AuthGuard]
-        public virtual async Task<List<NamebookDTO<long>>> GetUserListForAutocomplete(int limit, string query)
+        public virtual async Task<List<NamebookDTO<long>>> GetUserAutocompleteList(int limit, string query)
         {
-            return await _securityBusinessService.GetUserListForAutocomplete(limit, query);
+            return await _securityBusinessService.GetUserAutocompleteList(limit, query);
         }
 
         #endregion
@@ -162,16 +162,16 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> GetRoleListForAutocomplete(int limit, string query)
+        public async Task<List<NamebookDTO<int>>> GetRoleAutocompleteList(int limit, string query)
         {
-            return await _securityBusinessService.GetRoleListForAutocomplete(limit, query, _context.DbSet<Role>());
+            return await _securityBusinessService.GetRoleAutocompleteList(limit, query, _context.DbSet<Role>());
         }
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> GetRoleListForDropdown()
+        public async Task<List<NamebookDTO<int>>> GetRoleDropdownList()
         {
-            return await _securityBusinessService.GetRoleListForDropdown(_context.DbSet<Role>());
+            return await _securityBusinessService.GetRoleDropdownList(_context.DbSet<Role>());
         }
 
         #endregion
@@ -180,9 +180,9 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
 
         [HttpGet]
         [AuthGuard]
-        public async Task<List<NamebookDTO<int>>> GetPermissionListForDropdown()
+        public async Task<List<NamebookDTO<int>>> GetPermissionDropdownList()
         {
-            return await _securityBusinessService.GetPermissionListForDropdown(_context.DbSet<Permission>(), false); // FT: We don't have authorization of Permission, it will inherit from Role authorization
+            return await _securityBusinessService.GetPermissionDropdownList(_context.DbSet<Permission>(), false); // FT: We don't have authorization of Permission, it will inherit from Role authorization
         }
 
         [HttpGet]

@@ -198,8 +198,7 @@ namespace Spider.SourceGenerators.Shared
             if (entityDisplayNameAttribute != null)
                 return entityDisplayNameAttribute.Value;
 
-            List<SpiderProperty> props = entity.Properties;
-            SpiderProperty displayNamePropForClass = props.Where(x => x.Attributes.Any(x => x.Name == DisplayNameAttribute)).SingleOrDefault();
+            SpiderProperty displayNamePropForClass = entity.Properties.Where(x => x.Attributes.Any(x => x.Name == DisplayNameAttribute)).SingleOrDefault();
 
             if (displayNamePropForClass == null)
                 return $"Id.ToString()";
