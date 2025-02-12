@@ -12,10 +12,11 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Globalization;
 using System.Resources;
+using Spider.Shared.BaseEntities;
 
 namespace Spider.Shared.Helpers
 {
-    public static class Helper
+    public static class Helpers
     {
         public static void WriteToTheFile(string data, string path)
         {
@@ -67,6 +68,11 @@ namespace Spider.Shared.Helpers
         {
             string result = manager.GetString(key, CultureInfo.CurrentCulture);
             return string.IsNullOrEmpty(result) ? null : result;
+        }
+
+        public static bool AreIdsDifferent<ID>(List<ID> ids1, List<ID> ids2) where ID : struct
+        {
+            return ids1.Except(ids2).Any() || ids2.Except(ids1).Any();
         }
 
         #region Security

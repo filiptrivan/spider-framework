@@ -91,28 +91,24 @@ namespace {{basePartOfNamespace}}.Services
                 if (entity.BaseType == null) // FT: Handling many to many, maybe you should do something else in the future
                     continue;
 
-                string idTypeOfTheEntityClass = entity.GetIdType(allEntities);
+                string entityIdType = entity.GetIdType(allEntities);
 
                 sb.AppendLine($$"""
         #region {{entity.Name}}
 
-{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Read, $"{idTypeOfTheEntityClass} {entity.Name.FirstCharToLower()}Id", projectName, isSecurityProject)}}
+{{GetAuthorizeEntityMethod(entity.Name, entity, CrudCodes.Read, $"{entityIdType} {entity.Name.FirstCharToLower()}IdToRead", projectName, isSecurityProject)}}
 
-        // FT: Same for table, excel, autocomplete, dropdown
-{{GetAuthorizeEntityListMethod(entity.Name, CrudCodes.Read, "", projectName, isSecurityProject)}}
+{{GetAuthorizeEntityMethod(entity.Name, entity, CrudCodes.Read, $"List<{entityIdType}> {entity.Name.FirstCharToLower()}IdListToRead", projectName, isSecurityProject)}}
 
-{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Update, $"{entity.Name}DTO {entity.Name.FirstCharToLower()}DTO", projectName, isSecurityProject)}}
+{{GetAuthorizeEntityMethod(entity.Name, entity, CrudCodes.Update, $"{entity.Name}DTO dto", projectName, isSecurityProject)}}
 
-{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Update, $"{idTypeOfTheEntityClass} {entity.Name.FirstCharToLower()}Id", projectName, isSecurityProject)}}
+{{GetAuthorizeEntityMethod(entity.Name, entity, CrudCodes.Insert, $"{entity.Name}DTO dto", projectName, isSecurityProject)}}
 
-{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Insert, $"{entity.Name}DTO {entity.Name.FirstCharToLower()}DTO", projectName, isSecurityProject)}}
+{{GetAuthorizeEntityMethod(entity.Name, entity, CrudCodes.Delete, $"{entityIdType} {entity.Name.FirstCharToLower()}Id", projectName, isSecurityProject)}}
 
-        // FT: Blob, the id will always be 0, so we don't need to pass it.
-{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Insert, "", projectName, isSecurityProject)}}
+{{GetAuthorizeEntityMethod(entity.Name, entity, CrudCodes.Delete, $"List<{entityIdType}> {entity.Name.FirstCharToLower()}ListToDelete", projectName, isSecurityProject)}}
 
-{{GetAuthorizeEntityMethod(entity.Name, CrudCodes.Delete, $"{idTypeOfTheEntityClass} {entity.Name.FirstCharToLower()}Id", projectName, isSecurityProject)}}
-
-{{GetAuthorizeEntityListMethod(entity.Name, CrudCodes.Delete, $"List<{idTypeOfTheEntityClass}> {entity.Name.FirstCharToLower()}ListToDelete", projectName, isSecurityProject)}}
+{{GetBloblAuthorizeEntityMethods(entity, entityIdType, projectName, isSecurityProject)}}
 
         #endregion
 
@@ -122,24 +118,36 @@ namespace {{basePartOfNamespace}}.Services
             return sb.ToString();
         }
 
-        private static string GetAuthorizeEntityMethod(string entityName, CrudCodes crudCode, string parametersBody, string projectName, bool isSecurityProject)
+        private static string GetBloblAuthorizeEntityMethods(SpiderClass entity, string entityIdType, string projectName, bool isSecurityProject)
         {
-            return GetAuthorizeMethod(Helpers.GetAuthorizeEntityMethodName(entityName, crudCode), parametersBody, crudCode, entityName, projectName, isSecurityProject);
+            StringBuilder sb = new();
+
+            foreach (SpiderProperty property in Helpers.GetBlobProperties(entity.Properties))
+            {
+                sb.AppendLine($$"""
+{{GetAuthorizeEntityMethod($"{property.Name}For{entity.Name}", entity, CrudCodes.Update, $"{entityIdType} {entity.Name.FirstCharToLower()}Id", projectName, isSecurityProject)}} // FT: Blob update
+
+{{GetAuthorizeEntityMethod($"{property.Name}For{entity.Name}", entity, CrudCodes.Insert, $"", projectName, isSecurityProject)}} // FT: Blob insert, the id will always be 0, so we don't need to pass it.
+""");
+            }
+
+            return sb.ToString();
         }
 
-        private static string GetAuthorizeEntityListMethod(string entityName, CrudCodes crudCode, string parametersBody, string projectName, bool isSecurityProject)
+        private static string GetAuthorizeEntityMethod(string authorizeEntityMethodFirstPart, SpiderClass entity, CrudCodes crudCode, string parametersBody, string projectName, bool isSecurityProject)
         {
-            return GetAuthorizeMethod(Helpers.GetAuthorizeEntityListMethodName(entityName, crudCode), parametersBody, crudCode, entityName, projectName, isSecurityProject);
+            string methodName = Helpers.GetAuthorizeEntityMethodName(authorizeEntityMethodFirstPart, crudCode);
+            return GetAuthorizeMethod(methodName, parametersBody, crudCode, entity, projectName, isSecurityProject);
         }
 
-        private static string GetAuthorizeMethod(string methodName, string parametersBody, CrudCodes permissionCodePrefix, string entityName, string projectName, bool isSecurityProject)
+        private static string GetAuthorizeMethod(string methodName, string parametersBody, CrudCodes permissionCodePrefix, SpiderClass entity, string projectName, bool isSecurityProject)
         {
             return $$"""
         public virtual async Task {{methodName}}({{parametersBody}})
         {
             await _context.WithTransactionAsync(async () =>
             {
-                await AuthorizeAndThrowAsync<{{(isSecurityProject ? "TUser" : "UserExtended")}}>({{projectName}}PermissionCodes.{{permissionCodePrefix}}{{entityName}});
+                await AuthorizeAndThrowAsync<{{(isSecurityProject ? "TUser" : "UserExtended")}}>({{projectName}}PermissionCodes.{{permissionCodePrefix}}{{entity.Name}});
             });
         }
 """;

@@ -412,7 +412,7 @@ namespace Spider.Security.Services
             });
         }
 
-        public async Task<List<NamebookDTO<long>>> GetUsersAutocompleteListForRole(int limit, string filter, bool authorize = true)
+        public async Task<List<NamebookDTO<long>>> GetUsersAutocompleteListForRole(int limit, string filter, bool authorize)
         {
             IQueryable<TUser> query = _context.DbSet<TUser>();
 

@@ -171,7 +171,7 @@ namespace Spider.Shared.Extensions
 
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
                 {
-                    string ipAddress = Helper.GetIPAddress(httpContext);
+                    string ipAddress = Helpers.Helpers.GetIPAddress(httpContext);
                     
                     return RateLimitPartition.GetFixedWindowLimiter(
                         partitionKey: ipAddress,
@@ -267,7 +267,7 @@ namespace Spider.Shared.Extensions
 
                         Log.Error(exception, $$"""
 Currently authenticated user: {userEmail} (id: {userId});
-""", Helper.GetCurrentUserEmail(context), Helper.GetCurrentUserId(context));
+""", Helpers.Helpers.GetCurrentUserEmail(context), Helpers.Helpers.GetCurrentUserId(context));
 
                         string exceptionString = "";
 

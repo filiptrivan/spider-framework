@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace Spider.SourceGenerators.Net
 {
@@ -148,7 +149,7 @@ namespace {{basePartOfNamespace}}.Services
             string entityIdType = entity.GetIdType(allEntities);
 
             return $$"""
-        public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTO({{entityIdType}} id, bool authorize = true)
+        public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTO({{entityIdType}} id, bool authorize)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -179,18 +180,13 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        public async virtual Task<TableResponseDTO<{{entity.Name}}DTO>> Get{{entity.Name}}TableData(TableFilterDTO tableFilterPayload, IQueryable<{{entity.Name}}> query, bool authorize = true)
+        public async virtual Task<TableResponseDTO<{{entity.Name}}DTO>> Get{{entity.Name}}TableData(TableFilterDTO tableFilterPayload, IQueryable<{{entity.Name}}> query, bool authorize)
         {
             PaginationResult<{{entity.Name}}> paginationResult = new();
             List<{{entity.Name}}DTO> data = null;
 
             await _context.WithTransactionAsync(async () =>
             {
-                if (authorize) 
-                {
-                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
-                }
-
                 paginationResult = await Get{{entity.Name}}ListForPagination(tableFilterPayload, query);
 
                 data = await paginationResult.Query
@@ -198,59 +194,66 @@ namespace {{basePartOfNamespace}}.Services
                     .Take(tableFilterPayload.Rows)
                     .ProjectToType<{{entity.Name}}DTO>(Mapper.{{entity.Name}}ProjectToConfig())
                     .ToListAsync();
+
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "data.Select(x => x.Id).ToList()")}}
+                }
             });
 
             return new TableResponseDTO<{{entity.Name}}DTO> { Data = data, TotalRecords = paginationResult.TotalRecords };
         }
 
-        public async Task<byte[]> Export{{entity.Name}}TableDataToExcel(TableFilterDTO tableFilterPayload, IQueryable<{{entity.Name}}> query, bool authorize = true)
+        public async Task<byte[]> Export{{entity.Name}}TableDataToExcel(TableFilterDTO tableFilterPayload, IQueryable<{{entity.Name}}> query, bool authorize)
         {
             PaginationResult<{{entity.Name}}> paginationResult = new();
             List<{{entity.Name}}DTO> data = null;
 
             await _context.WithTransactionAsync(async () =>
             {
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
-                }
-
                 paginationResult = await Get{{entity.Name}}ListForPagination(tableFilterPayload, query);
 
                 data = await paginationResult.Query.ProjectToType<{{entity.Name}}DTO>(Mapper.{{entity.Name}}ExcelProjectToConfig()).ToListAsync();
+
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "data.Select(x => x.Id).ToList()")}}
+                }
             });
 
             string[] excelPropertiesToExclude = ExcelPropertiesToExclude.GetHeadersToExclude(new {{entity.Name}}DTO());
             return _excelService.FillReportTemplate<{{entity.Name}}DTO>(data, paginationResult.TotalRecords, excelPropertiesToExclude, {{GetTermsClassName(projectName)}}.ResourceManager).ToArray();
         }
 
-        public async Task<List<{{entity.Name}}>> Get{{entity.Name}}List(IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
+        public async Task<List<{{entity.Name}}>> Get{{entity.Name}}List(IQueryable<{{entity.Name}}> query, bool authorize)
         {
             return await _context.WithTransactionAsync(async () =>
             {
+                var result = await query
+                    .ToListAsync();
+
                 if (authorize)
                 {
-                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "result.Select(x => x.Id).ToList()")}}
                 }
 
-                return await {{entity.Name.FirstCharToLower()}}Query
-                    .ToListAsync();
+                return result;
             });
         }
 
-        public async Task<List<{{entity.Name}}DTO>> Get{{entity.Name}}DTOList(IQueryable<{{entity.Name}}> {{entity.Name.FirstCharToLower()}}Query, bool authorize = true)
+        public async Task<List<{{entity.Name}}DTO>> Get{{entity.Name}}DTOList(IQueryable<{{entity.Name}}> query, bool authorize)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
-                }
-
-                var dtoList = await {{entity.Name.FirstCharToLower()}}Query
+                var dtoList = await query
                     .AsNoTracking()
                     .ProjectToType<{{entity.Name}}DTO>(Mapper.{{entity.Name}}ToDTOConfig())
                     .ToListAsync();
+
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "dtoList.Select(x => x.Id).ToList()")}}
+                }
 
 {{GetPopulateDTOWithBlobPartsForDTOList(entity, entity.Properties)}}
 
@@ -258,8 +261,64 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
+        public async Task<{{entity.Name}}MainUIFormInitializationDTO> Get{{entity.Name}}MainUIFormInitializationDTO({{entityIdType}} id, bool authorize)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                return new {{entity.Name}}MainUIFormInitializationDTO
+                {
+                    {{entity.Name}} = await Get{{entity.Name}}DTO(id, authorize),
+{{GetOrderedOneToManyMainUIFormInitializationVariableInitializations(entity)}}
+{{GetManyToManyMultiSelectMainUIFormInitializationVariableInitializations(entity)}}
+{{GetManyToManyMultiAutocompleteMainUIFormInitializationVariableInitializations(entity)}}
+                };
+            });
+        }
+
 {{GetManyToOneReadMethods(entity, allEntities)}}
 """;
+        }
+
+        private static string GetOrderedOneToManyMainUIFormInitializationVariableInitializations(SpiderClass entity)
+        {
+            StringBuilder sb = new();
+
+            foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
+            {
+                sb.AppendLine($$"""
+                    {{property.Name}}For{{entity.Name}} = await GetOrdered{{property.Name}}For{{entity.Name}}(id, false),
+""");
+            }
+
+            return sb.ToString();
+        }
+
+        private static string GetManyToManyMultiSelectMainUIFormInitializationVariableInitializations(SpiderClass entity)
+        {
+            StringBuilder sb = new();
+
+            foreach (SpiderProperty property in entity.Properties.Where(x => x.IsMultiSelectControlType()))
+            {
+                sb.AppendLine($$"""
+                    {{property.Name}}For{{entity.Name}} = await Get{{property.Name}}NamebookListFor{{entity.Name}}(id, false),
+""");
+            }
+
+            return sb.ToString();
+        }
+
+        private static string GetManyToManyMultiAutocompleteMainUIFormInitializationVariableInitializations(SpiderClass entity)
+        {
+            StringBuilder sb = new();
+
+            foreach (SpiderProperty property in entity.Properties.Where(x => x.IsMultiAutocompleteControlType()))
+            {
+                sb.AppendLine($$"""
+                    {{property.Name}}For{{entity.Name}} = await Get{{property.Name}}NamebookListFor{{entity.Name}}(id, false),
+""");
+            }
+
+            return sb.ToString();
         }
 
         private static string GetTermsClassName(string projectName)
@@ -348,19 +407,14 @@ namespace {{basePartOfNamespace}}.Services
             string autocompleteEntityDisplayName = Helpers.GetDisplayNameProperty(autocompleteEntity);
 
             return $$"""
-        public async virtual Task<List<NamebookDTO<{{autocompleteEntityIdType}}>>> Get{{property.Name}}AutocompleteListFor{{entity.Name}}(int limit, string filter, IQueryable<{{autocompleteEntity.Name}}> query, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{autocompleteEntityIdType}}>>> Get{{property.Name}}AutocompleteListFor{{entity.Name}}(int limit, string filter, IQueryable<{{autocompleteEntity.Name}}> query, bool authorize)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
-                }
-
                 if (!string.IsNullOrEmpty(filter))
                     query = query.Where(x => x.{{autocompleteEntityDisplayName}}.Contains(filter));
 
-                return await query
+                var result = await query
                     .AsNoTracking()
                     .Take(limit)
                     .Select(x => new NamebookDTO<{{autocompleteEntityIdType}}>
@@ -369,6 +423,13 @@ namespace {{basePartOfNamespace}}.Services
                         DisplayName = x.{{autocompleteEntityDisplayName}},
                     })
                     .ToListAsync();
+
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "result.Select(x => x.Id).ToList()")}}
+                }
+
+                return result;
             });
         }
 """;
@@ -381,16 +442,11 @@ namespace {{basePartOfNamespace}}.Services
             string dropdownDisplayName = Helpers.GetDisplayNameProperty(dropdownEntity);
 
             return $$"""
-        public async virtual Task<List<NamebookDTO<{{dropdownEntityIdType}}>>> Get{{property.Name}}DropdownListFor{{entity.Name}}(IQueryable<{{dropdownEntity.Name}}> query, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{dropdownEntityIdType}}>>> Get{{property.Name}}DropdownListFor{{entity.Name}}(IQueryable<{{dropdownEntity.Name}}> query, bool authorize)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Read, "")}}
-                }
-
-                return await query
+                var result = await query
                     .AsNoTracking()
                     .Select(x => new NamebookDTO<{{dropdownEntityIdType}}>
                     {
@@ -398,6 +454,13 @@ namespace {{basePartOfNamespace}}.Services
                         DisplayName = x.{{dropdownDisplayName}},
                     })
                     .ToListAsync();
+
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "result.Select(x => x.Id).ToList()")}}
+                }
+
+                return result;
             });
         }
 """;
@@ -442,7 +505,7 @@ namespace {{basePartOfNamespace}}.Services
                 else if (extractedEntityManyToManyProperty != null)
                 {
                     result.Add($$"""
-        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{oneToManyProperty.Name}}NamebookListFor{{entity.Name}}({{entityIdType}} id, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{oneToManyProperty.Name}}NamebookListFor{{entity.Name}}({{entityIdType}} id, bool authorize)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -463,15 +526,10 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        public async Task<List<{{extractedPropertyEntity.Name}}>> Get{{oneToManyProperty.Name}}For{{entity.Name}}({{entityIdType}} id, bool authorize = true)
+        public async Task<List<{{extractedPropertyEntity.Name}}>> Get{{oneToManyProperty.Name}}For{{entity.Name}}({{entityIdType}} id)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
-                }
-
                 return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
                     .Where(x => x.{{extractedEntityManyToManyProperty.Name}}.Any(x => x.Id == id))
                     .ToListAsync();
@@ -512,7 +570,7 @@ namespace {{basePartOfNamespace}}.Services
         /// <summary>
         /// It's mandatory to pass queryable ordered by the same field as the table data
         /// </summary>
-        public async Task<LazyLoadSelectedIdsResultDTO<{{extractedPropertyEntityIdType}}>> LazyLoadSelected{{oneToManyProperty.Name}}IdsFor{{entity.Name}}(TableFilterDTO tableFilterDTO, IQueryable<{{extractedPropertyEntity.Name}}> query)
+        public async Task<LazyLoadSelectedIdsResultDTO<{{extractedPropertyEntityIdType}}>> LazyLoadSelected{{oneToManyProperty.Name}}IdsFor{{entity.Name}}(TableFilterDTO tableFilterDTO, IQueryable<{{extractedPropertyEntity.Name}}> query, bool authorize)
         {
             LazyLoadSelectedIdsResultDTO<{{extractedPropertyEntityIdType}}> lazyLoadSelectedIdsResultDTO = new();
 
@@ -520,10 +578,15 @@ namespace {{basePartOfNamespace}}.Services
                 .Skip(tableFilterDTO.First)
                 .Take(tableFilterDTO.Rows)
                 .Where(x => x.{{extractedEntityManyToManyProperty.Name}}
-                    .Any(x => x.Id == tableFilterDTO.{{extractedPropertyEntityIdType.GetTableFilterAdditionalFilterPropertyName()}}));
+                    .Any(x => x.Id == tableFilterDTO.{{entityIdType.GetTableFilterAdditionalFilterPropertyName()}}));
 
             await _context.WithTransactionAsync(async () =>
             {
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, $"({entityIdType})tableFilterDTO.{entityIdType.GetTableFilterAdditionalFilterPropertyName()}")}}
+                }
+
                 var paginationResult = await Get{{extractedPropertyEntity.Name}}ListForPagination(tableFilterDTO, query);
 
                 lazyLoadSelectedIdsResultDTO.SelectedIds = await paginationResult.Query
@@ -532,7 +595,7 @@ namespace {{basePartOfNamespace}}.Services
 
                 int count = await _context.DbSet<{{extractedPropertyEntity.Name}}>()
                     .Where(x => x.{{extractedEntityManyToManyProperty.Name}}
-                        .Any(x => x.Id == tableFilterDTO.{{extractedPropertyEntityIdType.GetTableFilterAdditionalFilterPropertyName()}}))
+                        .Any(x => x.Id == tableFilterDTO.{{entityIdType.GetTableFilterAdditionalFilterPropertyName()}}))
                     .CountAsync();
 
                 lazyLoadSelectedIdsResultDTO.TotalRecordsSelected = count;
@@ -557,15 +620,10 @@ namespace {{basePartOfNamespace}}.Services
         private static string GetOneToManyListForEntity(SpiderProperty oneToManyProperty, SpiderClass extractedPropertyEntity, SpiderProperty manyToOneProperty, SpiderClass entity, List<SpiderClass> entities)
         {
             return $$"""
-        public async Task<List<{{extractedPropertyEntity.Name}}>> Get{{oneToManyProperty.Name}}For{{entity.Name}}({{entity.GetIdType(entities)}} id, bool authorize = true)
+        public async Task<List<{{extractedPropertyEntity.Name}}>> Get{{oneToManyProperty.Name}}For{{entity.Name}}({{entity.GetIdType(entities)}} id)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
-                }
-
                 return await _context.DbSet<{{extractedPropertyEntity.Name}}>()
                     .Where(x => x.{{manyToOneProperty.Name}}.Id == id)
                     .ToListAsync();
@@ -579,7 +637,7 @@ namespace {{basePartOfNamespace}}.Services
             string extractedPropertyEntityIdType = extractedPropertyEntity.GetIdType(entities); // int
 
             return $$"""
-        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{oneToManyProperty.Name}}NamebookListFor{{entity.Name}}({{entity.GetIdType(entities)}} id, bool authorize = true)
+        public async virtual Task<List<NamebookDTO<{{extractedPropertyEntityIdType}}>>> Get{{oneToManyProperty.Name}}NamebookListFor{{entity.Name}}({{entity.GetIdType(entities)}} id, bool authorize)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -657,7 +715,7 @@ namespace {{basePartOfNamespace}}.Services
             SpiderProperty manyToOneProperty = extractedPropertyEntity.GetManyToOnePropertyWithManyAttribute(entity.Name, property.Name);
 
             return $$"""
-        public async Task<List<{{extractedPropertyEntity.Name}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}({{entity.GetIdType(entities)}} id, bool authorize = true)
+        public async Task<List<{{extractedPropertyEntity.Name}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}({{entity.GetIdType(entities)}} id, bool authorize)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -685,17 +743,17 @@ namespace {{basePartOfNamespace}}.Services
             return $$"""
 {{GetSaveAndReturnSaveBodyDTOData(entity, entities)}}
 
-        public async Task<{{entity.Name}}DTO> Save{{entity.Name}}AndReturnDTO({{entity.Name}}DTO {{entity.Name.FirstCharToLower()}}DTO, bool authorizeUpdate = true, bool authorizeInsert = true)
+        public async Task<{{entity.Name}}DTO> Save{{entity.Name}}AndReturnDTO({{entity.Name}}DTO dto, bool authorizeUpdate, bool authorizeInsert)
         {
             return await _context.WithTransactionAsync(async () =>
             {
-                var poco = await Save{{entity.Name}}({{entity.Name.FirstCharToLower()}}DTO, authorizeUpdate, authorizeInsert);
+                var poco = await Save{{entity.Name}}(dto, authorizeUpdate, authorizeInsert);
 
                 return poco.Adapt<{{entity.Name}}DTO>(Mapper.{{entity.Name}}ToDTOConfig());
             });
         }
 
-        public async Task<{{entity.Name}}> Save{{entity.Name}}({{entity.Name}}DTO dto, bool authorizeUpdate = true, bool authorizeInsert = true)
+        public async Task<{{entity.Name}}> Save{{entity.Name}}({{entity.Name}}DTO dto, bool authorizeUpdate, bool authorizeInsert)
         {
             {{entity.Name}}DTOValidationRules validationRules = new {{entity.Name}}DTOValidationRules();
             validationRules.ValidateAndThrow(dto);
@@ -748,7 +806,7 @@ namespace {{basePartOfNamespace}}.Services
         private static string GetSaveAndReturnSaveBodyDTOData(SpiderClass entity, List<SpiderClass> entities)
         {
             return $$"""
-        public virtual async Task<{{entity.Name}}SaveBodyDTO> Save{{entity.Name}}AndReturnSaveBodyDTO({{entity.Name}}SaveBodyDTO saveBodyDTO, bool authorizeUpdate = true, bool authorizeInsert = true)
+        public virtual async Task<{{entity.Name}}SaveBodyDTO> Save{{entity.Name}}AndReturnSaveBodyDTO({{entity.Name}}SaveBodyDTO saveBodyDTO, bool authorizeUpdate, bool authorizeInsert)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -997,46 +1055,40 @@ namespace {{basePartOfNamespace}}.Services
             return result;
         }
 
-        private static List<string> GetUploadBlobMethods(SpiderClass entity, List<SpiderClass> allEntityClasses)
+        private static List<string> GetUploadBlobMethods(SpiderClass entity, List<SpiderClass> allEntities)
         {
             List<string> result = new();
 
-            string entityIdType = entity.GetIdType(allEntityClasses);
+            string entityIdType = entity.GetIdType(allEntities);
 
             List<SpiderProperty> blobProperies = Helpers.GetBlobProperties(entity.Properties);
 
             foreach (SpiderProperty property in blobProperies)
             {
                 result.Add($$"""
-        public async Task<string> Upload{{property.Name}}For{{entity.Name}}(IFormFile file, bool authorizeUpdate = true, bool authorizeInsert = true) // FT: It doesn't work without interface
+        public async Task<string> Upload{{property.Name}}For{{entity.Name}}(IFormFile file, bool authorizeUpdate, bool authorizeInsert) // FT: It doesn't work without interface
         {
-            using Stream stream = file.OpenReadStream();
-
             {{entityIdType}} {{entity.Name.FirstCharToLower()}}Id = GetObjectIdFromFileName<{{entityIdType}}>(file.FileName);
 
-            if ({{entity.Name.FirstCharToLower()}}Id > 0)
+            OnBefore{{property.Name}}BlobFor{{entity.Name}}IsUploaded(file, {{entity.Name.FirstCharToLower()}}Id); // FT: Validate
+
+            if ({{entity.Name.FirstCharToLower()}}Id > 0 && authorizeUpdate)
             {
-                if (authorizeUpdate)
-                {
-                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Update, $"{entity.Name.FirstCharToLower()}Id")}}
-                }
+                {{GetAuthorizeEntityMethodCall($"{property.Name}For{entity.Name}", CrudCodes.Update, $"{entity.Name.FirstCharToLower()}Id")}}
             }
-            else
+            else if (authorizeInsert)
             {
-                if (authorizeInsert)
-                {
-                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Insert, "")}}
-                }
+                {{GetAuthorizeEntityMethodCall($"{property.Name}For{entity.Name}", CrudCodes.Insert, "")}}
             }
 
-            OnBefore{{property.Name}}BlobFor{{entity.Name}}IsUploaded({{entity.Name.FirstCharToLower()}}Id); // FT: Authorize access for this id...
+            using Stream stream = file.OpenReadStream();
 
             string fileName = await UploadFileAsync(file.FileName, nameof({{entity.Name}}), nameof({{entity.Name}}.{{property.Name}}), {{entity.Name.FirstCharToLower()}}Id.ToString(), stream);
 
             return fileName;
         }
 
-        public virtual async Task OnBefore{{property.Name}}BlobFor{{entity.Name}}IsUploaded ({{entityIdType}} {{entity.Name.FirstCharToLower()}}Id) { }
+        public virtual async Task OnBefore{{property.Name}}BlobFor{{entity.Name}}IsUploaded (IFormFile file, {{entityIdType}} {{entity.Name.FirstCharToLower()}}Id) { }
 """
 );
             }
@@ -1070,16 +1122,16 @@ namespace {{basePartOfNamespace}}.Services
             return $$"""
         public virtual async Task OnBefore{{entity.Name}}Delete({{entityIdType}} id) { }
 
-        public async Task Delete{{entity.Name}}({{entityIdType}} id, bool authorize = true)
+        public async Task Delete{{entity.Name}}({{entityIdType}} id, bool authorize)
         {
             await _context.WithTransactionAsync(async () =>
             {
+                await OnBefore{{entity.Name}}Delete(id);
+
                 if (authorize)
                 {
                     {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Delete, "id")}}
                 }
-
-                await OnBefore{{entity.Name}}Delete(id);
 
                 List<{{entityIdType}}> listForDelete_{{deleteIterator}} = id.StructToList();
 
@@ -1099,16 +1151,16 @@ namespace {{basePartOfNamespace}}.Services
             return $$"""
         public virtual async Task OnBefore{{entity.Name}}ListDelete(List<{{entityIdType}}> listForDelete) { }
 
-        public async Task Delete{{entity.Name}}List(List<{{entityIdType}}> listForDelete_{{deleteIterator}}, bool authorize = true)
+        public async Task Delete{{entity.Name}}List(List<{{entityIdType}}> listForDelete_{{deleteIterator}}, bool authorize)
         {
             await _context.WithTransactionAsync(async () =>
             {
+                await OnBefore{{entity.Name}}ListDelete(listForDelete_{{deleteIterator}});
+
                 if (authorize)
                 {
-                    {{GetAuthorizeEntityListMethodCall(entity.Name, CrudCodes.Delete, $"listForDelete_{deleteIterator}")}}
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Delete, $"listForDelete_{deleteIterator}")}}
                 }
-
-                await OnBefore{{entity.Name}}ListDelete(listForDelete_{{deleteIterator}});
 
 {{string.Join("\n\n", GetManyToOneDeleteQueries(entity, allEntities, "listForDelete", deleteIterator))}}
 
@@ -1286,16 +1338,7 @@ using Microsoft.AspNetCore.Http;
 
         private static string GetAuthorizeEntityMethodCall(string entityName, CrudCodes crudCode, string parametersBody)
         {
-            return GetAuthorizeMethodCall(Helpers.GetAuthorizeEntityMethodName(entityName, crudCode), parametersBody);
-        }
-
-        private static string GetAuthorizeEntityListMethodCall(string entityName, CrudCodes crudCode, string parametersBody)
-        {
-            return GetAuthorizeMethodCall(Helpers.GetAuthorizeEntityListMethodName(entityName, crudCode), parametersBody);
-        }
-
-        private static string GetAuthorizeMethodCall(string methodName, string parametersBody)
-        {
+            string methodName = Helpers.GetAuthorizeEntityMethodName(entityName, crudCode);
             return $"await _authorizationService.{methodName}({parametersBody});";
         }
 

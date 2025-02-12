@@ -6,6 +6,7 @@ using Spider.Shared.Exceptions;
 using Spider.Security.Interfaces;
 using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
+using Spider.Security.Entities;
 
 namespace Spider.Security.Services
 {
@@ -25,36 +26,39 @@ namespace Spider.Security.Services
 
         public async Task AuthorizeAndThrowAsync<TUser>(TUser user, string permissionCode) where TUser : class, IUser, new()
         {
+            if (user == null)
+                throw new ArgumentNullException("The user is not provided.");
+
+            if (permissionCode == null)
+                throw new ArgumentNullException("Permission code is not provided.");
+
             bool result = false;
 
             await _context.WithTransactionAsync(async () =>
             {
-                if (user == null)
-                    throw new ArgumentNullException("The user is not provided.");
-
-                if (permissionCode == null)
-                    throw new ArgumentNullException("Permission code is not provided.");
-
                 result = user.Roles.Any(role => role.Permissions.Any(permission => permission.Code == permissionCode));
             });
 
-            if (result == false) 
+            if (result == false)
                 throw new UnauthorizedException();
         }
 
         public async Task<bool> IsAuthorizedAsync<TUser>(string permissionCode) where TUser : class, IUser, new()
         {
+            if (permissionCode == null)
+                throw new ArgumentNullException("Permission code is not provided.");
+
             bool result = false;
             long userId = _authenticationService.GetCurrentUserId();
 
             await _context.WithTransactionAsync(async () =>
             {
-                TUser user = await GetInstanceAsync<TUser, long>(userId, null);
-
-                if (permissionCode == null)
-                    throw new ArgumentNullException("Permission code is not provided.");
-
-                result = user.Roles.Any(role => role.Permissions.Any(permission => permission.Code == permissionCode));
+                result = await _context.DbSet<TUser>()
+                    .AsNoTracking()
+                    .AnyAsync(user =>
+                        user.Id == userId &&
+                        user.Roles.Any(role => role.Permissions.Any(permission => permission.Code == permissionCode))
+                    );
             });
 
             return result;
@@ -62,20 +66,23 @@ namespace Spider.Security.Services
 
         public async Task AuthorizeAndThrowAsync<TUser>(string permissionCode) where TUser : class, IUser, new()
         {
+            if (permissionCode == null)
+                throw new ArgumentNullException("Permission code is not provided.");
+
             bool result = false;
             long userId = _authenticationService.GetCurrentUserId();
 
             await _context.WithTransactionAsync(async () =>
             {
-                TUser user = await GetInstanceAsync<TUser, long>(userId, null);
-
-                if (permissionCode == null)
-                    throw new ArgumentNullException("Permission code is not provided.");
-
-                result = user.Roles.Any(role => role.Permissions.Any(permission => permission.Code == permissionCode));
+                result = await _context.DbSet<TUser>()
+                    .AsNoTracking()
+                    .AnyAsync(user =>
+                        user.Id == userId &&
+                        user.Roles.Any(role => role.Permissions.Any(permission => permission.Code == permissionCode))
+                    );
             });
 
-            if (result == false) 
+            if (result == false)
                 throw new UnauthorizedException();
         }
 
@@ -86,6 +93,7 @@ namespace Spider.Security.Services
                 long userId = _authenticationService.GetCurrentUserId();
 
                 return await _context.DbSet<TUser>()
+                    .AsNoTracking()
                     .Where(x => x.Id == userId)
                     .SelectMany(x => x.Roles)
                     .SelectMany(x => x.Permissions)

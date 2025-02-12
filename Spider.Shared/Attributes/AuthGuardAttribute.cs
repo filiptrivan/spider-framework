@@ -25,7 +25,7 @@ namespace Spider.Shared.Attributes
                 return;
             }
 
-            if (!Helper.IsJwtTokenValid(accessToken))
+            if (!Helpers.Helpers.IsJwtTokenValid(accessToken))
             {
                 context.Result = new UnauthorizedResult();
                 return;

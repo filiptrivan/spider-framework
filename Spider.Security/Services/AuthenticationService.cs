@@ -34,12 +34,12 @@ namespace Spider.Security.Services
         
         public long GetCurrentUserId()
         {
-            return Helper.GetCurrentUserId(_httpContextAccessor.HttpContext);
+            return Helpers.GetCurrentUserId(_httpContextAccessor.HttpContext);
         }
 
         public string GetCurrentUserEmail()
         {
-            return Helper.GetCurrentUserEmail(_httpContextAccessor.HttpContext);
+            return Helpers.GetCurrentUserEmail(_httpContextAccessor.HttpContext);
         }
 
         public async Task<TUser> GetCurrentUser<TUser>() where TUser : class, IUser, new()
@@ -57,7 +57,7 @@ namespace Spider.Security.Services
 
         public string GetIPAddress()
         {
-            return Helper.GetIPAddress(_httpContextAccessor.HttpContext);
+            return Helpers.GetIPAddress(_httpContextAccessor.HttpContext);
         }
     }
 }

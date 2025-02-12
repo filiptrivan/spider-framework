@@ -114,14 +114,14 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
         [AuthGuard]
         public async Task<TableResponseDTO<RoleDTO>> GetRoleTableData(TableFilterDTO tableFilterDTO)
         {
-            return await _securityBusinessService.GetRoleTableData(tableFilterDTO, _context.DbSet<Role>());
+            return await _securityBusinessService.GetRoleTableData(tableFilterDTO, _context.DbSet<Role>(), true);
         }
 
         [HttpPost]
         [AuthGuard]
         public async Task<IActionResult> ExportRoleTableDataToExcel(TableFilterDTO tableFilterDTO)
         {
-            byte[] fileContent = await _securityBusinessService.ExportRoleTableDataToExcel(tableFilterDTO, _context.DbSet<Role>());
+            byte[] fileContent = await _securityBusinessService.ExportRoleTableDataToExcel(tableFilterDTO, _context.DbSet<Role>(), true);
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"Roles.xlsx"));
         }
 
@@ -136,14 +136,14 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
         [AuthGuard]
         public async Task<RoleDTO> GetRole(int id)
         {
-            return await _securityBusinessService.GetRoleDTO(id);
+            return await _securityBusinessService.GetRoleDTO(id, true);
         }
 
         [HttpPut]
         [AuthGuard]
         public async Task<RoleSaveBodyDTO> SaveRole(RoleSaveBodyDTO saveBodyDTO)
         {
-            return await _securityBusinessService.SaveRoleAndReturnSaveBodyDTO(saveBodyDTO);
+            return await _securityBusinessService.SaveRoleAndReturnSaveBodyDTO(saveBodyDTO, true, true);
         }
 
         [HttpGet]
@@ -157,14 +157,14 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
         [AuthGuard]
         public async Task<List<NamebookDTO<int>>> GetPermissionsDropdownListForRole()
         {
-            return await _securityBusinessService.GetPermissionsDropdownListForRole(_context.DbSet<Permission>());
+            return await _securityBusinessService.GetPermissionsDropdownListForRole(_context.DbSet<Permission>(), true);
         }
 
         [HttpGet]
         [AuthGuard]
         public virtual async Task<List<NamebookDTO<long>>> GetUsersAutocompleteListForRole(int limit, string query)
         {
-            return await _securityBusinessService.GetUsersAutocompleteListForRole(limit, query);
+            return await _securityBusinessService.GetUsersAutocompleteListForRole(limit, query, true);
         }
 
         #endregion
@@ -176,7 +176,7 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
         [AuthGuard]
         public async Task<List<NamebookDTO<int>>> GetPermissionsNamebookListForRole(int roleId)
         {
-            return await _securityBusinessService.GetPermissionsNamebookListForRole(roleId);
+            return await _securityBusinessService.GetPermissionsNamebookListForRole(roleId, true);
         }
 
         #endregion

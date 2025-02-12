@@ -737,6 +737,13 @@ namespace Spider.SourceGenerators.Shared
                         Namespace = x.Namespace.Replace(".Entities", ".DTO"),
                         IsGenerated = true
                     });
+                    DTOList.Add(new SpiderClass
+                    {
+                        Name = $"{x.Name}MainUIFormInitializationDTO",
+                        Properties = GetMainUIFormInitializationDTOProperties(x, allClasses),
+                        Namespace = x.Namespace.Replace(".Entities", ".DTO"),
+                        IsGenerated = true
+                    });
                 }
             }
 
@@ -776,9 +783,35 @@ namespace Spider.SourceGenerators.Shared
             return result;
         }
 
+        private static List<SpiderProperty> GetMainUIFormInitializationDTOProperties(SpiderClass entity, List<SpiderClass> entities)
+        {
+            List<SpiderProperty> result = new();
+
+            result.Add(new SpiderProperty { Name = $"{entity.Name}", Type = $"{entity.Name}DTO", EntityName = $"{entity.Name}MainUIFormInitializationDTO" });
+
+            foreach (SpiderProperty property in entity.Properties)
+            {
+                SpiderClass extractedEntity = entities.Where(x => x.Name == ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+                string extractedEntityIdType = extractedEntity.GetIdType(entities);
+
+                if (property.HasOrderedOneToManyAttribute())
+                {
+                    result.Add(new SpiderProperty { Name = $"{property.Name}For{entity.Name}", Type = $"List<{extractedEntity.Name}DTO>", EntityName = $"{entity.Name}MainUIFormInitializationDTO" });
+                }
+                else if (
+                    property.IsMultiSelectControlType() ||
+                    property.IsMultiAutocompleteControlType())
+                {
+                    result.Add(new SpiderProperty { Name = $"{property.Name}For{entity.Name}", Type = $"List<NamebookDTO<{extractedEntityIdType}>>", EntityName = $"{entity.Name}MainUIFormInitializationDTO" });
+                }
+            }
+
+            return result;
+        }
+
         public static List<SpiderProperty> GetSpiderDTOProperties(SpiderClass entity, List<SpiderClass> entities)
         {
-            List<SpiderProperty> DTOProperties = new List<SpiderProperty>(); // public string Email { get; set; }
+            List<SpiderProperty> DTOProperties = new(); // public string Email { get; set; }
 
             foreach (SpiderProperty property in entity.Properties)
             {
@@ -1284,11 +1317,6 @@ namespace Spider.SourceGenerators.Shared
         public static string GetAuthorizeEntityMethodName(string entityName, CrudCodes crudCode)
         {
             return $"Authorize{entityName}{crudCode}AndThrow";
-        }
-
-        public static string GetAuthorizeEntityListMethodName(string entityName, CrudCodes crudCode)
-        {
-            return $"Authorize{entityName}List{crudCode}AndThrow";
         }
 
         #endregion
