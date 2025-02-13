@@ -96,7 +96,7 @@ namespace {{basePartOfNamespace}}.Services
                 sb.AppendLine($$"""
         #region {{entity.Name}}
 
-{{GetAuthorizeEntityMethod(entity.Name, entity, CrudCodes.Read, $"{entityIdType} {entity.Name.FirstCharToLower()}IdToRead", projectName, isSecurityProject)}}
+{{GetAuthorizeEntityMethod(entity.Name, entity, CrudCodes.Read, $"{entityIdType}? {entity.Name.FirstCharToLower()}IdToRead", projectName, isSecurityProject)}}
 
 {{GetAuthorizeEntityMethod(entity.Name, entity, CrudCodes.Read, $"List<{entityIdType}> {entity.Name.FirstCharToLower()}IdListToRead", projectName, isSecurityProject)}}
 

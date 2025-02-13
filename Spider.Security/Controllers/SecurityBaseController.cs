@@ -157,12 +157,12 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
         [AuthGuard]
         public async Task<List<NamebookDTO<int>>> GetPermissionsDropdownListForRole()
         {
-            return await _securityBusinessService.GetPermissionsDropdownListForRole(_context.DbSet<Permission>(), true);
+            return await _securityBusinessService.GetPermissionsDropdownListForRole(_context.DbSet<Permission>(), true, null);
         }
 
         [HttpGet]
         [AuthGuard]
-        public virtual async Task<List<NamebookDTO<long>>> GetUsersAutocompleteListForRole(int limit, string query)
+        public virtual async Task<List<NamebookDTO<long>>> GetUsersAutocompleteListForRole(int limit, string query, long roleId)
         {
             return await _securityBusinessService.GetUsersAutocompleteListForRole(limit, query, true);
         }
@@ -170,7 +170,6 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
         #endregion
 
         #region Permission
-
 
         [HttpGet]
         [AuthGuard]

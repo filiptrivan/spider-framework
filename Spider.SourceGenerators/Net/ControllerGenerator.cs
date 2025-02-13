@@ -248,9 +248,15 @@ namespace {{basePartOfNamespace}}.Controllers
             return $$"""
         [HttpGet]
         [AuthGuard]
-        public virtual async Task<List<NamebookDTO<{{manyToOneEntityIdType}}>>> Get{{property.Name}}AutocompleteListFor{{entity.Name}}(int limit, string query)
+        public virtual async Task<List<NamebookDTO<{{manyToOneEntityIdType}}>>> Get{{property.Name}}AutocompleteListFor{{entity.Name}}(int limit, string query, {{entity.GetIdType(allEntities)}}? {{entity.Name.FirstCharToLower()}}Id)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{property.Name}}AutocompleteListFor{{entity.Name}}(limit, query, _context.DbSet<{{manyToOneEntity.Name}}>(), {{ShouldAuthorizeEntity(entity)}});
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{property.Name}}AutocompleteListFor{{entity.Name}}(
+                limit, 
+                query, 
+                _context.DbSet<{{manyToOneEntity.Name}}>(),
+                {{ShouldAuthorizeEntity(entity)}},
+                {{entity.Name.FirstCharToLower()}}Id
+            );
         }
 """;
         }
@@ -264,9 +270,13 @@ namespace {{basePartOfNamespace}}.Controllers
             return $$"""
         [HttpGet]
         [AuthGuard]
-        public virtual async Task<List<NamebookDTO<{{manyToOneEntityIdType}}>>> Get{{property.Name}}DropdownListFor{{entity.Name}}()
+        public virtual async Task<List<NamebookDTO<{{manyToOneEntityIdType}}>>> Get{{property.Name}}DropdownListFor{{entity.Name}}({{entity.GetIdType(allEntities)}}? {{entity.Name.FirstCharToLower()}}Id)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{property.Name}}DropdownListFor{{entity.Name}}(_context.DbSet<{{manyToOneEntity.Name}}>(), {{ShouldAuthorizeEntity(entity)}});
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{property.Name}}DropdownListFor{{entity.Name}}(
+                _context.DbSet<{{manyToOneEntity.Name}}>(), 
+                {{ShouldAuthorizeEntity(entity)}},
+                {{entity.Name.FirstCharToLower()}}Id
+            );
         }
 """;
         }
@@ -320,7 +330,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<LazyLoadSelectedIdsResultDTO<{{extractedEntityIdType}}>> LazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(TableFilterDTO tableFilterDTO)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.LazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>().OrderBy(x => x.Id));
+            return await _{{businessServiceName.FirstCharToLower()}}.LazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>().OrderBy(x => x.Id), {{ShouldAuthorizeEntity(entity)}});
         }
 """;
         }
@@ -416,7 +426,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<string> Upload{{property.Name}}For{{entity.Name}}([FromForm] IFormFile file) // FT: It doesn't work without interface
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Upload{{property.Name}}For{{entity.Name}}(file); // TODO: Make authorization in business service with override
+            return await _{{businessServiceName.FirstCharToLower()}}.Upload{{property.Name}}For{{entity.Name}}(file, {{ShouldAuthorizeEntity(entity)}}, {{ShouldAuthorizeEntity(entity)}}); // TODO: Make authorization in business service with override
         }
 """
 );
@@ -431,7 +441,7 @@ namespace {{basePartOfNamespace}}.Controllers
 
         private static string ShouldAuthorizeEntity(SpiderClass entity)
         {
-            return entity.HasAuthorizeAttribute().ToString().ToLower();
+            return (!entity.HasDoNotAuthorizeAttribute()).ToString().ToLower();
         }
 
         private static string GetBusinessServiceClassName(string businessServiceName)

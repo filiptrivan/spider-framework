@@ -235,8 +235,8 @@ export function capitalizeFirstLetter(inputString: string): string {
     });
   }
 
-  export function getPrimengDropdownNamebookOptions(getDropdownListObservable: () => Observable<Namebook[]>): Observable<PrimengOption[]>{
-      return getDropdownListObservable().pipe(
+  export function getPrimengDropdownNamebookOptions(getDropdownListObservable: (parentEntityId?: number) => Observable<Namebook[]>, parentEntityId?: number): Observable<PrimengOption[]>{
+      return getDropdownListObservable(parentEntityId ?? 0).pipe(
           map(res => {
               return res.map(x => ({ label: x.displayName, value: x.id }));
           })
@@ -251,8 +251,8 @@ export function capitalizeFirstLetter(inputString: string): string {
       );
   }
 
-  export function getPrimengAutocompleteNamebookOptions(getAutocompleteListObservable: (limit: number, query: string) => Observable<Namebook[]>, limit: number, query: string): Observable<PrimengOption[]>{
-      return getAutocompleteListObservable(limit, query).pipe(
+  export function getPrimengAutocompleteNamebookOptions(getAutocompleteListObservable: (limit: number, query: string, parentEntityId?: number) => Observable<Namebook[]>, limit: number, query: string, parentEntityId?: number): Observable<PrimengOption[]>{
+      return getAutocompleteListObservable(limit, query, parentEntityId ?? 0).pipe(
           map(res => {
               return res.map(x => ({ label: x.displayName, value: x.id }));
           })

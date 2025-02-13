@@ -737,13 +737,6 @@ namespace Spider.SourceGenerators.Shared
                         Namespace = x.Namespace.Replace(".Entities", ".DTO"),
                         IsGenerated = true
                     });
-                    DTOList.Add(new SpiderClass
-                    {
-                        Name = $"{x.Name}MainUIFormInitializationDTO",
-                        Properties = GetMainUIFormInitializationDTOProperties(x, allClasses),
-                        Namespace = x.Namespace.Replace(".Entities", ".DTO"),
-                        IsGenerated = true
-                    });
                 }
             }
 
@@ -777,32 +770,6 @@ namespace Spider.SourceGenerators.Shared
                     result.Add(new SpiderProperty { Name = $"Unselected{property.Name}Ids", Type = $"List<{extractedEntityIdType}>", EntityName = $"{entity.Name}SaveBodyDTO" });
                     result.Add(new SpiderProperty { Name = $"AreAll{property.Name}Selected", Type = "bool?", EntityName = $"{entity.Name}SaveBodyDTO" });
                     result.Add(new SpiderProperty { Name = $"{property.Name}TableFilter", Type = "TableFilterDTO", EntityName = $"{entity.Name}SaveBodyDTO" });
-                }
-            }
-
-            return result;
-        }
-
-        private static List<SpiderProperty> GetMainUIFormInitializationDTOProperties(SpiderClass entity, List<SpiderClass> entities)
-        {
-            List<SpiderProperty> result = new();
-
-            result.Add(new SpiderProperty { Name = $"{entity.Name}", Type = $"{entity.Name}DTO", EntityName = $"{entity.Name}MainUIFormInitializationDTO" });
-
-            foreach (SpiderProperty property in entity.Properties)
-            {
-                SpiderClass extractedEntity = entities.Where(x => x.Name == ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
-                string extractedEntityIdType = extractedEntity.GetIdType(entities);
-
-                if (property.HasOrderedOneToManyAttribute())
-                {
-                    result.Add(new SpiderProperty { Name = $"{property.Name}For{entity.Name}", Type = $"List<{extractedEntity.Name}DTO>", EntityName = $"{entity.Name}MainUIFormInitializationDTO" });
-                }
-                else if (
-                    property.IsMultiSelectControlType() ||
-                    property.IsMultiAutocompleteControlType())
-                {
-                    result.Add(new SpiderProperty { Name = $"{property.Name}For{entity.Name}", Type = $"List<NamebookDTO<{extractedEntityIdType}>>", EntityName = $"{entity.Name}MainUIFormInitializationDTO" });
                 }
             }
 

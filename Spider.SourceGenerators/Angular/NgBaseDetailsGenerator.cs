@@ -493,7 +493,7 @@ export class {{entity.Name}}BaseDetailsComponent {
             )
             {
                 result.Add($$"""
-            getPrimengDropdownNamebookOptions(this.apiService.get{{property.Name}}DropdownListFor{{entity.Name}}).subscribe(po => {
+            getPrimengDropdownNamebookOptions(this.apiService.get{{property.Name}}DropdownListFor{{entity.Name}}, this.modelId).subscribe(po => {
                 this.{{property.Name.FirstCharToLower()}}OptionsFor{{entity.Name}} = po;
             });
 """);

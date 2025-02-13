@@ -392,9 +392,9 @@ namespace Spider.SourceGenerators.Shared
             return entity.Attributes.Any(x => x.Name == "UIDoNotGenerate");
         }
 
-        public static bool HasAuthorizeAttribute(this SpiderClass entity)
+        public static bool HasDoNotAuthorizeAttribute(this SpiderClass entity)
         {
-            return entity.Attributes.Any(x => x.Name == "Authorize");
+            return entity.Attributes.Any(x => x.Name == "DoNotAuthorize");
         }
 
         public static bool HasBlobNameAttribute(this List<SpiderProperty> properties)

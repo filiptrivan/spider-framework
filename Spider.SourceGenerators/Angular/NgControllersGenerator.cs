@@ -498,7 +498,12 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
                     if (alreadyAddedMethods.Contains(methodName))
                         continue;
 
-                    Dictionary<string, string> getAndDeleteParameters = new Dictionary<string, string> { { "limit", "number" }, { "filter", "string" } };
+                    Dictionary<string, string> getAndDeleteParameters = new()
+                    { 
+                        { "limit", "number" }, 
+                        { "filter", "string" }, 
+                        { $"{entity.Name.FirstCharToLower()}Id?", "number"} 
+                    };
 
                     sb.AppendLine(GetAngularControllerMethod(methodName, getAndDeleteParameters, "Namebook[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsSkipSpinner));
                 }
@@ -520,7 +525,9 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
                     if (alreadyAddedMethods.Contains(methodName))
                         continue;
 
-                    sb.AppendLine(GetAngularControllerMethod(methodName, null, "Namebook[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsSkipSpinner));
+                    Dictionary<string, string> getAndDeleteParameters = new() { { $"{entity.Name.FirstCharToLower()}Id?", "number"} };
+
+                    sb.AppendLine(GetAngularControllerMethod(methodName, getAndDeleteParameters, "Namebook[]", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsSkipSpinner));
                 }
             }
 
@@ -534,7 +541,7 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
             if (alreadyAddedMethods.Contains(methodName))
                 return null;
 
-            Dictionary<string, string> getAndDeleteParameters = new Dictionary<string, string> { { "id", "number" } };
+            Dictionary<string, string> getAndDeleteParameters = new() { { "id", "number" } };
 
             return GetAngularControllerMethod(methodName, getAndDeleteParameters, $"{entity.Name}", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsBase);
         }
@@ -620,7 +627,7 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
             if (getAndDeleteParameters == null || getAndDeleteParameters.Count == 0)
                 return null;
 
-            return $"?{string.Join("&", getAndDeleteParameters.Select(x => $"{x.Key}=${{{x.Key}}}"))}";
+            return $"?{string.Join("&", getAndDeleteParameters.Select(x => $"{x.Key.Replace("?", "")}=${{{x.Key.Replace("?", "")}}}"))}";
         }
 
         private static string GetPostAndPutParameters(Dictionary<string, string> postAndPutParameter, HttpTypeCodes httpType)

@@ -261,64 +261,8 @@ namespace {{basePartOfNamespace}}.Services
             });
         }
 
-        public async Task<{{entity.Name}}MainUIFormInitializationDTO> Get{{entity.Name}}MainUIFormInitializationDTO({{entityIdType}} id, bool authorize)
-        {
-            return await _context.WithTransactionAsync(async () =>
-            {
-                return new {{entity.Name}}MainUIFormInitializationDTO
-                {
-                    {{entity.Name}} = await Get{{entity.Name}}DTO(id, authorize),
-{{GetOrderedOneToManyMainUIFormInitializationVariableInitializations(entity)}}
-{{GetManyToManyMultiSelectMainUIFormInitializationVariableInitializations(entity)}}
-{{GetManyToManyMultiAutocompleteMainUIFormInitializationVariableInitializations(entity)}}
-                };
-            });
-        }
-
 {{GetManyToOneReadMethods(entity, allEntities)}}
 """;
-        }
-
-        private static string GetOrderedOneToManyMainUIFormInitializationVariableInitializations(SpiderClass entity)
-        {
-            StringBuilder sb = new();
-
-            foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
-            {
-                sb.AppendLine($$"""
-                    {{property.Name}}For{{entity.Name}} = await GetOrdered{{property.Name}}For{{entity.Name}}(id, false),
-""");
-            }
-
-            return sb.ToString();
-        }
-
-        private static string GetManyToManyMultiSelectMainUIFormInitializationVariableInitializations(SpiderClass entity)
-        {
-            StringBuilder sb = new();
-
-            foreach (SpiderProperty property in entity.Properties.Where(x => x.IsMultiSelectControlType()))
-            {
-                sb.AppendLine($$"""
-                    {{property.Name}}For{{entity.Name}} = await Get{{property.Name}}NamebookListFor{{entity.Name}}(id, false),
-""");
-            }
-
-            return sb.ToString();
-        }
-
-        private static string GetManyToManyMultiAutocompleteMainUIFormInitializationVariableInitializations(SpiderClass entity)
-        {
-            StringBuilder sb = new();
-
-            foreach (SpiderProperty property in entity.Properties.Where(x => x.IsMultiAutocompleteControlType()))
-            {
-                sb.AppendLine($$"""
-                    {{property.Name}}For{{entity.Name}} = await Get{{property.Name}}NamebookListFor{{entity.Name}}(id, false),
-""");
-            }
-
-            return sb.ToString();
         }
 
         private static string GetTermsClassName(string projectName)
@@ -407,10 +351,21 @@ namespace {{basePartOfNamespace}}.Services
             string autocompleteEntityDisplayName = Helpers.GetDisplayNameProperty(autocompleteEntity);
 
             return $$"""
-        public async virtual Task<List<NamebookDTO<{{autocompleteEntityIdType}}>>> Get{{property.Name}}AutocompleteListFor{{entity.Name}}(int limit, string filter, IQueryable<{{autocompleteEntity.Name}}> query, bool authorize)
+        public async virtual Task<List<NamebookDTO<{{autocompleteEntityIdType}}>>> Get{{property.Name}}AutocompleteListFor{{entity.Name}}(
+            int limit, 
+            string filter, 
+            IQueryable<{{autocompleteEntity.Name}}> query, 
+            bool authorize,
+            {{entity.GetIdType(allEntities)}}? {{entity.Name.FirstCharToLower()}}Id = null
+        )
         {
             return await _context.WithTransactionAsync(async () =>
             {
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, $"{entity.Name.FirstCharToLower()}Id")}}
+                }
+
                 if (!string.IsNullOrEmpty(filter))
                     query = query.Where(x => x.{{autocompleteEntityDisplayName}}.Contains(filter));
 
@@ -423,11 +378,6 @@ namespace {{basePartOfNamespace}}.Services
                         DisplayName = x.{{autocompleteEntityDisplayName}},
                     })
                     .ToListAsync();
-
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "result.Select(x => x.Id).ToList()")}}
-                }
 
                 return result;
             });
@@ -442,10 +392,19 @@ namespace {{basePartOfNamespace}}.Services
             string dropdownDisplayName = Helpers.GetDisplayNameProperty(dropdownEntity);
 
             return $$"""
-        public async virtual Task<List<NamebookDTO<{{dropdownEntityIdType}}>>> Get{{property.Name}}DropdownListFor{{entity.Name}}(IQueryable<{{dropdownEntity.Name}}> query, bool authorize)
+        public async virtual Task<List<NamebookDTO<{{dropdownEntityIdType}}>>> Get{{property.Name}}DropdownListFor{{entity.Name}}(
+            IQueryable<{{dropdownEntity.Name}}> query, 
+            bool authorize,
+            {{entity.GetIdType(allEntities)}}? {{entity.Name.FirstCharToLower()}}Id = null
+        )
         {
             return await _context.WithTransactionAsync(async () =>
             {
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, $"{entity.Name.FirstCharToLower()}Id")}}
+                }
+
                 var result = await query
                     .AsNoTracking()
                     .Select(x => new NamebookDTO<{{dropdownEntityIdType}}>
@@ -454,11 +413,6 @@ namespace {{basePartOfNamespace}}.Services
                         DisplayName = x.{{dropdownDisplayName}},
                     })
                     .ToListAsync();
-
-                if (authorize)
-                {
-                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "result.Select(x => x.Id).ToList()")}}
-                }
 
                 return result;
             });

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Spider.Shared.Attributes.EF
 {
-    public class AuthorizeAttribute : Attribute
+    public class DoNotAuthorizeAttribute : Attribute
     {
         
     }
