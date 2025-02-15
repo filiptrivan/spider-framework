@@ -1,7 +1,7 @@
 import { AuthBaseService } from './auth-base.service';
 import { ApiSecurityService } from './api.service.security';
 import { Injectable, OnDestroy } from '@angular/core';
-import { BehaviorSubject, combineLatest, map, Observable, of, Subject } from 'rxjs';
+import { BehaviorSubject, combineLatest, map, Observable, of, Subject, Subscription } from 'rxjs';
 import { InitTopBarData } from '../entities/init-top-bar-data';
 import { ConfigBaseService } from './config-base.service';
 import { PrimengOption } from '../entities/primeng-option';
@@ -30,7 +30,9 @@ interface LayoutState {
 @Injectable({
     providedIn: 'root',
 })
-export class LayoutBaseService {
+export class LayoutBaseService implements OnDestroy {
+    userSubscription: Subscription;
+
     protected _unreadNotificationsNumber = new BehaviorSubject<number | null>(null);
     unreadNotificationsCount$ = this._unreadNotificationsNumber.asObservable();
 
@@ -67,16 +69,26 @@ export class LayoutBaseService {
         protected config: ConfigBaseService,
         protected authService: AuthBaseService
     ) {
-        this.getUnreadNotificationsCountForCurrentUser();
     }
 
-    ngOnInit(){
-    }
-
-    getUnreadNotificationsCountForCurrentUser = () => {
-        this.apiService.getUnreadNotificationsCountForCurrentUser().subscribe(unreadNotificationsCount => {
-            this._unreadNotificationsNumber.next(unreadNotificationsCount);
+    initUnreadNotificationsCountForCurrentUser = () => {
+        this.initUnreadNotificationsCountForCurrentUserObservable().subscribe((res) => {
+            if (res) {
+                this.setUnreadNotificationsCountForCurrentUser().subscribe();
+            }
         });
+    }
+
+    initUnreadNotificationsCountForCurrentUserObservable = (): Observable<any> => {
+        return this.authService.user$;
+    }
+
+    setUnreadNotificationsCountForCurrentUser = (): Observable<any> => {
+        return this.apiService.getUnreadNotificationsCountForCurrentUser().pipe(
+            map((unreadNotificationsCount) => {
+                this._unreadNotificationsNumber.next(unreadNotificationsCount);
+            })
+        );
     }
 
     onMenuToggle() {
@@ -161,4 +173,9 @@ export class LayoutBaseService {
 
     //#endregion
 
+    ngOnDestroy(): void {
+        if (this.userSubscription) {
+            this.userSubscription.unsubscribe();
+        }
+    }
 }

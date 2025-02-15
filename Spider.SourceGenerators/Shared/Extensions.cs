@@ -452,6 +452,11 @@ namespace Spider.SourceGenerators.Shared
             return method.Attributes.Any(x => x.Name == "UIDoNotGenerate");
         }
 
+        public static bool HasUIDoNotGenerateAttribute(this SpiderProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "UIDoNotGenerate");
+        }
+
         #endregion
 
         #region IsControlType
@@ -469,6 +474,11 @@ namespace Spider.SourceGenerators.Shared
         public static bool IsMultiAutocompleteControlType(this SpiderProperty property)
         {
             return property.Attributes.Any(x => x.Name == "UIControlType" && x.Value == UIControlTypeCodes.MultiAutocomplete.ToString());
+        }
+
+        public static bool IsTableControlType(this SpiderProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "UIControlType" && x.Value == UIControlTypeCodes.Table.ToString());
         }
 
         public static bool IsDropdownControlType(this SpiderProperty property)

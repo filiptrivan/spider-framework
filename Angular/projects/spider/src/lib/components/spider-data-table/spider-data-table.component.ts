@@ -53,6 +53,7 @@ export class SpiderDataTableComponent implements OnInit {
   @Input() cols: Column[];
   @Input() showPaginator: boolean = true; // FT: Pass only when hasLazyLoad === false
   @Input() showCardWrapper: boolean = true;
+  @Input() readonly: boolean = false;
   totalRecords: number;
   @Output() onTotalRecordsChange: EventEmitter<number> = new EventEmitter();;
   

@@ -67,6 +67,7 @@ export * from './lib/entities/table-filter-sort-meta';
 export * from './lib/entities/table-response';
 export * from './lib/entities/init-company-auth-dialog-details';
 export * from './lib/entities/init-top-bar-data';
+export * from './lib/entities/is-authorized-for-save-event';
 
 export * from './lib/enums/security-enums';
 export * from './lib/enums/verification-type-codes';

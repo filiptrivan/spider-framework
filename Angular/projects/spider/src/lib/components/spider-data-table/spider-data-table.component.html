@@ -20,7 +20,7 @@
         <tr>
           <th style="width: 0rem;" *ngIf="selectionMode == 'multiple'">
             <div style="display: flex; gap: 8px;">
-              <p-checkbox (onChange)="selectAll($event.checked)" [(ngModel)]="fakeIsAllSelected" [binary]="true"></p-checkbox> ({{rowsSelectedNumber}})
+              <p-checkbox [disabled]="readonly" (onChange)="selectAll($event.checked)" [(ngModel)]="fakeIsAllSelected" [binary]="true"></p-checkbox> ({{rowsSelectedNumber}})
             </div>
           </th>
           <ng-container *ngFor="let col of cols; trackBy: colTrackByFn">
@@ -53,7 +53,7 @@
       <ng-template pTemplate="body" let-rowData let-index="rowIndex" let-editing="editing">
         <tr>
           <td *ngIf="selectionMode == 'multiple'">
-              <p-checkbox (onChange)="selectRow(rowData.id, rowData.index)" [ngModel]="isRowSelected(rowData.id)" [binary]="true"></p-checkbox>
+              <p-checkbox [disabled]="readonly" (onChange)="selectRow(rowData.id, rowData.index)" [ngModel]="isRowSelected(rowData.id)" [binary]="true"></p-checkbox>
           </td>
           <ng-container *ngFor="let col of cols; trackBy: colTrackByFn">
             <td [pTooltip]="getRowData(rowData, col)" [style]="getStyleForBodyColumn(col)" *ngIf="!col.editable">

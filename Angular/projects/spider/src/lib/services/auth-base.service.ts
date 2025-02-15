@@ -16,8 +16,8 @@ export class AuthBaseService implements OnDestroy {
   private readonly apiUrl = this.config.apiUrl;
   private timer?: Subscription;
 
-  protected _currentUserPermissions = new BehaviorSubject<string[] | null>(null);
-  currentUserPermissions$ = this._currentUserPermissions.asObservable();
+  protected _currentUserPermissionCodes = new BehaviorSubject<string[] | null>(null);
+  currentUserPermissionCodes$ = this._currentUserPermissionCodes.asObservable();
 
   protected _user = new BehaviorSubject<User | null>(null);
   user$ = this._user.asObservable();
@@ -35,7 +35,7 @@ export class AuthBaseService implements OnDestroy {
     protected apiService: ApiSecurityService,
     protected config: ConfigBaseService,
   ) {
-    window.addEventListener('storage', this.storageEventListener.bind(this));
+    window.addEventListener('storage', this.storageEventListener);
 
     // Google auth
     this.externalAuthService.authState.subscribe((user) => {
@@ -50,37 +50,29 @@ export class AuthBaseService implements OnDestroy {
     });
   }
 
-  private storageEventListener(event: StorageEvent) {
+  private storageEventListener = (event: StorageEvent) => {
     if (event.storageArea === localStorage) {
       if (event.key === 'logout-event') {
         this.stopTokenTimer();
         this._user.next(null);
 
-        this.onAfterLogoutEvent();
+        this._currentUserPermissionCodes.next(null);
       }
       if (event.key === 'login-event') {
         this.stopTokenTimer();
 
-        this.apiService.getCurrentUser().subscribe(async (user: User) => {
+        this.apiService.getCurrentUser().subscribe((user: User) => {
             this._user.next({
               id: user.id,
               email: user.email
             });
 
-            this.onAfterLoginEvent();
+            this.setCurrentUserPermissionCodes().subscribe();
           });
       }
     }
   }
 
-  onAfterLogoutEvent = () => {
-    this._currentUserPermissions.next(null);
-  }
-
-  onAfterLoginEvent = async () => {
-    await firstValueFrom(this.getCurrentUserPermissionCodes()); // FT: Needs to be after setting local storage
-  }
-    
   sendLoginVerificationEmail(body: Login): Observable<any> {
     const browserId = this.getBrowserId();
     body.browserId = browserId;
@@ -117,20 +109,16 @@ export class AuthBaseService implements OnDestroy {
   handleLoginResult(loginResultObservable: Observable<AuthResult>){
     return loginResultObservable.pipe(
       map(async (loginResult: AuthResult) => {
+        this.setLocalStorage(loginResult);
         this._user.next({
           id: loginResult.userId,
           email: loginResult.email,
         });
-        this.setLocalStorage(loginResult);
         this.startTokenTimer();
-        this.onAfterHandledLoginResult();
+        this.setCurrentUserPermissionCodes().subscribe()
         return loginResult;
       })
     );
-  }
-
-  onAfterHandledLoginResult = async () => {
-    await firstValueFrom(this.getCurrentUserPermissionCodes()); // FT: Needs to be after setting local storage
   }
 
   logout() {
@@ -150,10 +138,10 @@ export class AuthBaseService implements OnDestroy {
   }
 
   onAfterLogout = () => {
-    this._currentUserPermissions.next(null);
+    this._currentUserPermissionCodes.next(null);
   }
 
-  refreshToken(): Observable<Promise<AuthResult> | null> {
+  refreshToken(): Observable<Promise<AuthResult>> {
     let refreshToken = localStorage.getItem(this.config.refreshTokenKey);
 
     if (!refreshToken) {
@@ -165,26 +153,27 @@ export class AuthBaseService implements OnDestroy {
     let body: RefreshTokenRequest = new RefreshTokenRequest();
     body.browserId = browserId;
     body.refreshToken = refreshToken;
+    
     return this.http
-    .post<AuthResult>(`${this.apiUrl}/Security/RefreshToken`, body, this.config.httpSkipSpinnerOptions)
-    .pipe(
-      map(async (loginResult) => {
-        this._user.next({
-          id: loginResult.userId,
-          email: loginResult.email
-        });
-        
-        this.setLocalStorage(loginResult);
-        this.startTokenTimer();
-        this.onAfterRefreshToken();
-        
-        return loginResult;
-      })
-    );
+      .post<AuthResult>(`${this.apiUrl}/Security/RefreshToken`, body, this.config.httpSkipSpinnerOptions)
+      .pipe(
+        map(async (loginResult) => {
+          this._user.next({
+            id: loginResult.userId,
+            email: loginResult.email
+          });
+          
+          this.setLocalStorage(loginResult);
+          this.startTokenTimer();
+          this.setCurrentUserPermissionCodes().subscribe(); // FT: Needs to be after setting local storage
+          this.onAfterRefreshToken();
+          
+          return loginResult;
+        })
+      );
   }
 
-  onAfterRefreshToken = async () => {
-    await firstValueFrom(this.getCurrentUserPermissionCodes()); // FT: Needs to be after setting local storage
+  onAfterRefreshToken = () => {
   }
 
   setLocalStorage(loginResult: AuthResult) {
@@ -264,10 +253,10 @@ export class AuthBaseService implements OnDestroy {
     );
   }
 
-  getCurrentUserPermissionCodes(): Observable<string[]> {
+  setCurrentUserPermissionCodes(): Observable<string[]> {
     return this.apiService.getCurrentUserPermissionCodes().pipe(
       map(permissionCodes => {
-        this._currentUserPermissions.next(permissionCodes);
+        this._currentUserPermissionCodes.next(permissionCodes);
         return permissionCodes;
       }
     ));

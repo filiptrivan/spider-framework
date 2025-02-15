@@ -125,4 +125,20 @@ export class BaseFormService {
     return formArray;
   }
 
+  disableAllFormControls<T>(formArray: SpiderFormArray<T>){
+    formArray.controls.forEach((segmentationItemFormGroup: SpiderFormGroup) => {
+        Object.keys(segmentationItemFormGroup.controls).forEach(key => {
+            segmentationItemFormGroup.controls[key].disable();
+        });
+    });
+  }
+
+  enableAllFormControls<T>(formArray: SpiderFormArray<T>){
+    formArray.controls.forEach((segmentationItemFormGroup: SpiderFormGroup) => {
+        Object.keys(segmentationItemFormGroup.controls).forEach(key => {
+            segmentationItemFormGroup.controls[key].enable();
+        });
+    });
+  }
+
 }

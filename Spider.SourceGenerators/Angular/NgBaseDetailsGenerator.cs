@@ -18,12 +18,12 @@ namespace Spider.SourceGenerators.Angular
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//#if DEBUG
-//            if (!Debugger.IsAttached)
-//            {
-//                Debugger.Launch();
-//            }
-//#endif
+            //#if DEBUG
+            //            if (!Debugger.IsAttached)
+            //            {
+            //                Debugger.Launch();
+            //            }
+            //#endif
             IncrementalValuesProvider<ClassDeclarationSyntax> classDeclarations = Helpers.GetClassIncrementalValuesProvider(context.SyntaxProvider, new List<NamespaceExtensionCodes>
                 {
                     NamespaceExtensionCodes.Entities,
@@ -85,7 +85,7 @@ namespace Spider.SourceGenerators.Angular
             List<string> result = new();
 
             foreach (SpiderClass entity in currentProjectEntities
-                .Where(x => 
+                .Where(x =>
                     x.HasUIDoNotGenerateAttribute() == false &&
                     x.IsReadonlyObject() == false &&
                     x.IsManyToMany() == false
@@ -97,13 +97,15 @@ namespace Spider.SourceGenerators.Angular
     selector: '{{entity.Name.FromPascalToKebabCase()}}-base-details',
     template:`
 <ng-container *transloco="let t">
-    <spider-panel [isFirstMultiplePanel]="isFirstMultiplePanel" [isMiddleMultiplePanel]="isMiddleMultiplePanel" [isLastMultiplePanel]="isLastMultiplePanel">
+    <spider-panel [isFirstMultiplePanel]="isFirstMultiplePanel" [isMiddleMultiplePanel]="isMiddleMultiplePanel" [isLastMultiplePanel]="isLastMultiplePanel" [showPanelHeader]="showPanelHeader" >
         <panel-header></panel-header>
 
         <panel-body>
             @defer (when loading === false) {
                 <form class="grid">
+                    <ng-content select="[BEFORE]"></ng-content>
 {{string.Join("\n", GetPropertyBlocks(entity.Properties, entity, allEntities, customDTOClasses))}}
+                    <ng-content select="[AFTER]"></ng-content>
                 </form>
             } @placeholder {
                 <card-skeleton [height]="502"></card-skeleton>
@@ -111,11 +113,11 @@ namespace Spider.SourceGenerators.Angular
         </panel-body>
 
         <panel-footer>
-            <spider-button (onClick)="save()" [label]="t('Save')" icon="pi pi-save"></spider-button>
+            <spider-button [disabled]="!isAuthorizedForSave" (onClick)="save()" [label]="t('Save')" icon="pi pi-save"></spider-button>
             @for (button of additionalButtons; track button.label) {
                 <spider-button (onClick)="button.onClick()" [label]="button.label" [icon]="button.icon"></spider-button>
             }
-            <spider-return-button></spider-return-button>
+            <spider-return-button *ngIf="showReturnButton" ></spider-return-button>
         </panel-footer>
     </spider-panel>
 </ng-container>
@@ -143,8 +145,17 @@ export class {{entity.Name}}BaseDetailsComponent {
     @Input() isFirstMultiplePanel: boolean = false;
     @Input() isMiddleMultiplePanel: boolean = false;
     @Input() isLastMultiplePanel: boolean = false;
+    @Input() showPanelHeader: boolean = true;
+    @Input() showReturnButton: boolean = true;
+    authorizationForSaveSubscription: Subscription;
+    @Input() authorizedForSaveObservable: () => Observable<boolean> = () => of(false);
+    isAuthorizedForSave: boolean = false;
+    @Output() onIsAuthorizedForSaveChange = new EventEmitter<IsAuthorizedForSaveEvent>(); 
+
     modelId: number;
     loading: boolean = true;
+
+    currentUserPermissionCodes: string[] = [];
 
     {{entity.Name.FirstCharToLower()}}SaveBodyName: string = nameof<{{entity.Name}}SaveBody>('{{entity.Name.FirstCharToLower()}}DTO');
 
@@ -156,6 +167,8 @@ export class {{entity.Name}}BaseDetailsComponent {
 
 {{string.Join("\n", GetSimpleManyToManyTableLazyLoadVariables(entity, allEntities))}}
 
+{{GetShowFormBlocksVariables(entity, allEntities, customDTOClasses)}}
+
     constructor(
         private apiService: ApiService,
         private route: ActivatedRoute,
@@ -163,6 +176,7 @@ export class {{entity.Name}}BaseDetailsComponent {
         private validatorService: ValidatorService,
         private translateLabelsService: TranslateLabelsService,
         private translocoService: TranslocoService,
+        private authService: AuthService,
     ) {}
 
     ngOnInit(){
@@ -214,8 +228,38 @@ export class {{entity.Name}}BaseDetailsComponent {
             [{{string.Join(", ", GetCustomOnChangeProperties(entity))}}]
         );
         this.{{entity.Name.FirstCharToLower()}}FormGroup.mainDTOName = this.{{entity.Name.FirstCharToLower()}}SaveBodyName;
-        this.loading = false;
+
         this.on{{entity.Name}}FormGroupInitFinish.next();
+
+        this.authorizationForSaveSubscription = this.handleAuthorizationForSave().subscribe();
+
+        this.loading = false;
+    }
+
+    handleAuthorizationForSave = () => {
+        return combineLatest([this.authService.currentUserPermissionCodes$, this.authorizedForSaveObservable()]).pipe(
+            map(([currentUserPermissionCodes, isAuthorizedForSave]) => {
+                if (currentUserPermissionCodes != null && isAuthorizedForSave != null) {
+                    this.isAuthorizedForSave =
+{{GetAdditionalPermissionCodes(entity)}}
+                        (currentUserPermissionCodes.includes('InsertPartnerUser') && this.modelId <= 0) || 
+                        (currentUserPermissionCodes.includes('UpdatePartnerUser') && this.modelId > 0) ||
+                        isAuthorizedForSave;
+
+                    if (this.isAuthorizedForSave) { 
+{{GetControlsForNonAuthorizedUser(entity, allEntities, customDTOClasses, false)}}
+                    }
+                    else{
+{{GetControlsForNonAuthorizedUser(entity, allEntities, customDTOClasses, true)}}
+                    }
+
+                    this.onIsAuthorizedForSaveChange.next(new IsAuthorizedForSaveEvent({
+                        isAuthorizedForSave: this.isAuthorizedForSave, 
+                        currentUserPermissionCodes: currentUserPermissionCodes
+                    })); 
+                }
+            })
+        );
     }
 
 {{string.Join("\n", GetOrderedOneToManyInitFormArrayMethods(entity, allEntities))}}
@@ -240,11 +284,85 @@ export class {{entity.Name}}BaseDetailsComponent {
         this.onSave.next();
     }
 
+	ngOnDestroy(){
+        if (this.authorizationForSaveSubscription) {
+            this.authorizationForSaveSubscription.unsubscribe();
+        }
+    }
+
 }
 """);
             }
 
             return result;
+        }
+
+        private static string GetShowFormBlocksVariables(SpiderClass entity, List<SpiderClass> allEntities, List<SpiderClass> customDTOClasses)
+        {
+            StringBuilder sb = new();
+
+            List<AngularFormBlock> formBlocks = GetAngularFormBlocks(entity.Properties, entity, allEntities, customDTOClasses);
+
+            foreach (AngularFormBlock formBlock in formBlocks)
+            {
+                sb.AppendLine($$"""
+    @Input() show{{formBlock.Property.Name}}For{{formBlock.Property.EntityName}}: boolean = true;
+""");
+            }
+
+            return sb.ToString();
+        }
+
+        private static string GetAdditionalPermissionCodes(SpiderClass entity)
+        {
+            StringBuilder sb = new();
+
+            foreach (SpiderAttribute attribute in entity.Attributes)
+            {
+                if (attribute.Name == "CanInsertAdditionalPermissionCode")
+                {
+                    sb.AppendLine($$"""
+                (currentUserPermissionCodes?.includes('{{attribute.Value}}') && this.modelId <= 0) || 
+""");
+                }
+                else if (attribute.Name == "CanUpdateAdditionalPermissionCode")
+                {
+                    sb.AppendLine($$"""
+                (currentUserPermissionCodes?.includes('{{attribute.Value}}') && this.modelId > 0) || 
+""");
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        private static string GetControlsForNonAuthorizedUser(SpiderClass entity, List<SpiderClass> allEntities, List<SpiderClass> customDTOClasses, bool disable)
+        {
+            StringBuilder sb = new();
+
+            List<AngularFormBlock> formBlocks = GetAngularFormBlocks(entity.Properties, entity, allEntities, customDTOClasses);
+
+            foreach (AngularFormBlock formBlock in formBlocks)
+            {
+                if (formBlock.FormControlName == null)
+                    continue;
+
+                if (formBlock.Property.IsMultiSelectControlType() ||
+                    formBlock.Property.IsMultiAutocompleteControlType())
+                {
+                    sb.AppendLine($$"""
+                        this.{{formBlock.FormControlName}}.{{(disable ? "disable" : "enable")}}();
+""");
+                }
+                else
+                {
+                    sb.AppendLine($$"""
+                        this.{{entity.Name.FirstCharToLower()}}FormGroup.controls.{{formBlock.FormControlName}}.{{(disable ? "disable" : "enable")}}();
+""");
+                }
+            }
+
+            return sb.ToString();
         }
 
         private static List<string> GetSimpleManyToManyMethods(SpiderClass entity, List<SpiderClass> entities)
@@ -487,8 +605,8 @@ export class {{entity.Name}}BaseDetailsComponent {
 
             foreach (SpiderProperty property in entity.Properties
                 .Where(x =>
-                    x.IsMultiSelectControlType() ||
-                    x.IsDropdownControlType()
+                    (x.IsMultiSelectControlType() || x.IsDropdownControlType()) &&
+                    x.HasUIDoNotGenerateAttribute() == false
                 )
             )
             {
@@ -693,10 +811,10 @@ export class {{entity.Name}}BaseDetailsComponent {
         /// <returns></returns>
         private static string GetOrderedOneToManyBlock(SpiderProperty property, List<SpiderClass> allEntities, List<SpiderClass> customDTOClasses)
         {
-            SpiderClass entity = allEntities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault(); // eg. SegmentationItem
+            SpiderClass extractedEntity = allEntities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault(); // eg. SegmentationItem
 
             // Every property of SegmentationItem without the many to one reference (Segmentation) and enumerable properties
-            List<SpiderProperty> propertyBlocks = entity.Properties
+            List<SpiderProperty> propertyBlocks = extractedEntity.Properties
                 .Where(x =>
                     x.WithMany() != property.Name &&
                     x.Type.IsEnumerable() == false
@@ -704,14 +822,14 @@ export class {{entity.Name}}BaseDetailsComponent {
                 .ToList();
 
             return $$"""
-                 <div class="col-12">
+                 <div *ngIf="show{{property.Name}}For{{property.EntityName}}" class="col-12">
                     <spider-panel>
                         <panel-header [title]="t('{{property.Name}}')" icon="pi pi-list"></panel-header>
                         <panel-body [normalBottomPadding]="true">
-                            @for ({{entity.Name.FirstCharToLower()}}FormGroup of getFormArrayGroups({{property.Name.FirstCharToLower()}}FormArray); track {{entity.Name.FirstCharToLower()}}FormGroup; let index = $index; let last = $last) {
+                            @for ({{extractedEntity.Name.FirstCharToLower()}}FormGroup of getFormArrayGroups({{property.Name.FirstCharToLower()}}FormArray); track {{extractedEntity.Name.FirstCharToLower()}}FormGroup; let index = $index; let last = $last) {
                                 <index-card [index]="index" [last]="false" [crudMenu]="{{property.Name.FirstCharToLower()}}CrudMenu" (onMenuIconClick)="{{property.Name.FirstCharToLower()}}LastIndexClicked.index = $event">
-                                    <form [formGroup]="{{entity.Name.FirstCharToLower()}}FormGroup" class="grid">
-{{string.Join("\n", GetPropertyBlocks(propertyBlocks, entity, allEntities, customDTOClasses))}}
+                                    <form [formGroup]="{{extractedEntity.Name.FirstCharToLower()}}FormGroup" class="grid">
+{{string.Join("\n", GetPropertyBlocks(propertyBlocks, extractedEntity, allEntities, customDTOClasses))}}
                                     </form>
                                 </index-card>
                             }
@@ -724,6 +842,21 @@ export class {{entity.Name}}BaseDetailsComponent {
                     </spider-panel>
                 </div>       
 """;
+        }
+
+        private static List<AngularFormBlock> GetOrderedOneToManyAngularFormControls(SpiderProperty property, List<SpiderClass> allEntities, List<SpiderClass> customDTOClasses)
+        {
+            SpiderClass entity = allEntities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault(); // eg. SegmentationItem
+
+            // Every property of SegmentationItem without the many to one reference (Segmentation) and enumerable properties
+            List<SpiderProperty> propertyBlocks = entity.Properties
+                .Where(x =>
+                    x.WithMany() != property.Name &&
+                    x.Type.IsEnumerable() == false
+                )
+                .ToList();
+
+            return GetAngularFormBlocks(propertyBlocks, entity, allEntities, customDTOClasses);
         }
 
         #endregion
@@ -893,11 +1026,7 @@ export class {{entity.Name}}BaseDetailsComponent {
             SpiderClass customDTOClass = customDTOClasses.Where(x => x.Name.Replace("DTO", "") == entity.Name).SingleOrDefault();
 
             if (customDTOClass != null)
-            {
-                List<SpiderProperty> customDTOClassProperties = customDTOClass.Properties;
-
-                properties.AddRange(customDTOClassProperties);
-            }
+                properties.AddRange(customDTOClass.Properties);
 
             foreach (SpiderProperty property in GetPropertiesForUIBlocks(properties))
             {
@@ -911,10 +1040,68 @@ export class {{entity.Name}}BaseDetailsComponent {
                 string controlType = GetUIStringControlType(GetUIControlType(property));
 
                 result.Add($$"""
-                    <div class="{{GetUIControlWidth(property)}}">
+                    <div *ngIf="show{{property.Name}}For{{entity.Name}}" class="{{GetUIControlWidth(property)}}">
                         <{{controlType}} {{GetControlAttributes(property, entity)}}></{{controlType}}>
                     </div>
 """);
+            }
+
+            return result;
+        }
+
+        private static List<AngularFormBlock> GetAngularFormBlocks(
+            List<SpiderProperty> properties,
+            SpiderClass entity,
+            List<SpiderClass> allEntities,
+            List<SpiderClass> customDTOClasses
+        )
+        {
+            List<AngularFormBlock> result = new();
+
+            SpiderClass customDTOClass = customDTOClasses.Where(x => x.Name.Replace("DTO", "") == entity.Name).SingleOrDefault();
+
+            if (customDTOClass != null)
+                properties.AddRange(customDTOClass.Properties);
+
+            foreach (SpiderProperty property in GetPropertiesForUIBlocks(properties))
+            {
+                if (property.Attributes.Any(x => x.Name == "UIOrderedOneToMany"))
+                {
+                    result.Add(new AngularFormBlock // FT: Name is null because there is no form control for the one to many properties
+                    {
+                        Property = property
+                    });
+                    result.AddRange(GetOrderedOneToManyAngularFormControls(property, allEntities, customDTOClasses));
+
+                    continue;
+                }
+
+                UIControlTypeCodes controlType = GetUIControlType(property);
+
+                if (property.IsMultiSelectControlType() ||
+                    property.IsMultiAutocompleteControlType())
+                {
+                    result.Add(new AngularFormBlock
+                    {
+                        FormControlName = $"selected{property.Name}For{entity.Name}",
+                        Property = property,
+                    });
+                }
+                else if (controlType != UIControlTypeCodes.Table)
+                {
+                    result.Add(new AngularFormBlock
+                    {
+                        FormControlName = GetFormControlName(property),
+                        Property = property,
+                    });
+                }
+                else if (controlType == UIControlTypeCodes.Table)
+                {
+                    result.Add(new AngularFormBlock // FT: Name is null because there is no form control for the table
+                    {
+                        Property = property,
+                    });
+                }
             }
 
             return result;
@@ -1005,6 +1192,7 @@ export class {{entity.Name}}BaseDetailsComponent {
                             [getTableDataObservableMethod]="get{{property.Name}}TableDataObservableMethodFor{{entity.Name}}" 
                             [exportTableDataToExcelObservableMethod]="export{{property.Name}}TableDataToExcelObservableMethodFor{{entity.Name}}"
                             [showAddButton]="false" 
+                            [readonly]="!isAuthorizedForSave"
                             selectionMode="multiple"
                             [newlySelectedItems]="newlySelected{{property.Name}}IdsFor{{entity.Name}}" 
                             [unselectedItems]="unselected{{property.Name}}IdsFor{{entity.Name}}" 
@@ -1171,9 +1359,10 @@ import { ApiService } from '../../services/api/api.service';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { ActivatedRoute } from '@angular/router';
-import { firstValueFrom, forkJoin, Observable } from 'rxjs';
+import { combineLatest, firstValueFrom, forkJoin, map, Observable, of, Subscription } from 'rxjs';
 import { MenuItem } from 'primeng/api';
-import { PrimengModule, SpiderControlsModule, CardSkeletonComponent, IndexCardComponent, SpiderDataTableComponent, SpiderFormArray, BaseEntity, LastMenuIconIndexClicked, SpiderFormGroup, SpiderButton, nameof, BaseFormService, getControl, Column, TableFilter, LazyLoadSelectedIdsResult, AllClickEvent, SpiderFileSelectEvent, getPrimengDropdownNamebookOptions, PrimengOption, SpiderFormControl, getPrimengAutocompleteNamebookOptions } from '@playerty/spider';
+import { AuthService } from '../../services/auth/auth.service';
+import { PrimengModule, SpiderControlsModule, CardSkeletonComponent, IndexCardComponent, IsAuthorizedForSaveEvent, SpiderDataTableComponent, SpiderFormArray, BaseEntity, LastMenuIconIndexClicked, SpiderFormGroup, SpiderButton, nameof, BaseFormService, getControl, Column, TableFilter, LazyLoadSelectedIdsResult, AllClickEvent, SpiderFileSelectEvent, getPrimengDropdownNamebookOptions, PrimengOption, SpiderFormControl, getPrimengAutocompleteNamebookOptions } from '@playerty/spider';
 {{string.Join("\n", GetDynamicNgImports(imports))}}
 """;
         }

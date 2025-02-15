@@ -6,10 +6,12 @@
     <required *ngIf="control?.required"></required>
   </div>
 
+  <!-- Disable doesn't work on this control -->
   <p-editor
   *ngIf="control"
   [formControl]="control"
   [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control.valid" tooltipStyleClass="spider-tooltip-invalid"
+  [readonly]="control.disabled"
   [class]="control.invalid && control.dirty ? 'control-error-border' : ''"
   [id]="control.label"
   [placeholder]="placeholder"

@@ -24,6 +24,7 @@ export class SpiderButtonComponent {
   @Input() style: { [klass: string]: any; };
   @Input() class: string;
   @Input() severity: 'success' | 'info' | 'warning' | 'danger' | 'help' | 'primary' | 'secondary' | 'contrast' | null | undefined;
+  @Input() disabled: boolean = false;
 
   @Output() onClick = new EventEmitter<Event>();
   private clickSubject = new Subject<Event>(); // Internal subject to handle click events.

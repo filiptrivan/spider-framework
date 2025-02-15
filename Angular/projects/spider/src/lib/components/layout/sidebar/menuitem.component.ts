@@ -105,7 +105,7 @@ export class MenuitemComponent implements OnInit, OnDestroy {
             this.updateActiveStateFromRoute();
         }
 
-        this.permissionSubscription = this.authService.currentUserPermissions$.subscribe((currentUserPermissionCodes: string[]) => {
+        this.permissionSubscription = this.authService.currentUserPermissionCodes$.subscribe((currentUserPermissionCodes: string[]) => {
             if (this.item && typeof this.item.hasPermission === 'function') {
                 this.item.visible = this.item.hasPermission(currentUserPermissionCodes);
             }

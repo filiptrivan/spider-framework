@@ -17,6 +17,27 @@
 	}
 }
 
+.multiple-panel-middle-without-header{
+	.p-panel .p-panel-content {
+		border-bottom-left-radius: 0px;
+		border-bottom-right-radius: 0px;
+		border-top: 1px solid var(--surface-border);
+		border-top-left-radius: 0px;
+		border-top-right-radius: 0px;
+		border-bottom: none;
+	}
+}
+
+.multiple-panel-last-without-header{
+	.p-panel .p-panel-content {
+		border-bottom-left-radius: 12px;
+		border-bottom-right-radius: 12px;
+		border-top: 1px solid var(--surface-border);
+		border-top-left-radius: 0px;
+		border-top-right-radius: 0px;
+	}
+}
+
 .multiple-panel-first{
 	.p-panel .p-panel-content {
 		border-bottom-left-radius: 0px;
