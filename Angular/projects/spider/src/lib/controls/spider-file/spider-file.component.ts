@@ -26,11 +26,13 @@ import { SpiderButtonComponent } from '../../components/spider-buttons/spider-bu
     ]
 })
 export class SpiderFileComponent extends BaseControl implements OnInit {
-    @Output() onSelectedFile = new EventEmitter<SpiderFileSelectEvent>();
+    @Output() onFileSelected = new EventEmitter<SpiderFileSelectEvent>();
+    @Output() onFileRemoved = new EventEmitter<null>();
     @Input() objectId: number;
     @Input() fileData: string;
     @Input() acceptedFileTypes: Array<'image/*' | 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' | 'application/vnd.ms-excel' | '.xlsx' | '.xls'> = ['image/*'];
     @Input() required: boolean; // FT: It's okay for this control, because for the custom uploads where we are not initializing the control from the backend, there is no need for formControl.
+    
     acceptedFileTypesCommaSeparated: string;
     files: File[] = [];
 
@@ -51,22 +53,23 @@ export class SpiderFileComponent extends BaseControl implements OnInit {
         super.ngOnInit();
     }
 
-    onSelectedFiles(event: FileSelectEvent){
+    filesSelected(event: FileSelectEvent){
         const file = event.files[0];
 
         const formData: FormData = new FormData();
         formData.append('file', file, `${this.objectId}-${file.name}`);
         
-        this.onSelectedFile.next(new SpiderFileSelectEvent({file: file, formData: formData}));
+        this.onFileSelected.next(new SpiderFileSelectEvent({file: file, formData: formData}));
     }
 
     choose(event, chooseCallback){
         chooseCallback();
     }
     
-    removeFile(removeFileCallback, index: number){
+    fileRemoved(removeFileCallback, index: number){
         removeFileCallback(index);
         this.control?.setValue(null);
+        this.onFileRemoved.next(null);
     }
 
     // FT: Put inside global functions if you need it

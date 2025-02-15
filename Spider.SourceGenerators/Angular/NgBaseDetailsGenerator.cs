@@ -242,8 +242,8 @@ export class {{entity.Name}}BaseDetailsComponent {
                 if (currentUserPermissionCodes != null && isAuthorizedForSave != null) {
                     this.isAuthorizedForSave =
 {{GetAdditionalPermissionCodes(entity)}}
-                        (currentUserPermissionCodes.includes('InsertPartnerUser') && this.modelId <= 0) || 
-                        (currentUserPermissionCodes.includes('UpdatePartnerUser') && this.modelId > 0) ||
+                        (currentUserPermissionCodes.includes('Insert{{entity.Name}}') && this.modelId <= 0) || 
+                        (currentUserPermissionCodes.includes('Update{{entity.Name}}') && this.modelId > 0) ||
                         isAuthorizedForSave;
 
                     if (this.isAuthorizedForSave) { 
@@ -1163,7 +1163,7 @@ export class {{entity.Name}}BaseDetailsComponent {
             }
             else if (controlType == UIControlTypeCodes.File)
             {
-                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [fileData]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}Data.getRawValue()\" [objectId]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.id.getRawValue()\" (onSelectedFile)=\"upload{property.Name}For{entity.Name}($event)\"";
+                return $"[control]=\"{GetControlHtmlAttributeValue(property, entity)}\" [fileData]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.{property.Name.FirstCharToLower()}Data.getRawValue()\" [objectId]=\"{entity.Name.FirstCharToLower()}FormGroup.controls.id.getRawValue()\" (onFileSelected)=\"upload{property.Name}For{entity.Name}($event)\" [disabled]=\"!isAuthorizedForSave\"";
             }
             else if (controlType == UIControlTypeCodes.Dropdown)
             {
