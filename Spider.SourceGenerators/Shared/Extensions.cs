@@ -407,7 +407,7 @@ namespace Spider.SourceGenerators.Shared
             return property.Attributes.Any(x => x.Name == "Required");
         }
 
-        public static bool HasOrderedOneToManyAttribute(this SpiderProperty property)
+        public static bool HasUIOrderedOneToManyAttribute(this SpiderProperty property)
         {
             return property.Attributes.Any(x => x.Name == "UIOrderedOneToMany");
         }
@@ -600,7 +600,7 @@ namespace Spider.SourceGenerators.Shared
 
         public static List<SpiderProperty> GetOrderedOneToManyProperties(this SpiderClass entity)
         {
-            return entity.Properties.Where(x => x.HasOrderedOneToManyAttribute()).ToList();
+            return entity.Properties.Where(x => x.HasUIOrderedOneToManyAttribute()).ToList();
         }
 
         public static string GetIdType(this SpiderClass c, List<SpiderClass> classes)

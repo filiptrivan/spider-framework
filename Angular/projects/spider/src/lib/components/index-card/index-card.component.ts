@@ -16,16 +16,17 @@ import { PrimengModule } from '../../modules/primeng.module';
 ]
 })
 export class IndexCardComponent {
-    @Input() public last: boolean;
-    @Input() public index: number;
-    @Input() public header: string = '';
-    @Input() public description: string;
-    @Input() public showRemoveIcon: boolean;
+    @Input() last: boolean;
+    @Input() index: number;
+    @Input() header: string = '';
+    @Input() description: string;
+    @Input() showRemoveIcon: boolean;
+    @Input() showCrudMenu: boolean = true;
 
     @Input() crudMenu: MenuItem[];
 
-    @Output() onMenuIconClick: EventEmitter<number> = new EventEmitter();
-    @Output() onRemoveIconClick: EventEmitter<null> = new EventEmitter();
+    @Output() onMenuIconClick = new EventEmitter<number>();
+    @Output() onRemoveIconClick = new EventEmitter<null>();
     
     constructor(
         protected formBuilder: FormBuilder,

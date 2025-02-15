@@ -662,7 +662,7 @@ namespace {{basePartOfNamespace}}.Services
 
         private static string GetOrderedOneToManyMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> entities)
         {
-            if (property.HasOrderedOneToManyAttribute() == false)
+            if (property.HasUIOrderedOneToManyAttribute() == false)
                 return null;
 
             SpiderClass extractedPropertyEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).Single();

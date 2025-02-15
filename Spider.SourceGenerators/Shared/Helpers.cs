@@ -754,7 +754,7 @@ namespace Spider.SourceGenerators.Shared
                 SpiderClass extractedEntity = entities.Where(x => x.Name == ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
                 string extractedEntityIdType = extractedEntity.GetIdType(entities);
 
-                if (property.HasOrderedOneToManyAttribute())
+                if (property.HasUIOrderedOneToManyAttribute())
                 {
                     result.Add(new SpiderProperty { Name = $"{property.Name}DTO", Type = $"List<{extractedEntity.Name}DTO>", EntityName = $"{entity.Name}SaveBodyDTO" });
                 }

@@ -17,7 +17,7 @@
     </ng-template>
 
     <ng-template pTemplate="icons">
-        <div *ngIf="crudMenu" class="mr-2">
+        <div *ngIf="showCrudMenu && crudMenu" class="mr-2">
             <i class="pi pi-ellipsis-h icon-hover" (click)="menuItemClick(index, $event)"></i>
             <p-menu #menu [model]="crudMenu" [popup]="true" appendTo="body"></p-menu>
         </div>
