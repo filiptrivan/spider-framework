@@ -98,7 +98,7 @@ namespace Spider.SourceGenerators.Angular
     template:`
 <ng-container *transloco="let t">
     <spider-panel [isFirstMultiplePanel]="isFirstMultiplePanel" [isMiddleMultiplePanel]="isMiddleMultiplePanel" [isLastMultiplePanel]="isLastMultiplePanel" [showPanelHeader]="showPanelHeader" >
-        <panel-header></panel-header>
+        <panel-header [title]="panelTitle" [icon]="panelIcon"></panel-header>
 
         <panel-body>
             @defer (when loading === false) {
@@ -146,6 +146,8 @@ export class {{entity.Name}}BaseDetailsComponent {
     @Input() isMiddleMultiplePanel: boolean = false;
     @Input() isLastMultiplePanel: boolean = false;
     @Input() showPanelHeader: boolean = true;
+    @Input() panelTitle: string;
+    @Input() panelIcon: string;
     @Input() showReturnButton: boolean = true;
     authorizationForSaveSubscription: Subscription;
     @Input() authorizedForSaveObservable: () => Observable<boolean> = () => of(false);
@@ -319,13 +321,13 @@ export class {{entity.Name}}BaseDetailsComponent {
 
             foreach (SpiderAttribute attribute in entity.Attributes)
             {
-                if (attribute.Name == "CanInsertAdditionalPermissionCode")
+                if (attribute.Name == "UIAdditionalPermissionCodeForInsert")
                 {
                     sb.AppendLine($$"""
                         (currentUserPermissionCodes.includes('{{attribute.Value}}') && this.modelId <= 0) || 
 """);
                 }
-                else if (attribute.Name == "CanUpdateAdditionalPermissionCode")
+                else if (attribute.Name == "UIAdditionalPermissionCodeForUpdate")
                 {
                     sb.AppendLine($$"""
                         (currentUserPermissionCodes.includes('{{attribute.Value}}') && this.modelId > 0) || 

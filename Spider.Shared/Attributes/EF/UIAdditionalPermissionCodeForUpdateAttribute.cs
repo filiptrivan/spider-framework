@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 namespace Spider.Shared.Attributes.EF
 {
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public class CanInsertAdditionalPermissionCodeAttribute : Attribute
+    public class UIAdditionalPermissionCodeForUpdateAttribute : Attribute
     {
-        public CanInsertAdditionalPermissionCodeAttribute(string permissionCode)
+        public UIAdditionalPermissionCodeForUpdateAttribute(string permissionCode)
         {
             
         }
