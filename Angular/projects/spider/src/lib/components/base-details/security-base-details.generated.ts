@@ -3,7 +3,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { ActivatedRoute } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { combineLatest, forkJoin, map, Observable, of, Subscription } from 'rxjs';
 import { MenuItem } from 'primeng/api';
 import { PrimengModule } from '../../modules/primeng.module';
 import { SpiderControlsModule } from '../../controls/spider-controls.module';
@@ -18,6 +18,8 @@ import { BaseFormService } from '../../services/base-form.service';
 import { ApiSecurityService } from '../../services/api.service.security';
 import { PrimengOption } from '../../entities/primeng-option';
 import { AutoCompleteCompleteEvent } from 'primeng/autocomplete';
+import { IsAuthorizedForSaveEvent } from '../../entities/is-authorized-for-save-event';
+import { AuthBaseService } from '../../services/auth-base.service';
 
 @Component({
     selector: 'role-base-details',
@@ -48,9 +50,9 @@ import { AutoCompleteCompleteEvent } from 'primeng/autocomplete';
         </panel-body>
 
         <panel-footer>
-            <spider-button (onClick)="save()" [label]="t('Save')" icon="pi pi-save"></spider-button>
+        <spider-button [disabled]="!isAuthorizedForSave" (onClick)="save()" [label]="t('Save')" icon="pi pi-save"></spider-button>
             @for (button of additionalButtons; track button.label) {
-                <spider-button (onClick)="button.onClick()" [label]="button.label" [icon]="button.icon"></spider-button>
+                <spider-button (onClick)="button.onClick()" [disabled]="button.disabled" [label]="button.label" [icon]="button.icon"></spider-button>
             }
             <spider-return-button></spider-return-button>
         </panel-footer>
@@ -78,6 +80,12 @@ export class RoleBaseDetailsComponent {
     @Input() isFirstMultiplePanel: boolean = false;
     @Input() isMiddleMultiplePanel: boolean = false;
     @Input() isLastMultiplePanel: boolean = false;
+
+    authorizationForSaveSubscription: Subscription;
+    @Input() authorizedForSaveObservable: () => Observable<boolean> = () => of(false);
+    isAuthorizedForSave: boolean = false;
+    @Output() onIsAuthorizedForSaveChange = new EventEmitter<IsAuthorizedForSaveEvent>(); 
+    
     modelId: number;
     loading: boolean = true;
     roleSaveBodyName: string = nameof<RoleSaveBody>('roleDTO');
@@ -92,6 +100,7 @@ export class RoleBaseDetailsComponent {
         private apiService: ApiSecurityService,
         private route: ActivatedRoute,
         private baseFormService: BaseFormService,
+        private authService: AuthBaseService
     ) {}
 
     ngOnInit(){
@@ -130,10 +139,16 @@ export class RoleBaseDetailsComponent {
                     this.selectedUsersForRole.setValue(
                         usersForRole.map(n => ({ label: n.displayName, value: n.id }))
                     );
+
+                    this.authorizationForSaveSubscription = this.handleAuthorizationForSave().subscribe();
+                    this.loading = false;
                 });
             }
             else{
                 this.initRoleFormGroup(new Role({id: 0}));
+
+                this.authorizationForSaveSubscription = this.handleAuthorizationForSave().subscribe();
+                this.loading = false;
             }
         });
     }
@@ -147,8 +162,38 @@ export class RoleBaseDetailsComponent {
             []
         );
         this.roleFormGroup.mainDTOName = this.roleSaveBodyName;
-        this.loading = false;
         this.onRoleFormGroupInitFinish.next();
+    }
+    
+    handleAuthorizationForSave = () => {
+        return combineLatest([this.authService.currentUserPermissionCodes$, this.authorizedForSaveObservable()]).pipe(
+            map(([currentUserPermissionCodes, isAuthorizedForSave]) => {
+                if (currentUserPermissionCodes != null && isAuthorizedForSave != null) {
+                    this.isAuthorizedForSave =
+                        (currentUserPermissionCodes.includes('InsertRole') && this.modelId <= 0) || 
+                        (currentUserPermissionCodes.includes('UpdateRole') && this.modelId > 0) ||
+                        isAuthorizedForSave;
+
+                    if (this.isAuthorizedForSave) { 
+                        this.roleFormGroup.controls.name.enable();
+                        this.roleFormGroup.controls.description.enable();
+                        this.selectedUsersForRole.enable();
+                        this.selectedPermissionsForRole.enable();
+                    }
+                    else{
+                        this.roleFormGroup.controls.name.disable();
+                        this.roleFormGroup.controls.description.disable();
+                        this.selectedUsersForRole.disable();
+                        this.selectedPermissionsForRole.disable();
+                    }
+
+                    this.onIsAuthorizedForSaveChange.next(new IsAuthorizedForSaveEvent({
+                        isAuthorizedForSave: this.isAuthorizedForSave, 
+                        currentUserPermissionCodes: currentUserPermissionCodes
+                    })); 
+                }
+            })
+        );
     }
 
     searchUsersForRole(event: AutoCompleteCompleteEvent) {
@@ -167,6 +212,12 @@ export class RoleBaseDetailsComponent {
 
     save(){
         this.onSave.next();
+    }
+
+    ngOnDestroy(){
+        if (this.authorizationForSaveSubscription) {
+            this.authorizationForSaveSubscription.unsubscribe();
+        }
     }
 
 }

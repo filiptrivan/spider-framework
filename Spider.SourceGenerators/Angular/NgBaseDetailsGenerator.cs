@@ -322,13 +322,13 @@ export class {{entity.Name}}BaseDetailsComponent {
                 if (attribute.Name == "CanInsertAdditionalPermissionCode")
                 {
                     sb.AppendLine($$"""
-                (currentUserPermissionCodes?.includes('{{attribute.Value}}') && this.modelId <= 0) || 
+                        (currentUserPermissionCodes.includes('{{attribute.Value}}') && this.modelId <= 0) || 
 """);
                 }
                 else if (attribute.Name == "CanUpdateAdditionalPermissionCode")
                 {
                     sb.AppendLine($$"""
-                (currentUserPermissionCodes?.includes('{{attribute.Value}}') && this.modelId > 0) || 
+                        (currentUserPermissionCodes.includes('{{attribute.Value}}') && this.modelId > 0) || 
 """);
                 }
             }

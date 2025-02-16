@@ -141,4 +141,8 @@ export class BaseFormService {
     });
   }
 
+  generateNewNegativeId<T extends BaseEntity>(formArray: SpiderFormArray<T>){
+    return -formArray.getRawValue().filter(x => x.id < 0).length - 1;
+  }
+
 }
