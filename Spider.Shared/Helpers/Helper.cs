@@ -16,7 +16,7 @@ using Spider.Shared.BaseEntities;
 
 namespace Spider.Shared.Helpers
 {
-    public static class Helpers
+    public static class Helper
     {
         public static void WriteToTheFile(string data, string path)
         {
@@ -79,12 +79,30 @@ namespace Spider.Shared.Helpers
 
         #region User
 
+        public static bool IsUserLoggedIn(HttpContext context)
+        {
+            return context?.User?.Identity?.IsAuthenticated ?? false;
+        }
+
         public static long GetCurrentUserId(HttpContext context)
         {
-            return long.Parse(context.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.PrimarySid)?.Value);
+            return long.Parse(context.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.PrimarySid).Value);
+        }
+
+        public static long? GetCurrentUserIdOrDefault(HttpContext context)
+        {
+            if (IsUserLoggedIn(context))
+                return long.Parse(context.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.PrimarySid).Value);
+
+            return null;
         }
 
         public static string GetCurrentUserEmail(HttpContext context)
+        {
+            return context.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email).Value;
+        }
+
+        public static string GetCurrentUserEmailOrDefault(HttpContext context)
         {
             return context.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
         }

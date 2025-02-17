@@ -1,11 +1,16 @@
-<div [style]="fakeLabel ? 'margin-top: 12px;' : '' + 'display: flex; align-items: center; height: 100%;'">
-    <p-checkbox
-    *ngIf="control"
-    [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid" 
-    [formControl]="control"
-    [id]="label"
-    [label]="getTranslatedLabel()"
-    [binary]="true"
-    />
-    <required *ngIf="control?.required"></required>
+<div class="flex flex-column gap-2">
+    <div *ngIf="inlineLabel === false && getTranslatedLabel() != '' && getTranslatedLabel() != null">
+      <label>{{getTranslatedLabel()}}</label>
+      <required *ngIf="control?.required"></required>
+    </div>
+    <div class="p-inputgroup p-fluid" style="margin-top: 0.5rem;">
+        <p-checkbox
+        *ngIf="control"
+        [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid" 
+        [formControl]="control"
+        [label]="inlineLabel ? label : null"
+        [id]="label"
+        [binary]="true"
+        />
+    </div>
 </div>

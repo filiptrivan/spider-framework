@@ -21,7 +21,8 @@ import { PrimengModule } from '../../modules/primeng.module';
 })
 export class SpiderCheckboxComponent extends BaseControl implements OnInit {
     @Input() fakeLabel = true;
-    @Input() initializeToFalse = true;
+    @Input() initializeToFalse = false;
+    @Input() inlineLabel = false;
 
     constructor(
         protected override translocoService: TranslocoService,
