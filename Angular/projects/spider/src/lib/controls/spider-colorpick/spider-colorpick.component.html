@@ -12,7 +12,7 @@
       </span> -->
       <input
       *ngIf="control"
-      [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid"
+      [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control.valid" tooltipStyleClass="spider-tooltip-invalid"
       pInputText
       [placeholder]="placeholder"
       [style]="{'width':'100%', 'position': 'relative'}"
@@ -23,7 +23,7 @@
   </div>
     <p-colorPicker
     *ngIf="control"
-    [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid"
+    [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control.valid" tooltipStyleClass="spider-tooltip-invalid"
     [formControl]="control"
     [id]="control.label"
     (blur)="control.markAsDirty()"

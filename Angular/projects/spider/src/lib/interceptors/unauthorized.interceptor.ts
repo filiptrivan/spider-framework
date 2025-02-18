@@ -45,7 +45,7 @@ export class UnauthorizedInterceptor implements HttpInterceptor {
       errorResponse= JSON.parse(err.error);
 
     if (err.status == 0) {
-      this.messageService.warningMessage(
+      this.messageService.warningMessageWithTimeout( // FT: Had problem when the server is shut down, and try to refresh token, warning message didn't appear
         this.translocoService.translate('ServerLostConnectionDetails'),
         this.translocoService.translate('ServerLostConnectionTitle'),
       );

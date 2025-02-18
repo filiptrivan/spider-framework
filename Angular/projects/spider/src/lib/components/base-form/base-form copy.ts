@@ -131,7 +131,7 @@ export class BaseFormCopy implements OnInit {
       
       this.onAfterSaveRequest();
     }else{
-      this.showInvalidFieldsMessage();
+      this.baseFormService.showInvalidFieldsMessage();
     }
   }
 
@@ -190,33 +190,6 @@ export class BaseFormCopy implements OnInit {
     return true;
   }
 
-  areFormControlsValid(formControls: SpiderFormControl[]): boolean {
-    if(formControls == null)
-      return true;
-
-    let invalid: boolean = false;
-
-    formControls.forEach(formControl => {
-      if (formControl.invalid) {
-        formControl.markAsDirty();
-        invalid = true;
-      }
-    });
-
-    if (invalid) {
-      return false;
-    }
-
-    return true;
-  }
-
-  showInvalidFieldsMessage(){
-    this.messageService.warningMessage(
-      this.translocoService.translate('YouHaveSomeInvalidFieldsDescription'),
-      this.translocoService.translate('YouHaveSomeInvalidFieldsTitle'), 
-    );
-  }
-
   // FT: If you want to call single method
   checkFormGroupValidity(){
     if (this.formGroup.invalid || this.invalidForm) {
@@ -224,7 +197,7 @@ export class BaseFormCopy implements OnInit {
         this.formGroup.controls[key].markAsDirty(); // this.formGroup.markAsDirty(); // FT: For some reason this doesnt work
       });
 
-      this.showInvalidFieldsMessage();
+      this.baseFormService.showInvalidFieldsMessage();
 
       return false;
     }
@@ -402,7 +375,7 @@ export class BaseFormCopy implements OnInit {
     const tab = singleOrDefault(tabs, x => x.isSelected);
 
     if (tab) {
-      return tab.value;
+      return tab.id;
     }
     else{
       return null;

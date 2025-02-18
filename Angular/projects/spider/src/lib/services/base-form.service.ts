@@ -1,8 +1,10 @@
+import { TranslocoService } from '@jsverse/transloco';
 import { Injectable } from '@angular/core';
 import { SpiderFormArray, SpiderFormControl, SpiderFormGroup } from '../components/spider-form-control/spider-form-control';
 import { BaseEntity } from '../entities/base-entity';
 import { TranslateLabelsAbstractService } from './translate-labels-abstract.service';
 import { ValidatorAbstractService } from './validator-abstract.service';
+import { SpiderMessageService } from './spider-message.service';
 
 @Injectable({
   providedIn: 'root',
@@ -11,6 +13,8 @@ export class BaseFormService {
   constructor(
     private translateLabelsService: TranslateLabelsAbstractService,
     private validatorService: ValidatorAbstractService,
+    private messageService: SpiderMessageService,
+    private translocoService: TranslocoService
   ) {}
 
   initFormGroup<T>(
@@ -141,8 +145,39 @@ export class BaseFormService {
     });
   }
 
+  //#region Helpers
+
+  areFormControlsValid = (formControls: SpiderFormControl[]): boolean => {
+    if(formControls == null)
+      return true;
+
+    let invalid: boolean = false;
+
+    formControls.forEach(formControl => {
+      if (formControl.invalid) {
+        formControl.markAsDirty();
+        invalid = true;
+      }
+    });
+
+    if (invalid) {
+      return false;
+    }
+
+    return true;
+  }
+
+  showInvalidFieldsMessage = () => {
+    this.messageService.warningMessage(
+      this.translocoService.translate('YouHaveSomeInvalidFieldsDescription'),
+      this.translocoService.translate('YouHaveSomeInvalidFieldsTitle'), 
+    );
+  }
+
   generateNewNegativeId<T extends BaseEntity>(formArray: SpiderFormArray<T>){
     return -formArray.getRawValue().filter(x => x.id < 0).length - 1;
   }
+
+  //#endregion
 
 }

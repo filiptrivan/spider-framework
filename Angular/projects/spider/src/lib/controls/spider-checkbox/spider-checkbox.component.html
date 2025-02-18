@@ -6,7 +6,7 @@
     <div class="p-inputgroup p-fluid" style="margin-top: 0.5rem;">
         <p-checkbox
         *ngIf="control"
-        [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid" 
+        [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control.valid" tooltipStyleClass="spider-tooltip-invalid" 
         [formControl]="control"
         [label]="inlineLabel ? label : null"
         [id]="label"

@@ -20,7 +20,6 @@ import { TranslocoService } from '@jsverse/transloco';
     @Input() tooltipText: string = null;
     @Input() tooltipIcon: string = 'pi pi-info-circle';
     errorMessageTooltipEvent: 'hover' | 'focus';
-    validationErrorMessage: string;
     
     constructor(
       protected translocoService: TranslocoService,
@@ -50,10 +49,10 @@ import { TranslocoService } from '@jsverse/transloco';
       if(this.control?.errors && this.control?.dirty){
           // FT: it should always be one error message for single form control, 
           // also i don't need to reassign it to null because it will be shown only when control.valid == false
-          this.validationErrorMessage = this.control.errors['_'];
+          return this.control.errors['_'];
       }
-      
-      return this.validationErrorMessage;
+
+      return null;
     }
 
   }

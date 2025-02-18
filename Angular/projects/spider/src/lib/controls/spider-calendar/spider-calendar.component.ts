@@ -33,8 +33,6 @@ export class SpiderCalendarComponent extends BaseControl implements OnInit {
     }
 
     setDate(event:Date) { 
-        // event.setTime(event.getTime() + (new Date().getTimezoneOffset() * 60 * 1000));
-        // console.log(event)
-        // this.control.setValue(event)
+        
     }
 }

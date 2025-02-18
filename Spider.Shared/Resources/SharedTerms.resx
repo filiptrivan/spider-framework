@@ -201,4 +201,8 @@
     <value>Description</value>
     <comment>Opis</comment>
   </data>
+  <data name="EmailSendError" xml:space="preserve">
+    <value>An error occurred while sending the email, our team has been informed and will fix it as soon as possible. Thank you for your patience.</value>
+    <comment>Dogodila se greška prilikom slanja mejla, naš tim je obavešten i otkloniće je u najkraćem mogućem roku. Hvala Vam na strpljenju.</comment>
+  </data>
 </root>

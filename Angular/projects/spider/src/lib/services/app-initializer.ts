@@ -1,10 +1,9 @@
 import { Observable } from 'rxjs';
 import { AuthBaseService } from './auth-base.service';
+import { AuthResult } from '../entities/security-entities';
 
-export function appInitializer(
-  authService: AuthBaseService,
-): () => Promise<Observable<any>> {
-  return async () => { // FT: Without async keyword the transloco is loading late
+export function authInitializer(authService: AuthBaseService): () => Observable<AuthResult> {
+  return () => {
     return authService.refreshToken();
   };
 }

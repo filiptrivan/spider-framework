@@ -133,6 +133,15 @@ namespace Spider.Shared.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to An error occurred while sending the email, our team has been informed and will fix it as soon as possible. Thank you for your patience..
+        /// </summary>
+        public static string EmailSendError {
+            get {
+                return ResourceManager.GetString("EmailSendError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The record you&apos;re looking for doesn&apos;t exist in database..
         /// </summary>
         public static string EntityDoesNotExistInDatabase {

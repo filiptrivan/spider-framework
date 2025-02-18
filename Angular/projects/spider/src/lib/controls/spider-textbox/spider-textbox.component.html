@@ -8,7 +8,7 @@
   <div class="p-inputgroup p-fluid">
     <input
       *ngIf="control"
-      [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control?.valid" tooltipStyleClass="spider-tooltip-invalid"
+      [pTooltip]="getValidationErrrorMessages()" [tooltipEvent]="errorMessageTooltipEvent" tooltipPosition="bottom" [tooltipDisabled]="control.valid" tooltipStyleClass="spider-tooltip-invalid"
       pInputText
       [formControl]="control"
       [id]="control.label"

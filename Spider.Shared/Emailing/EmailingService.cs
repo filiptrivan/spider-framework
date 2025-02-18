@@ -1,4 +1,7 @@
-﻿using Spider.Shared.Resources;
+﻿using Serilog;
+using Spider.Shared.Exceptions;
+using Spider.Shared.Helpers;
+using Spider.Shared.Resources;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,8 +23,6 @@ namespace Spider.Shared.Emailing
                 Credentials = new NetworkCredential(SettingsProvider.Current.SmtpUser, SettingsProvider.Current.SmtpPass),
                 EnableSsl = true
             };
-
-            _smtpClient.SendCompleted += new SendCompletedEventHandler(SmtpSendCompleted);
         }
 
         public async Task SendVerificationEmailAsync(string toEmail, string verificationCode)
@@ -36,44 +37,12 @@ namespace Spider.Shared.Emailing
                 IsBodyHtml = true
             };
 
-            try
-            {
-                await _smtpClient.SendMailAsync(mailMessage);
-            }
-            catch (Exception ex)
-            {
-                // log
-                throw;
-            }
+            await _smtpClient.SendMailAsync(mailMessage); // https://stackoverflow.com/questions/11120350/how-to-check-programmatically-if-an-email-is-existing-or-not
         }
 
         public async Task SendEmailAsync(List<string> recipients, string subject, string body)
         {
-            try
-            {
-                foreach (string recipient in recipients)
-                {
-                    MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, recipient)
-                    {
-                        Subject = subject,
-                        Body = body,
-                        BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
-                        IsBodyHtml = true,
-                    };
-
-                    await _smtpClient.SendMailAsync(mailMessage);
-                }
-            }
-            catch (Exception ex)
-            {
-                // don't throw, log
-                throw;
-            }
-        }
-
-        public async Task SendEmailAsync(string recipient, string subject, string body)
-        {
-            try
+            foreach (string recipient in recipients)
             {
                 MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, recipient)
                 {
@@ -85,21 +54,44 @@ namespace Spider.Shared.Emailing
 
                 await _smtpClient.SendMailAsync(mailMessage);
             }
-            catch (Exception ex)
-            {
-                // don't throw, log
-                throw;
-            }
         }
 
-        /// <summary>
-        /// TODO FT: Test if this is working
-        /// </summary>
-        private void SmtpSendCompleted(object sender, System.ComponentModel.AsyncCompletedEventArgs e)
+        public async Task SendEmailAsync(string recipient, string subject, string body)
         {
-            if (e.Cancelled == true || e.Error != null)
+            MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, recipient)
             {
-                throw new Exception(e.Cancelled ? "Email sedning was canceled." : "Error: " + e.Error.ToString());
+                Subject = subject,
+                Body = body,
+                BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
+                IsBodyHtml = true,
+            };
+
+            await _smtpClient.SendMailAsync(mailMessage);
+        }
+
+        public async Task SendEmailFromBackgroundJobAsync(string recipient, string subject, string body)
+        {
+            MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, recipient)
+            {
+                Subject = subject,
+                Body = body,
+                BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
+                IsBodyHtml = true,
+            };
+
+            try
+            {
+                await _smtpClient.SendMailAsync(mailMessage);
+            }
+            catch (Exception ex)
+            {
+                // FT: We need to log because exception will not get into api global error handler from the background job
+                Log.Error(
+                    ex, 
+                    "We failed to send an email to the recipient: {recipient};", 
+                    recipient
+                );
+                throw;
             }
         }
 

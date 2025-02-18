@@ -141,7 +141,7 @@ export class AuthBaseService implements OnDestroy {
     this._currentUserPermissionCodes.next(null);
   }
 
-  refreshToken(): Observable<Promise<AuthResult>> {
+  refreshToken(): Observable<AuthResult> {
     let refreshToken = localStorage.getItem(this.config.refreshTokenKey);
 
     if (!refreshToken) {
@@ -157,7 +157,7 @@ export class AuthBaseService implements OnDestroy {
     return this.http
       .post<AuthResult>(`${this.apiUrl}/Security/RefreshToken`, body, this.config.httpSkipSpinnerOptions)
       .pipe(
-        map(async (loginResult) => {
+        map((loginResult) => {
           this._user.next({
             id: loginResult.userId,
             email: loginResult.email

@@ -1,7 +1,7 @@
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NgModule, APP_INITIALIZER, Optional, SkipSelf, ErrorHandler } from '@angular/core';
 import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
-import { appInitializer } from '../services/app-initializer';
+import { authInitializer } from '../services/app-initializer';
 import { JwtInterceptor } from '../interceptors/jwt.interceptor';
 import { UnauthorizedInterceptor } from '../interceptors/unauthorized.interceptor';
 import { HttpLoadingInterceptor } from '../interceptors/http-loading.interceptor';
@@ -26,7 +26,7 @@ import { ToastModule } from 'primeng/toast';
     MessageService,
     {
       provide: APP_INITIALIZER,
-      useFactory: appInitializer,
+      useFactory: authInitializer,
       multi: true,
       deps: [AuthBaseService],
     },

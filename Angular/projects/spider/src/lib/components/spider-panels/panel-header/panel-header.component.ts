@@ -38,25 +38,25 @@ export class PanelHeaderComponent implements OnInit {
 export class SpiderTab
 {
     label?: string;
-    value?: number;
+    id?: number;
     icon?: string;
     isSelected?: boolean;
   
     constructor(
     {
         label,
-        value,
+        id,
         icon,
         isSelected,
     }:{
         label?: string;
-        value?: number;
+        id?: number;
         icon?: string;
         isSelected?: boolean;
     } = {}
     ) {
         this.label = label;
-        this.value = value;
+        this.id = id;
         this.icon = icon;
         this.isSelected = isSelected;
     }
