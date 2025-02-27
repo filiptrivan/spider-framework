@@ -11,9 +11,10 @@ import { Component, OnInit, Input } from '@angular/core';
   `]
 })
 export class PanelHeaderComponent implements OnInit {
-  @Input() icon: string = 'pi pi-file-edit';
   @Input() title: string;
   @Input() bigTitle: boolean;
+  @Input() showIcon: boolean = true;
+  @Input() icon: string;
   @Input() index: number;
   @Input() tabs: SpiderTab[];
 
@@ -23,7 +24,10 @@ export class PanelHeaderComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.title == null)
-      this.title = this.translocoService.translate('Details')
+      this.title = this.translocoService.translate('Details');
+
+    if (this.showIcon === true && this.icon == null)
+      this.icon = 'pi pi-file-edit';
   }
 
   setTabIsSelected(tab: SpiderTab){

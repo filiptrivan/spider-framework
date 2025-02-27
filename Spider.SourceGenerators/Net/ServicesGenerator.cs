@@ -149,6 +149,22 @@ namespace {{basePartOfNamespace}}.Services
             string entityIdType = entity.GetIdType(allEntities);
 
             return $$"""
+        public async Task<{{entity.Name}}MainUIFormDTO> Get{{entity.Name}}MainUIFormDTO({{entityIdType}} id, bool authorize)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    {{GetAuthorizeEntityMethodCall(entity.Name, CrudCodes.Read, "id")}}
+                }
+
+                return new {{entity.Name}}MainUIFormDTO
+                {
+{{GetMainUIFormDTOInitializationProperties(entity, allEntities)}}
+                };
+            });
+        }
+
         public async Task<{{entity.Name}}DTO> Get{{entity.Name}}DTO({{entityIdType}} id, bool authorize)
         {
             return await _context.WithTransactionAsync(async () =>
@@ -263,6 +279,36 @@ namespace {{basePartOfNamespace}}.Services
 
 {{GetManyToOneReadMethods(entity, allEntities)}}
 """;
+        }
+
+        private static string GetMainUIFormDTOInitializationProperties(SpiderClass entity, List<SpiderClass> allEntities)
+        {
+            List<string> result = new();
+
+            result.Add($"{entity.Name}DTO = await Get{entity.Name}DTO(id, false),");
+
+            foreach (SpiderProperty property in entity.Properties)
+            {
+                SpiderClass extractedEntity = allEntities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
+                string extractedEntityIdType = extractedEntity.GetIdType(allEntities);
+
+                if (property.HasUIOrderedOneToManyAttribute())
+                {
+                    result.Add($$"""
+                    Ordered{{property.Name}}DTO = await GetOrdered{{property.Name}}For{{entity.Name}}(id, false),
+""");
+                }
+                else if (
+                    property.IsMultiSelectControlType() ||
+                    property.IsMultiAutocompleteControlType())
+                {
+                    result.Add($$"""
+                    {{property.Name}}NamebookDTOList = await Get{{property.Name}}NamebookListFor{{entity.Name}}(id, false),
+""");
+                }
+            }
+
+            return string.Join("\n", result);
         }
 
         private static string GetTermsClassName(string projectName)

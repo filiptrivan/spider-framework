@@ -203,12 +203,10 @@ export class {{entity.Name}}BaseDetailsComponent {
 
             if(this.modelId > 0){
                 forkJoin({
-                    {{entity.Name.FirstCharToLower()}}: this.apiService.get{{entity.Name}}(this.modelId),
-{{string.Join("\n", GetOrderedOneToManyForkJoinParameters(entity))}}
-{{string.Join("\n", GetManyToManyMultiControlTypesForkJoinParameters(entity))}}
+                    mainUIFormDTO: this.apiService.get{{entity.Name}}MainUIFormDTO(this.modelId),
                 })
-                .subscribe(({ {{string.Join(", ", GetForkJoinParameterNames(entity))}} }) => {
-                    this.init{{entity.Name}}FormGroup(new {{entity.Name}}({{entity.Name.FirstCharToLower()}}));
+                .subscribe(({ mainUIFormDTO }) => {
+                    this.init{{entity.Name}}FormGroup(new {{entity.Name}}(mainUIFormDTO.{{entity.Name.FirstCharToLower()}}DTO));
 {{string.Join("\n", GetOrderedOneToManyInitFormGroupForExistingObject(entity))}}
 {{string.Join("\n", GetManyToManyMultiSelectInitFormControls(entity))}}
 {{string.Join("\n", GetManyToManyMultiAutocompleteInitFormControls(entity))}}
@@ -584,7 +582,7 @@ export class {{entity.Name}}BaseDetailsComponent {
             {
                 result.Add($$"""
                     this.selected{{property.Name}}For{{entity.Name}}.setValue(
-                        {{property.Name.FirstCharToLower()}}For{{entity.Name}}.map(n => { return n.id })
+                        mainUIFormDTO.{{property.Name.FirstCharToLower()}}NamebookDTOList.map(n => { return n.id })
                     );
 """);
             }
@@ -600,7 +598,7 @@ export class {{entity.Name}}BaseDetailsComponent {
             {
                 result.Add($$"""
                     this.selected{{property.Name}}For{{entity.Name}}.setValue(
-                        {{property.Name.FirstCharToLower()}}For{{entity.Name}}.map(n => ({ label: n.displayName, value: n.id }))
+                        mainUIFormDTO.{{property.Name.FirstCharToLower()}}NamebookDTOList.map(n => ({ label: n.displayName, value: n.id }))
                     );
 """);
             }
@@ -753,7 +751,7 @@ export class {{entity.Name}}BaseDetailsComponent {
             foreach (SpiderProperty property in entity.GetOrderedOneToManyProperties())
             {
                 result.Add($$"""
-                    this.init{{property.Name}}FormArray({{property.Name.FirstCharToLower()}}For{{entity.Name}});
+                    this.init{{property.Name}}FormArray(mainUIFormDTO.ordered{{property.Name}}DTO);
 """);
             }
 
@@ -799,11 +797,11 @@ export class {{entity.Name}}BaseDetailsComponent {
                 SpiderClass extractedEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
 
                 result.Add($$"""
-    {{property.Name.FirstCharToLower()}}Model: {{extractedEntity.Name}} = new {{extractedEntity.Name}}();
-    {{property.Name.FirstCharToLower()}}SaveBodyName: string = nameof<{{extractedEntity.Name}}SaveBody>('{{extractedEntity.Name.FirstCharToLower()}}DTO');
+    {{property.Name.FirstCharToLower()}}Model = new {{extractedEntity.Name}}();
+    {{property.Name.FirstCharToLower()}}SaveBodyName: string = nameof<{{entity.Name}}SaveBody>('{{property.Name.FirstCharToLower()}}DTO');
     {{property.Name.FirstCharToLower()}}TranslationKey: string = new {{extractedEntity.Name}}().typeName;
     {{property.Name.FirstCharToLower()}}FormArray: SpiderFormArray<{{extractedEntity.Name}}>;
-    {{property.Name.FirstCharToLower()}}LastIndexClicked: LastMenuIconIndexClicked = new LastMenuIconIndexClicked();
+    {{property.Name.FirstCharToLower()}}LastIndexClicked = new LastMenuIconIndexClicked();
     {{property.Name.FirstCharToLower()}}CrudMenu: MenuItem[] = [];
 """);
             }

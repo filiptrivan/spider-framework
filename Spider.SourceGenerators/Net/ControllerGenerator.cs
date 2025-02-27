@@ -177,6 +177,13 @@ namespace {{basePartOfNamespace}}.Controllers
 
         [HttpGet]
         [AuthGuard]
+        public virtual async Task<{{referencedProjectEntity.Name}}MainUIFormDTO> Get{{referencedProjectEntity.Name}}MainUIFormDTO({{referencedProjectEntityClassIdType}} id)
+        {
+            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntity.Name}}MainUIFormDTO(id, {{ShouldAuthorizeEntity(referencedProjectEntity)}});
+        }
+
+        [HttpGet]
+        [AuthGuard]
         public virtual async Task<{{referencedProjectEntity.Name}}DTO> Get{{referencedProjectEntity.Name}}({{referencedProjectEntityClassIdType}} id)
         {
             return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntity.Name}}DTO(id, {{ShouldAuthorizeEntity(referencedProjectEntity)}});

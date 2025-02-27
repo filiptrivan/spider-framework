@@ -73,14 +73,14 @@ namespace Spider.SourceGenerators.Angular
             StringBuilder sb = new();
             StringBuilder sbImports = new();
             sbImports.Append($$"""
-import { BaseEntity, TableFilter, TableFilterContext, TableFilterSortMeta, MimeTypes } from '@playerty/spider';
+import { BaseEntity, TableFilter, TableFilterContext, TableFilterSortMeta, MimeTypes, Namebook } from '@playerty/spider';
 {{string.Join("\n", GetEnumPropertyImports(currentProjectDTOClasses, projectName))}}
 
 """);
 
             foreach (IGrouping<string, SpiderClass> DTOClassGroup in currentProjectDTOClasses.GroupBy(x => x.Name)) // Grouping because UserDTO.generated and UserDTO
             {
-                List<SpiderProperty> DTOProperties = new List<SpiderProperty>();
+                List<SpiderProperty> DTOProperties = new();
 
                 foreach (SpiderClass DTOClass in DTOClassGroup) // It can only be 2 here
                     DTOProperties.AddRange(DTOClass.Properties);

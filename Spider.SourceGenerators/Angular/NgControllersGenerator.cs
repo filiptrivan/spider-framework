@@ -250,6 +250,8 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
 {{GetBaseGetListAngularControllerMethod(entity, alreadyAddedMethods)}}
 
+{{GetBaseGetMainUIFormAngularControllerMethod(entity, alreadyAddedMethods)}}
+
 {{GetBaseGetAngularControllerMethod(entity, alreadyAddedMethods)}}
 
 {{GetBaseGetListForAutocompleteAngularControllerMethods(entity, alreadyAddedMethods)}}
@@ -532,6 +534,18 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
             }
 
             return sb.ToString();
+        }
+
+        private static string GetBaseGetMainUIFormAngularControllerMethod(SpiderClass entity, HashSet<string> alreadyAddedMethods)
+        {
+            string methodName = $"Get{entity.Name}MainUIFormDTO";
+
+            if (alreadyAddedMethods.Contains(methodName))
+                return null;
+
+            Dictionary<string, string> getAndDeleteParameters = new() { { "id", "number" } };
+
+            return GetAngularControllerMethod(methodName, getAndDeleteParameters, returnType:$"{entity.Name}MainUIForm", HttpTypeCodes.Get, entity.ControllerName, Settings.HttpOptionsBase);
         }
 
         private static string GetBaseGetAngularControllerMethod(SpiderClass entity, HashSet<string> alreadyAddedMethods)

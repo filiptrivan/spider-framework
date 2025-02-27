@@ -30,9 +30,9 @@ export class IndexCardComponent {
     
     constructor(
         protected formBuilder: FormBuilder,
-        ) {
+    ) {
 
-        }
+    }
 
     ngOnInit(){
         // console.log(this.last);

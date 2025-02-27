@@ -6,6 +6,13 @@
 	}
 }
 
+.buttons-wrapper{
+    gap: 0.5rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
 .multiple-panel-first-without-header{
 	.p-panel .p-panel-content {
 		border-bottom-left-radius: 0px;

@@ -3,7 +3,7 @@
     'card-margin-bottom': true,
 	}">
 	<spider-panel [crudMenu]="crudMenu" [showCrudMenu]="showCrudMenu" (onMenuIconClick)="menuIconClick($event)" [showRemoveIcon]="showRemoveIcon" (onRemoveIconClick)="removeIconClick()" [index]="index">
-		<panel-header [title]="header" [index]="index" [icon]="null"></panel-header>
+		<panel-header [title]="header" [index]="index" [showIcon]="false"></panel-header>
 		
 		<panel-body>
 			<ng-content>
