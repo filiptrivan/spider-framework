@@ -89,7 +89,7 @@ export class BaseFormCopy implements OnInit {
 
         Object.keys(res).forEach((key) => {
           const formControl = this.formGroup.get(key);
-          console.log(this.formGroup)
+          
           if (formControl) {
             if (formControl instanceof SpiderFormArray) {
               const formArray = formControl as SpiderFormArray;
@@ -103,7 +103,6 @@ export class BaseFormCopy implements OnInit {
 
               res[key].forEach((model: any) => {
                 if (typeof model === 'object' && model !== null) {
-                  console.log(formArray.modelConstructor)
                   Object.assign(formArray.modelConstructor, model);
                   let helperFormGroup = new SpiderFormGroup({});
                   this.baseFormService.createFormGroup(helperFormGroup, formArray.modelConstructor)
