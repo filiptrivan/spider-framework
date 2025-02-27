@@ -7,7 +7,7 @@ using OfficeOpenXml.Style;
 using OfficeOpenXml.Table;
 using System.Resources;
 using Spider.Shared.Resources;
-using Spider.Shared.Helpers;
+using Spider.Shared.Extensions;
 
 namespace Spider.Shared.Excel
 {

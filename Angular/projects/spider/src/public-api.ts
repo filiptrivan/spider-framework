@@ -20,9 +20,12 @@ export * from './lib/controls/spider-number/spider-number.component';
 export * from './lib/controls/spider-password/spider-password.component';
 export * from './lib/controls/spider-textarea/spider-textarea.component';
 export * from './lib/controls/spider-textbox/spider-textbox.component';
+export * from './lib/controls/base-control';
+export * from './lib/controls/base-autocomplete-control';
+export * from './lib/controls/base-dropdown-control';
 export * from './lib/controls/spider-controls.module';
 
-export * from './lib/components/base-details/security-base-details.generated'
+export * from './lib/components/base-details/role-base-details.component'
 export * from './lib/components/base-form/base-form copy';
 export * from './lib/components/card-skeleton/card-skeleton.component';
 export * from './lib/components/auth/partials/login-verification.component';

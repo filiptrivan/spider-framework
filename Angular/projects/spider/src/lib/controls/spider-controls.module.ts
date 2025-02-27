@@ -4,7 +4,7 @@ import { SpiderMultiAutocompleteComponent } from './spider-multiautocomplete/spi
 import { SpiderPasswordComponent } from './spider-password/spider-password.component';
 import { SpiderTextboxComponent } from './spider-textbox/spider-textbox.component';
 import { SpiderCheckboxComponent } from './spider-checkbox/spider-checkbox.component';
-import { SpiderMultiselectComponent } from './spider-multiselect/spider-multiselect.component';
+import { SpiderMultiSelectComponent } from './spider-multiselect/spider-multiselect.component';
 import { SpiderTextareaComponent } from './spider-textarea/spider-textarea.component';
 import { SpiderNumberComponent } from './spider-number/spider-number.component';
 import { SpiderDropdownComponent } from './spider-dropdown/spider-dropdown.component';
@@ -28,7 +28,7 @@ import { SpiderReturnButtonComponent } from '../components/spider-buttons/return
     SpiderPasswordComponent,
     SpiderAutocompleteComponent,
     SpiderMultiAutocompleteComponent,
-    SpiderMultiselectComponent,
+    SpiderMultiSelectComponent,
     SpiderNumberComponent,
     SpiderDropdownComponent,
     SpiderEditorComponent,
@@ -46,7 +46,7 @@ import { SpiderReturnButtonComponent } from '../components/spider-buttons/return
     SpiderPasswordComponent,
     SpiderAutocompleteComponent,
     SpiderMultiAutocompleteComponent,
-    SpiderMultiselectComponent,
+    SpiderMultiSelectComponent,
     SpiderNumberComponent,
     SpiderDropdownComponent,
     SpiderEditorComponent,

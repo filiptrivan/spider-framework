@@ -1,0 +1,33 @@
+<ng-container *transloco="let t">
+    <spider-panel>
+        <panel-header></panel-header>
+
+        <panel-body>
+            <form *ngIf="loading === false" class="grid"> <!-- FT: Don't put @deffer it's not working as expected -->
+                <div class="col-12">
+                    <spider-textbox [control]="control('name', roleFormGroup)"></spider-textbox>
+                </div>
+                <div class="col-12">
+                    <spider-textarea [control]="control('description', roleFormGroup)"></spider-textarea>
+                </div>
+                <div class="col-12">
+                    <spider-multiautocomplete [control]="selectedUsersForRole" [options]="usersForRoleOptions" (onTextInput)="searchUsersForRole($event)" [label]="t('Users')"></spider-multiautocomplete>
+                </div>
+                <div class="col-12">
+                    <spider-multiselect [control]="selectedPermissionsForRole" [options]="permissionsForRoleOptions" [label]="t('Permissions')"></spider-multiselect>
+                </div>
+            </form>
+
+            <card-skeleton *ngIf="loading === true" [height]="502"></card-skeleton>
+
+        </panel-body>
+
+        <panel-footer>
+            <spider-button [disabled]="!isAuthorizedForSave" (onClick)="save()" [label]="t('Save')" icon="pi pi-save"></spider-button>
+            @for (button of additionalButtons; track button.label) {
+                <spider-button (onClick)="button.onClick()" [disabled]="button.disabled" [label]="button.label" [icon]="button.icon"></spider-button>
+            }
+            <spider-return-button></spider-return-button>
+        </panel-footer>
+    </spider-panel>
+</ng-container>

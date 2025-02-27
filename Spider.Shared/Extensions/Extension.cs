@@ -1,8 +1,10 @@
 ﻿using Spider.Shared.Resources;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Resources;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -55,5 +57,28 @@ namespace Spider.Shared.Extensions
         {
             return new List<T> { structValue };
         }
+
+        #region ResourceManager
+
+        public static string GetExcelTranslation(this ResourceManager manager, string excelKey, string pluralKey)
+        {
+            string result = manager.GetTranslation(excelKey);
+
+            if (result == null)
+                result = manager.GetTranslation(pluralKey);
+
+            if (result == null)
+                result = SharedTerms.ResourceManager.GetTranslation(pluralKey);
+
+            return string.IsNullOrEmpty(result) ? pluralKey : result;
+        }
+
+        public static string GetTranslation(this ResourceManager manager, string key)
+        {
+            string result = manager.GetString(key, CultureInfo.CurrentCulture);
+            return string.IsNullOrEmpty(result) ? null : result;
+        }
+
+        #endregion
     }
 }

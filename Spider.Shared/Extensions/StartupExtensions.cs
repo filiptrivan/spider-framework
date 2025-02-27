@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;
 using System.Threading.RateLimiting;
 using Serilog;
+using Serilog.Events;
 
 namespace Spider.Shared.Extensions
 {
@@ -265,46 +266,50 @@ namespace Spider.Shared.Extensions
 
                         Exception exception = contextFeature.Error;
 
-                        Log.Error(
-                            exception, 
-                            "Currently authenticated user: {userEmail} (id: {userId});", 
-                            Helper.GetCurrentUserEmailOrDefault(context), Helper.GetCurrentUserIdOrDefault(context)
-                        );
-
                         string exceptionString = "";
 
                         if (env.IsDevelopment())
                             exceptionString = exception.ToString();
 
                         string message;
-                        if (exception is BusinessException bussinessEx)
+                        LogEventLevel logLevel;
+
+                        if (exception is BusinessException businessEx)
                         {
                             context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                            message = bussinessEx.Message;
+                            message = businessEx.Message;
+                            logLevel = LogEventLevel.Warning;
+                        }
+                        else if (exception is ExpiredVerificationException expiredVerificationEx)
+                        {
+                            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                            message = expiredVerificationEx.Message;
+                            logLevel = LogEventLevel.Information;
                         }
                         else if (exception is UnauthorizedException unauthorizedEx)
                         {
                             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                             message = unauthorizedEx.Message;
+                            logLevel = LogEventLevel.Error;
                         }
                         else if (exception is SecurityTokenException securityTokenEx)
                         {
                             context.Response.StatusCode = StatusCodes.Status419AuthenticationTimeout;
                             message = securityTokenEx.Message;
-                        }
-                        else if (exception is ExpiredVerificationException expiredVerificationEx)
-                        {
-                            context.Response.StatusCode = StatusCodes.Status419AuthenticationTimeout;
-                            message = expiredVerificationEx.Message;
-                        }
-                        else if (exception is SqlException sqlEx && sqlEx.Number == 2627)
-                        {
-                            message = sqlEx.Message; // FT: Test this
+                            logLevel = LogEventLevel.Information;
                         }
                         else
                         {
                             message = $"{SharedTerms.GlobalError}";
+                            logLevel = LogEventLevel.Error;
                         }
+
+                        Log.Write(
+                            logLevel,
+                            exception,
+                            "Currently authenticated user: {userEmail} (id: {userId});",
+                            Helper.GetCurrentUserEmailOrDefault(context), Helper.GetCurrentUserIdOrDefault(context)
+                        );
 
                         await context.Response.WriteAsJsonAsync(new
                         {

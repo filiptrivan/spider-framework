@@ -64,12 +64,6 @@ namespace Spider.Shared.Helpers
             return streamReader.ReadToEnd();
         }
 
-        public static string GetTranslation(this ResourceManager manager, string key)
-        {
-            string result = manager.GetString(key, CultureInfo.CurrentCulture);
-            return string.IsNullOrEmpty(result) ? null : result;
-        }
-
         public static bool AreIdsDifferent<ID>(List<ID> ids1, List<ID> ids2) where ID : struct
         {
             return ids1.Except(ids2).Any() || ids2.Except(ids1).Any();

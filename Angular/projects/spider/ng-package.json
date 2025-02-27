@@ -3,5 +3,8 @@
   "dest": "../../dist/spider",
   "lib": {
     "entryFile": "src/public-api.ts"
-  }
+  },
+  "assets": [
+    { "input": "src/lib", "glob": "**/*.scss", "output": "styles" }
+  ]
 }

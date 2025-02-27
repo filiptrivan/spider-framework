@@ -77,6 +77,7 @@ using Azure.Storage.Blobs;
 using System.Data;
 using Spider.Infrastructure;
 using Spider.Shared.Helpers;
+using Spider.Shared.Extensions;
 using Spider.Shared.Attributes;
 using Spider.Shared.Interfaces;
 using {{appName}}.Shared.Resources;
@@ -165,7 +166,7 @@ namespace {{basePartOfNamespace}}.Controllers
         public virtual async Task<IActionResult> Export{{referencedProjectEntity.Name}}TableDataToExcel(TableFilterDTO tableFilterDTO)
         {
             byte[] fileContent = await _{{businessServiceName.FirstCharToLower()}}.Export{{referencedProjectEntity.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{referencedProjectEntity.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntity)}});
-            return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"{TermsGenerated.{{referencedProjectEntity.Name}}ExcelExportName}.xlsx"));
+            return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"{TermsGenerated.ResourceManager.GetExcelTranslation("{{referencedProjectEntity.Name}}ExcelExportName", "{{referencedProjectEntity.Name}}List")}.xlsx"));
         }
 
         [HttpGet]

@@ -20,7 +20,7 @@ import { PrimengModule } from '../../modules/primeng.module';
         RequiredComponent
     ]
 })
-export class SpiderMultiselectComponent extends BaseDropdownControl implements OnInit {
+export class SpiderMultiSelectComponent extends BaseDropdownControl implements OnInit {
     
     constructor(
         protected override translocoService: TranslocoService,

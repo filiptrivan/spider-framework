@@ -190,8 +190,8 @@
     <comment>Datum promene</comment>
   </data>
   <data name="Id" xml:space="preserve">
-    <value>Identifier</value>
-    <comment>Identifikator</comment>
+    <value>Id</value>
+    <comment>Id</comment>
   </data>
   <data name="Name" xml:space="preserve">
     <value>Name</value>
@@ -204,5 +204,125 @@
   <data name="EmailSendError" xml:space="preserve">
     <value>An error occurred while sending the email, our team has been informed and will fix it as soon as possible. Thank you for your patience.</value>
     <comment>Dogodila se greška prilikom slanja mejla, naš tim je obavešten i otkloniće je u najkraćem mogućem roku. Hvala Vam na strpljenju.</comment>
+  </data>
+  <data name="HasLoggedInWithExternalProvider" xml:space="preserve">
+    <value></value>
+    <comment>Prijavljen sa eksternim provajderom</comment>
+  </data>
+  <data name="IsDisabled" xml:space="preserve">
+    <value></value>
+    <comment>Blokiran</comment>
+  </data>
+  <data name="Gender" xml:space="preserve">
+    <value></value>
+    <comment>Pol</comment>
+  </data>
+  <data name="GenderId" xml:space="preserve">
+    <value>Gender Id</value>
+    <comment>Id pola</comment>
+  </data>
+  <data name="GenderDisplayName" xml:space="preserve">
+    <value>Gender</value>
+    <comment>Pol</comment>
+  </data>
+  <data name="Version" xml:space="preserve">
+    <value>Version</value>
+    <comment>Verzija</comment>
+  </data>
+  <data name="UserExtended" xml:space="preserve">
+    <value>User</value>
+    <comment>Korisnik</comment>
+  </data>
+  <data name="User" xml:space="preserve">
+    <value>User</value>
+    <comment>Korisnik</comment>
+  </data>
+  <data name="BirthDate" xml:space="preserve">
+    <value>Birth date</value>
+    <comment>Datum rođenja</comment>
+  </data>
+  <data name="ValidFrom" xml:space="preserve">
+    <value>Valid from</value>
+    <comment>Važi od</comment>
+  </data>
+  <data name="ValidTo" xml:space="preserve">
+    <value>Valid to</value>
+    <comment>Važi do</comment>
+  </data>
+  <data name="OrderNumber" xml:space="preserve">
+    <value>Order number</value>
+    <comment>Redni broj</comment>
+  </data>
+  <data name="Points" xml:space="preserve">
+    <value>Points</value>
+    <comment>Poeni</comment>
+  </data>
+  <data name="Partner" xml:space="preserve">
+    <value>Partner</value>
+    <comment>Partner</comment>
+  </data>
+  <data name="IsMarkedAsRead" xml:space="preserve">
+    <value>Is marked as read</value>
+    <comment>Označeno kao pročitano</comment>
+  </data>
+  <data name="UserId" xml:space="preserve">
+    <value>User Id</value>
+    <comment>Id korisnika</comment>
+  </data>
+  <data name="UserDisplayName" xml:space="preserve">
+    <value>User</value>
+    <comment>Korisnik</comment>
+  </data>
+  <data name="PartnerId" xml:space="preserve">
+    <value>Partner Id</value>
+    <comment>Id partnera</comment>
+  </data>
+  <data name="Code" xml:space="preserve">
+    <value>Code</value>
+    <comment>Šifra</comment>
+  </data>
+  <data name="Title" xml:space="preserve">
+    <value>Title</value>
+    <comment>Naslov</comment>
+  </data>
+  <data name="EmailBody" xml:space="preserve">
+    <value>Email body</value>
+    <comment>Sadržaj email-a</comment>
+  </data>
+  <data name="Slug" xml:space="preserve">
+    <value>Slug</value>
+    <comment>Url putanja</comment>
+  </data>
+  <data name="LogoImage" xml:space="preserve">
+    <value>Logo</value>
+    <comment>Logo</comment>
+  </data>
+  <data name="PrimaryColor" xml:space="preserve">
+    <value>Primary color</value>
+    <comment>Primarna boja</comment>
+  </data>
+  <data name="Discount" xml:space="preserve">
+    <value>Discount</value>
+    <comment>Popust</comment>
+  </data>
+  <data name="UserExtendedList" xml:space="preserve">
+    <value>Users</value>
+    <comment>Korisnici</comment>
+  </data>
+  <data name="PartnerList" xml:space="preserve">
+    <value>Partners</value>
+    <comment>Partneri</comment>
+  </data>
+  <data name="NotificationList" xml:space="preserve">
+    <value>Notifications</value>
+    <comment>Notifikacije</comment>
+  </data>
+  <data name="RoleList" xml:space="preserve">
+    <value>Roles</value>
+    <comment>Uloge</comment>
+  </data>
+  <data name="PartnerDisplayName" xml:space="preserve">
+    <value>Partner</value>
+    <comment>Partner</comment>
   </data>
 </root>

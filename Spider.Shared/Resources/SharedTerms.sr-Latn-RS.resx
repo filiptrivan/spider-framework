@@ -187,7 +187,7 @@
     <value>Datum promene</value>
   </data>
   <data name="Id" xml:space="preserve">
-    <value>Identifikator</value>
+    <value>Id</value>
   </data>
   <data name="Name" xml:space="preserve">
     <value>Naziv</value>
@@ -197,5 +197,95 @@
   </data>
   <data name="EmailSendError" xml:space="preserve">
     <value>Dogodila se greška prilikom slanja mejla, naš tim je obavešten i otkloniće je u najkraćem mogućem roku. Hvala Vam na strpljenju.</value>
+  </data>
+  <data name="HasLoggedInWithExternalProvider" xml:space="preserve">
+    <value>Prijavljen sa eksternim provajderom</value>
+  </data>
+  <data name="IsDisabled" xml:space="preserve">
+    <value>Blokiran</value>
+  </data>
+  <data name="Gender" xml:space="preserve">
+    <value>Pol</value>
+  </data>
+  <data name="GenderId" xml:space="preserve">
+    <value>Id pola</value>
+  </data>
+  <data name="GenderDisplayName" xml:space="preserve">
+    <value>Pol</value>
+  </data>
+  <data name="Version" xml:space="preserve">
+    <value>Verzija</value>
+  </data>
+  <data name="UserExtended" xml:space="preserve">
+    <value>Korisnik</value>
+  </data>
+  <data name="User" xml:space="preserve">
+    <value>Korisnik</value>
+  </data>
+  <data name="BirthDate" xml:space="preserve">
+    <value>Datum rođenja</value>
+  </data>
+  <data name="ValidFrom" xml:space="preserve">
+    <value>Važi od</value>
+  </data>
+  <data name="ValidTo" xml:space="preserve">
+    <value>Važi do</value>
+  </data>
+  <data name="OrderNumber" xml:space="preserve">
+    <value>Redni broj</value>
+  </data>
+  <data name="Points" xml:space="preserve">
+    <value>Poeni</value>
+  </data>
+  <data name="Partner" xml:space="preserve">
+    <value>Partner</value>
+  </data>
+  <data name="IsMarkedAsRead" xml:space="preserve">
+    <value>Označeno kao pročitano</value>
+  </data>
+  <data name="UserId" xml:space="preserve">
+    <value>Id korisnika</value>
+  </data>
+  <data name="UserDisplayName" xml:space="preserve">
+    <value>Korisnik</value>
+  </data>
+  <data name="PartnerId" xml:space="preserve">
+    <value>Id partnera</value>
+  </data>
+  <data name="Code" xml:space="preserve">
+    <value>Šifra</value>
+  </data>
+  <data name="Title" xml:space="preserve">
+    <value>Naslov</value>
+  </data>
+  <data name="EmailBody" xml:space="preserve">
+    <value>Sadržaj email-a</value>
+  </data>
+  <data name="Slug" xml:space="preserve">
+    <value>Url putanja</value>
+  </data>
+  <data name="LogoImage" xml:space="preserve">
+    <value>Logo</value>
+  </data>
+  <data name="PrimaryColor" xml:space="preserve">
+    <value>Primarna boja</value>
+  </data>
+  <data name="Discount" xml:space="preserve">
+    <value>Popust</value>
+  </data>
+  <data name="UserExtendedList" xml:space="preserve">
+    <value>Korisnici</value>
+  </data>
+  <data name="PartnerList" xml:space="preserve">
+    <value>Partneri</value>
+  </data>
+  <data name="NotificationList" xml:space="preserve">
+    <value>Notifikacije</value>
+  </data>
+  <data name="RoleList" xml:space="preserve">
+    <value>Uloge</value>
+  </data>
+  <data name="PartnerDisplayName" xml:space="preserve">
+    <value>Partner</value>
   </data>
 </root>

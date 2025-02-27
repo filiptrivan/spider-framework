@@ -157,8 +157,6 @@ export class {{entity.Name}}BaseDetailsComponent {
     modelId: number;
     loading: boolean = true;
 
-    currentUserPermissionCodes: string[] = [];
-
     {{entity.Name.FirstCharToLower()}}SaveBodyName: string = nameof<{{entity.Name}}SaveBody>('{{entity.Name.FirstCharToLower()}}DTO');
 
 {{string.Join("\n\n", GetOrderedOneToManyVariables(entity, allEntities))}}
@@ -1185,7 +1183,7 @@ export class {{entity.Name}}BaseDetailsComponent {
             {
                 return $$"""
 
-                            [tableTitle]="t('{{property.Name}}For{{entity.Name}}')" 
+                            [tableTitle]="t('{{property.Name}}')" 
                             [cols]="{{property.Name.FirstCharToLower()}}TableColsFor{{entity.Name}}" 
                             [getTableDataObservableMethod]="get{{property.Name}}TableDataObservableMethodFor{{entity.Name}}" 
                             [exportTableDataToExcelObservableMethod]="export{{property.Name}}TableDataToExcelObservableMethodFor{{entity.Name}}"

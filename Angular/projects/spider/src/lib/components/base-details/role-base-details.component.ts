@@ -20,54 +20,33 @@ import { PrimengOption } from '../../entities/primeng-option';
 import { AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { IsAuthorizedForSaveEvent } from '../../entities/is-authorized-for-save-event';
 import { AuthBaseService } from '../../services/auth-base.service';
+import { SpiderTextboxComponent } from '../../controls/spider-textbox/spider-textbox.component';
+import { SpiderTextareaComponent } from '../../controls/spider-textarea/spider-textarea.component';
+import { SpiderMultiAutocompleteComponent } from '../../controls/spider-multiautocomplete/spider-multiautocomplete.component';
+import { SpiderMultiSelectComponent } from '../../controls/spider-multiselect/spider-multiselect.component';
+import { SpiderPanelsModule } from '../spider-panels/spider-panels.module';
+import { SpiderButtonComponent } from '../spider-buttons/spider-button/spider-button.component';
+import { SpiderReturnButtonComponent } from '../spider-buttons/return-button/spider-return-button.component';
 
 @Component({
     selector: 'role-base-details',
-    template:`
-<ng-container *transloco="let t">
-    <spider-panel [isFirstMultiplePanel]="isFirstMultiplePanel" [isMiddleMultiplePanel]="isMiddleMultiplePanel" [isLastMultiplePanel]="isLastMultiplePanel">
-        <panel-header></panel-header>
-
-        <panel-body>
-            @defer (when loading === false) {
-                <form class="grid">
-                    <div class="col-12">
-                        <spider-textbox [control]="control('name', roleFormGroup)"></spider-textbox>
-                    </div>
-                    <div class="col-12">
-                        <spider-textarea [control]="control('description', roleFormGroup)"></spider-textarea>
-                    </div>
-                    <div class="col-12">
-                        <spider-multiautocomplete [control]="selectedUsersForRole" [options]="usersForRoleOptions" (onTextInput)="searchUsersForRole($event)" [label]="t('Users')"></spider-multiautocomplete>
-                    </div>
-                    <div class="col-12">
-                        <spider-multiselect [control]="selectedPermissionsForRole" [options]="permissionsForRoleOptions" [label]="t('Permissions')"></spider-multiselect>
-                    </div>
-                </form>
-            } @placeholder {
-                <card-skeleton [height]="502"></card-skeleton>
-            }
-        </panel-body>
-
-        <panel-footer>
-        <spider-button [disabled]="!isAuthorizedForSave" (onClick)="save()" [label]="t('Save')" icon="pi pi-save"></spider-button>
-            @for (button of additionalButtons; track button.label) {
-                <spider-button (onClick)="button.onClick()" [disabled]="button.disabled" [label]="button.label" [icon]="button.icon"></spider-button>
-            }
-            <spider-return-button></spider-return-button>
-        </panel-footer>
-    </spider-panel>
-</ng-container>
-    `,
+    templateUrl: 'role-base-details.component.html',
     standalone: true,
     imports: [
         CommonModule, 
         FormsModule,
         ReactiveFormsModule,
         PrimengModule,
-        SpiderControlsModule,
+        // SpiderControlsModule,
         TranslocoDirective,
         CardSkeletonComponent,
+        SpiderTextboxComponent,
+        SpiderTextareaComponent,
+        SpiderMultiAutocompleteComponent,
+        SpiderMultiSelectComponent,
+        SpiderPanelsModule,
+        SpiderButtonComponent,
+        SpiderReturnButtonComponent
     ]
 })
 export class RoleBaseDetailsComponent {
@@ -77,9 +56,6 @@ export class RoleBaseDetailsComponent {
     @Input() formGroup: SpiderFormGroup;
     @Input() roleFormGroup: SpiderFormGroup<Role>;
     @Input() additionalButtons: SpiderButton[] = [];
-    @Input() isFirstMultiplePanel: boolean = false;
-    @Input() isMiddleMultiplePanel: boolean = false;
-    @Input() isLastMultiplePanel: boolean = false;
 
     authorizationForSaveSubscription: Subscription;
     @Input() authorizedForSaveObservable: () => Observable<boolean> = () => of(false);

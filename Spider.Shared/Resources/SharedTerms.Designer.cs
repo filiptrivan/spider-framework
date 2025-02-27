@@ -88,6 +88,24 @@ namespace Spider.Shared.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Birth date.
+        /// </summary>
+        public static string BirthDate {
+            get {
+                return ResourceManager.GetString("BirthDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Code.
+        /// </summary>
+        public static string Code {
+            get {
+                return ResourceManager.GetString("Code", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to This record has been modified or deleted by another user..
         /// </summary>
         public static string ConcurrencyException {
@@ -124,11 +142,29 @@ namespace Spider.Shared.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Discount.
+        /// </summary>
+        public static string Discount {
+            get {
+                return ResourceManager.GetString("Discount", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Account verification.
         /// </summary>
         public static string EmailAccountVerificationTitle {
             get {
                 return ResourceManager.GetString("EmailAccountVerificationTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Email body.
+        /// </summary>
+        public static string EmailBody {
+            get {
+                return ResourceManager.GetString("EmailBody", resourceCulture);
             }
         }
         
@@ -178,6 +214,33 @@ namespace Spider.Shared.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        public static string Gender {
+            get {
+                return ResourceManager.GetString("Gender", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Gender.
+        /// </summary>
+        public static string GenderDisplayName {
+            get {
+                return ResourceManager.GetString("GenderDisplayName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Gender Id.
+        /// </summary>
+        public static string GenderId {
+            get {
+                return ResourceManager.GetString("GenderId", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to An error occurred in the system, our team has been informed and will fix it as soon as possible. Thank you for your patience..
         /// </summary>
         public static string GlobalError {
@@ -187,11 +250,38 @@ namespace Spider.Shared.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Identifier.
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        public static string HasLoggedInWithExternalProvider {
+            get {
+                return ResourceManager.GetString("HasLoggedInWithExternalProvider", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Id.
         /// </summary>
         public static string Id {
             get {
                 return ResourceManager.GetString("Id", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        public static string IsDisabled {
+            get {
+                return ResourceManager.GetString("IsDisabled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Is marked as read.
+        /// </summary>
+        public static string IsMarkedAsRead {
+            get {
+                return ResourceManager.GetString("IsMarkedAsRead", resourceCulture);
             }
         }
         
@@ -201,6 +291,15 @@ namespace Spider.Shared.Resources {
         public static string LatestVerificationCodeException {
             get {
                 return ResourceManager.GetString("LatestVerificationCodeException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Logo.
+        /// </summary>
+        public static string LogoImage {
+            get {
+                return ResourceManager.GetString("LogoImage", resourceCulture);
             }
         }
         
@@ -232,6 +331,15 @@ namespace Spider.Shared.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Notifications.
+        /// </summary>
+        public static string NotificationList {
+            get {
+                return ResourceManager.GetString("NotificationList", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Your account already exists with third-party (eg. Google) authentication. If you want to set up a password as well, please use the &apos;Forgot password?&apos; option to reset it or log in to your profile and add a password..
         /// </summary>
         public static string OnlyThirdPartyAccountButTriedToRegisterOrLoginException {
@@ -241,11 +349,74 @@ namespace Spider.Shared.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Order number.
+        /// </summary>
+        public static string OrderNumber {
+            get {
+                return ResourceManager.GetString("OrderNumber", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Partner.
+        /// </summary>
+        public static string Partner {
+            get {
+                return ResourceManager.GetString("Partner", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Partner.
+        /// </summary>
+        public static string PartnerDisplayName {
+            get {
+                return ResourceManager.GetString("PartnerDisplayName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Partner Id.
+        /// </summary>
+        public static string PartnerId {
+            get {
+                return ResourceManager.GetString("PartnerId", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Partners.
+        /// </summary>
+        public static string PartnerList {
+            get {
+                return ResourceManager.GetString("PartnerList", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Password.
         /// </summary>
         public static string Password {
             get {
                 return ResourceManager.GetString("Password", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Points.
+        /// </summary>
+        public static string Points {
+            get {
+                return ResourceManager.GetString("Points", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Primary color.
+        /// </summary>
+        public static string PrimaryColor {
+            get {
+                return ResourceManager.GetString("PrimaryColor", resourceCulture);
             }
         }
         
@@ -268,11 +439,38 @@ namespace Spider.Shared.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Roles.
+        /// </summary>
+        public static string RoleList {
+            get {
+                return ResourceManager.GetString("RoleList", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to An account with this email address already exists..
         /// </summary>
         public static string SameEmailAlreadyExistsException {
             get {
                 return ResourceManager.GetString("SameEmailAlreadyExistsException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Slug.
+        /// </summary>
+        public static string Slug {
+            get {
+                return ResourceManager.GetString("Slug", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Title.
+        /// </summary>
+        public static string Title {
+            get {
+                return ResourceManager.GetString("Title", resourceCulture);
             }
         }
         
@@ -295,11 +493,83 @@ namespace Spider.Shared.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to User.
+        /// </summary>
+        public static string User {
+            get {
+                return ResourceManager.GetString("User", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to User.
+        /// </summary>
+        public static string UserDisplayName {
+            get {
+                return ResourceManager.GetString("UserDisplayName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Users.
         /// </summary>
         public static string UserExcel {
             get {
                 return ResourceManager.GetString("UserExcel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to User.
+        /// </summary>
+        public static string UserExtended {
+            get {
+                return ResourceManager.GetString("UserExtended", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Users.
+        /// </summary>
+        public static string UserExtendedList {
+            get {
+                return ResourceManager.GetString("UserExtendedList", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to User Id.
+        /// </summary>
+        public static string UserId {
+            get {
+                return ResourceManager.GetString("UserId", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Valid from.
+        /// </summary>
+        public static string ValidFrom {
+            get {
+                return ResourceManager.GetString("ValidFrom", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Valid to.
+        /// </summary>
+        public static string ValidTo {
+            get {
+                return ResourceManager.GetString("ValidTo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Version.
+        /// </summary>
+        public static string Version {
+            get {
+                return ResourceManager.GetString("Version", resourceCulture);
             }
         }
     }
