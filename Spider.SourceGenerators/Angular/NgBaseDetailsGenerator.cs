@@ -104,7 +104,7 @@ namespace Spider.SourceGenerators.Angular
             @defer (when loading === false) {
                 <form class="grid">
                     <ng-content select="[BEFORE]"></ng-content>
-{{string.Join("\n", GetPropertyBlocks(entity.Properties, entity, allEntities, customDTOClasses, isFromOrderedOneToMany: false))}}
+{{string.Join("\n", GetPropertyBlocks(entity.Properties.ToList(), entity, allEntities, customDTOClasses, isFromOrderedOneToMany: false))}}
                     <ng-content select="[AFTER]"></ng-content>
                 </form>
             } @placeholder {
@@ -222,7 +222,7 @@ export class {{entity.Name}}BaseDetailsComponent {
     }
 
     init{{entity.Name}}FormGroup({{entity.Name.FirstCharToLower()}}: {{entity.Name}}) {
-        this.baseFormService.initFormGroup<{{entity.Name}}>(
+        this.baseFormService.addFormGroup<{{entity.Name}}>(
             this.{{entity.Name.FirstCharToLower()}}FormGroup, 
             this.formGroup, 
             {{entity.Name.FirstCharToLower()}}, 
@@ -299,7 +299,7 @@ export class {{entity.Name}}BaseDetailsComponent {
         {
             StringBuilder sb = new();
 
-            List<AngularFormBlock> formBlocks = GetAngularFormBlocks(entity.Properties, entity, allEntities, customDTOClasses);
+            List<AngularFormBlock> formBlocks = GetAngularFormBlocks(entity, allEntities, customDTOClasses);
 
             foreach (AngularFormBlock formBlock in formBlocks)
             {
@@ -338,7 +338,7 @@ export class {{entity.Name}}BaseDetailsComponent {
         {
             StringBuilder sb = new();
 
-            List<AngularFormBlock> formBlocks = GetAngularFormBlocks(entity.Properties, entity, allEntities, customDTOClasses);
+            List<AngularFormBlock> formBlocks = GetAngularFormBlocks(entity, allEntities, customDTOClasses);
 
             foreach (AngularFormBlock formBlock in formBlocks)
             {
@@ -1047,13 +1047,14 @@ export class {{entity.Name}}BaseDetailsComponent {
         }
 
         private static List<AngularFormBlock> GetAngularFormBlocks(
-            List<SpiderProperty> properties,
             SpiderClass entity,
             List<SpiderClass> allEntities,
             List<SpiderClass> customDTOClasses
         )
         {
             List<AngularFormBlock> result = new();
+
+            List<SpiderProperty> properties = entity.Properties.ToList();
 
             SpiderClass customDTOClass = customDTOClasses.Where(x => x.Name.Replace("DTO", "") == entity.Name).SingleOrDefault();
 

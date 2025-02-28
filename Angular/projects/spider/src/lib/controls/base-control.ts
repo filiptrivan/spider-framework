@@ -31,8 +31,9 @@ import { TranslocoService } from '@jsverse/transloco';
       if(this.control != null && this.disabled == true)
         this.control.disable();
 
-      if(this.control?.validator?.hasNotEmptyRule == true) // FT HACK: Be carefull with this name, if you change it in generator you need to change it here also
-        this.control.required = true;
+      // TODO FT: Delete if you don't need
+      // if(this.control?.validator?.hasNotEmptyRule == true) // FT HACK: Be carefull with this name, if you change it in generator you need to change it here also
+      //   this.control.required = true;
 
        this.errorMessageTooltipEvent = window.innerWidth > 1000 ? 'hover' : 'focus'
     }

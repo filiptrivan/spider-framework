@@ -102,18 +102,16 @@ export class RoleBaseDetailsComponent {
 
             if(this.modelId > 0){
                 forkJoin({
-                    role: this.apiService.getRole(this.modelId),
-                    usersForRole: this.apiService.getUsersNamebookListForRole(this.modelId),
-                    permissionsForRole: this.apiService.getPermissionsNamebookListForRole(this.modelId),
+                    mainUIFormDTO: this.apiService.getRoleMainUIFormDTO(this.modelId)
                 })
-                .subscribe(({ role, usersForRole, permissionsForRole }) => {
-                    this.initRoleFormGroup(new Role(role));
+                .subscribe(({ mainUIFormDTO }) => {
+                    this.initRoleFormGroup(new Role(mainUIFormDTO.roleDTO));
 
                     this.selectedPermissionsForRole.setValue(
-                        permissionsForRole.map(n => { return n.id })
+                        mainUIFormDTO.permissionsNamebookDTOList.map(n => { return n.id })
                     );
                     this.selectedUsersForRole.setValue(
-                        usersForRole.map(n => ({ label: n.displayName, value: n.id }))
+                        mainUIFormDTO.usersNamebookDTOList.map(n => ({ label: n.displayName, value: n.id }))
                     );
 
                     this.authorizationForSaveSubscription = this.handleAuthorizationForSave().subscribe();
@@ -130,7 +128,7 @@ export class RoleBaseDetailsComponent {
     }
 
     initRoleFormGroup(role: Role) {
-        this.baseFormService.initFormGroup<Role>(
+        this.baseFormService.addFormGroup<Role>(
             this.roleFormGroup, 
             this.formGroup, 
             role, 

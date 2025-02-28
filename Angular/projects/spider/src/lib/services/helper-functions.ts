@@ -184,7 +184,7 @@ export function capitalizeFirstLetter(inputString: string): string {
     return fileName ?? defaultName;
   }
 
-  export function getControl<T extends BaseEntity>(formControlName: string & keyof T, formGroup: SpiderFormGroup<T>) {
+  export const getControl = <T extends BaseEntity>(formControlName: string & keyof T, formGroup: SpiderFormGroup<T>) => {
       if (formGroup == null)
         return null; // FT: When we initialized form group again this will happen
   
@@ -193,7 +193,7 @@ export function capitalizeFirstLetter(inputString: string): string {
   
       let formControl = formGroup.controls[formControlName];
       if (formControl == null) {
-        console.error(`FT: The property ${formControlName} in the model ${formGroup.getRawValue().typeName} doesn't exist`);
+        console.error(`FT: The property ${formControlName} in the form group ${formGroup.getRawValue().typeName} doesn't exist`);
         return null;
       }
     

@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Namebook } from '../entities/namebook';
 import { TableFilter } from '../entities/table-filter';
-import { Login, Registration, RegistrationVerificationResult, RefreshTokenRequest, AuthResult, Role, User, ExternalProvider, VerificationTokenRequest, RoleSaveBody } from '../entities/security-entities';
+import { Login, Registration, RegistrationVerificationResult, RefreshTokenRequest, AuthResult, Role, User, ExternalProvider, VerificationTokenRequest, RoleSaveBody, RoleMainUIForm } from '../entities/security-entities';
 import { ConfigBaseService } from './config-base.service';
 import { TableResponse } from '../entities/table-response';
 
@@ -76,6 +76,10 @@ export class ApiSecurityService {
 
     deleteRole = (id: number): Observable<any> => { 
         return this.http.delete<any>(`${this.config.apiUrl}/Security/DeleteRole?id=${id}`);
+    }
+
+    getRoleMainUIFormDTO = (id: number): Observable<RoleMainUIForm> => {
+        return this.http.get<RoleMainUIForm>(`${this.config.apiUrl}/Security/GetRoleMainUIFormDTO?id=${id}`);
     }
 
     getRole = (id: number): Observable<Role> => {

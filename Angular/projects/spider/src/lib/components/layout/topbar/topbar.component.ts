@@ -67,7 +67,7 @@ export class AppTopBarComponent implements OnDestroy {
         }
       },
       {
-        label: this.translocoService.translate('NotificationList'),
+        label: this.translocoService.translate('Notifications'),
         icon: 'pi-bell',
         showNotificationBadge: true,
         onClick: () => {
@@ -76,7 +76,10 @@ export class AppTopBarComponent implements OnDestroy {
       },
       // {
       //   label: this.translocoService.translate('Settings'),
-      //   icon: 'pi-cog'
+      //   icon: 'pi-cog',
+      //   onClick: () => {
+      //     this.router.navigateByUrl(`/administration/users`);
+      //   }
       // },
       {
         label: this.translocoService.translate('Logout'),

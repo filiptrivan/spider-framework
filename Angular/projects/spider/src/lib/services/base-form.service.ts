@@ -17,30 +17,30 @@ export class BaseFormService {
     private translocoService: TranslocoService
   ) {}
 
-  initFormGroup<T>(
+  addFormGroup = <T>(
     formGroup: SpiderFormGroup<T>, 
     parentFormGroup: SpiderFormGroup, 
     modelConstructor: any, 
     propertyNameInSaveBody: string,
-    updateOnChangeControls?: (keyof T)[])
-  {
+    updateOnChangeControls?: (keyof T)[]
+  ) => {
     if (modelConstructor == null)
       return null;
 
     if (formGroup == null)
       console.error('FT: You need to instantiate the form group.')
 
-    this.createFormGroup(formGroup, modelConstructor, updateOnChangeControls);
+    this.initFormGroup(formGroup, modelConstructor, updateOnChangeControls);
     parentFormGroup.addControl(propertyNameInSaveBody, formGroup);
 
     return formGroup;
   }
 
-  createFormGroup<T>(
+  initFormGroup = <T>(
     formGroup: SpiderFormGroup<T>, 
     modelConstructor: T & BaseEntity, 
-    updateOnChangeControls?: (keyof T)[])
-  {
+    updateOnChangeControls?: (keyof T)[]
+  ) => {
     if (formGroup == null)
       console.error('FT: You need to instantiate the form group.')
 
@@ -90,7 +90,7 @@ export class BaseFormService {
     index: number,
   ) : SpiderFormGroup {
     let helperFormGroup = new SpiderFormGroup({});
-    this.createFormGroup(helperFormGroup, modelConstructor);
+    this.initFormGroup(helperFormGroup, modelConstructor);
     
     if (index == null) {
       formArray.push(helperFormGroup);
@@ -120,7 +120,7 @@ export class BaseFormService {
     modelList.forEach(model => {
       Object.assign(modelConstructor, model);
       let helperFormGroup: SpiderFormGroup = new SpiderFormGroup({});
-      this.createFormGroup(helperFormGroup, formArray.modelConstructor);
+      this.initFormGroup(helperFormGroup, formArray.modelConstructor);
       formArray.push(helperFormGroup);
     });
 

@@ -134,6 +134,13 @@ namespace Spider.Security.SecurityControllers // Needs to be other namespace bec
 
         [HttpGet]
         [AuthGuard]
+        public async Task<RoleMainUIFormDTO> GetRoleMainUIFormDTO(int id)
+        {
+            return await _securityBusinessService.GetRoleMainUIFormDTO(id, true);
+        }
+
+        [HttpGet]
+        [AuthGuard]
         public async Task<RoleDTO> GetRole(int id)
         {
             return await _securityBusinessService.GetRoleDTO(id, true);

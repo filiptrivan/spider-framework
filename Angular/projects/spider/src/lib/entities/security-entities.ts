@@ -4,6 +4,7 @@ import { TableFilterContext } from "./table-filter-context";
 import { TableFilterSortMeta } from "./table-filter-sort-meta";
 import { MimeTypes } from "./mime-type";
 import { RegistrationVerificationResultStatusCodes } from "../enums/security-enums";
+import { Namebook } from "./namebook";
 
 
 export class User extends BaseEntity
@@ -404,6 +405,31 @@ export class Role extends BaseEntity
     }
 }
 
+
+export class RoleMainUIForm extends BaseEntity
+{
+    roleDTO?: Role;
+	usersNamebookDTOList?: Namebook[];
+	permissionsNamebookDTOList?: Namebook[];
+
+    constructor(
+    {
+        roleDTO,
+        usersNamebookDTOList,
+        permissionsNamebookDTOList
+    }:{
+        roleDTO?: Role;
+        usersNamebookDTOList?: Namebook[];
+        permissionsNamebookDTOList?: Namebook[];     
+    } = {}
+    ) {
+        super('RoleMainUIForm'); 
+
+        this.roleDTO = roleDTO;
+        this.usersNamebookDTOList = usersNamebookDTOList;
+        this.permissionsNamebookDTOList = permissionsNamebookDTOList;
+    }
+}
 
 export class RoleSaveBody extends BaseEntity
 {

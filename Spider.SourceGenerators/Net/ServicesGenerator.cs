@@ -149,7 +149,7 @@ namespace {{basePartOfNamespace}}.Services
             string entityIdType = entity.GetIdType(allEntities);
 
             return $$"""
-        public async Task<{{entity.Name}}MainUIFormDTO> Get{{entity.Name}}MainUIFormDTO({{entityIdType}} id, bool authorize)
+        public async virtual Task<{{entity.Name}}MainUIFormDTO> Get{{entity.Name}}MainUIFormDTO({{entityIdType}} id, bool authorize)
         {
             return await _context.WithTransactionAsync(async () =>
             {
@@ -285,7 +285,9 @@ namespace {{basePartOfNamespace}}.Services
         {
             List<string> result = new();
 
-            result.Add($"{entity.Name}DTO = await Get{entity.Name}DTO(id, false),");
+            result.Add($$"""
+                    {{entity.Name}}DTO = await Get{{entity.Name}}DTO(id, false),
+""");
 
             foreach (SpiderProperty property in entity.Properties)
             {
@@ -1009,19 +1011,29 @@ namespace {{basePartOfNamespace}}.Services
                 if (classOfManyToOneProperty.IsBusinessObject() || classOfManyToOneProperty.IsReadonlyObject() == false)
                 {
                     result.Add($$"""
-            if (dto.{{prop.Name}}Id > 0)
-                poco.{{prop.Name}} = await GetInstanceAsync<{{prop.Type}}, {{classOfManyToOneProperty.GetIdType(allEntityClasses)}}>(dto.{{prop.Name}}Id.Value, null);
-            else
-                poco.{{prop.Name}} = null;
+                if (dto.{{prop.Name}}Id > 0)
+                {
+                    poco.{{prop.Name}} = await GetInstanceAsync<{{prop.Type}}, {{classOfManyToOneProperty.GetIdType(allEntityClasses)}}>(dto.{{prop.Name}}Id.Value, null);
+                }
+                else
+                {
+                    var _ = poco.{{prop.Name}}; // HACK
+                    poco.{{prop.Name}} = null;
+                }
 """);
                 }
                 else
                 {
                     result.Add($$"""
-            if (dto.{{prop.Name}}Id > 0)
-                poco.{{prop.Name}} = await GetInstanceAsync<{{prop.Type}}, {{classOfManyToOneProperty.GetIdType(allEntityClasses)}}>(dto.{{prop.Name}}Id.Value);
-            else
-                poco.{{prop.Name}} = null;
+                if (dto.{{prop.Name}}Id > 0)
+                {
+                    poco.{{prop.Name}} = await GetInstanceAsync<{{prop.Type}}, {{classOfManyToOneProperty.GetIdType(allEntityClasses)}}>(dto.{{prop.Name}}Id.Value);
+                }
+                else
+                {
+                    var _ = poco.{{prop.Name}}; // HACK
+                    poco.{{prop.Name}} = null;
+                }
 """);
                 }
             }

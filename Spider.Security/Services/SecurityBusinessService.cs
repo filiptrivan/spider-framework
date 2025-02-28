@@ -350,6 +350,24 @@ namespace Spider.Security.Services
 
         #region Role
 
+        public async override Task<RoleMainUIFormDTO> GetRoleMainUIFormDTO(int id, bool authorize)
+        {
+            return await _context.WithTransactionAsync(async () =>
+            {
+                if (authorize)
+                {
+                    await _authorizationService.AuthorizeRoleReadAndThrow(id);
+                }
+
+                return new RoleMainUIFormDTO
+                {
+                    RoleDTO = await GetRoleDTO(id, false),
+                    PermissionsNamebookDTOList = await GetPermissionsNamebookListForRole(id, false),
+                    UsersNamebookDTOList = await GetUsersNamebookListForRole(id, false),
+                };
+            });
+        }
+
         protected override async Task OnAfterSaveRoleAndReturnSaveBodyDTO(RoleDTO savedDTO, RoleSaveBodyDTO saveBodyDTO) 
         {
             await _context.WithTransactionAsync(async () =>

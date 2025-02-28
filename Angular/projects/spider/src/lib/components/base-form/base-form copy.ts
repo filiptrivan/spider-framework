@@ -48,29 +48,29 @@ export class BaseFormCopy implements OnInit {
 
   //#region Model
 
-  initFormGroup<T>(
+  initFormGroup = <T>(
     formGroup: SpiderFormGroup<T>, 
     parentFormGroup: SpiderFormGroup, 
     modelConstructor: any, 
     propertyNameInSaveBody: string,
-    updateOnChangeControls?: (keyof T)[])
-  {
-    return this.baseFormService.initFormGroup(
+    updateOnChangeControls?: (keyof T)[]
+  ) => {
+    return this.baseFormService.addFormGroup(
       formGroup, parentFormGroup, modelConstructor, propertyNameInSaveBody, updateOnChangeControls
     );
   }
 
-  createFormGroup<T>(
+  createFormGroup = <T>(
     formGroup: SpiderFormGroup<T>, 
     modelConstructor: T & BaseEntity, 
     updateOnChangeControls?: (keyof T)[]
-  ) {
-    return this.baseFormService.createFormGroup(
+  ) => {
+    return this.baseFormService.initFormGroup(
       formGroup, modelConstructor, updateOnChangeControls
     );
   }
 
-  control<T extends BaseEntity>(formControlName: string & keyof T, formGroup: SpiderFormGroup<T>) {
+  control = <T extends BaseEntity>(formControlName: string & keyof T, formGroup: SpiderFormGroup<T>) => {
     return getControl(formControlName, formGroup);
   }
 
@@ -105,7 +105,7 @@ export class BaseFormCopy implements OnInit {
                 if (typeof model === 'object' && model !== null) {
                   Object.assign(formArray.modelConstructor, model);
                   let helperFormGroup = new SpiderFormGroup({});
-                  this.baseFormService.createFormGroup(helperFormGroup, formArray.modelConstructor)
+                  this.baseFormService.initFormGroup(helperFormGroup, formArray.modelConstructor)
                   formArray.push(helperFormGroup);
                 } else {
                   console.error('Can not add primitive form control inside form array.');
@@ -135,7 +135,7 @@ export class BaseFormCopy implements OnInit {
     }
   }
 
-  rerouteToSavedObject(rerouteId: number | string): void {
+  rerouteToSavedObject = (rerouteId: number | string): void => {
     if(rerouteId == null){
       // console.error('You do not have rerouteId in your DTO.')
       const currentUrl = this.router.url;
