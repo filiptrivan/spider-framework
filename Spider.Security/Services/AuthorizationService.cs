@@ -88,10 +88,10 @@ namespace Spider.Security.Services
 
         public async Task<List<string>> GetCurrentUserPermissionCodes<TUser>() where TUser : class, IUser, new()
         {
+            long userId = _authenticationService.GetCurrentUserId();
+
             return await _context.WithTransactionAsync(async () =>
             {
-                long userId = _authenticationService.GetCurrentUserId();
-
                 return await _context.DbSet<TUser>()
                     .AsNoTracking()
                     .Where(x => x.Id == userId)

@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using Spider.Shared.Helpers;
+using Microsoft.EntityFrameworkCore;
 
 namespace Spider.Security.Services
 {
