@@ -833,10 +833,10 @@ namespace Spider.SourceGenerators.Shared
                 {
                     DTOProperties.Add(new SpiderProperty { Name = $"{property.Name}DTOList", Type = property.Type.Replace(">", "DTO>"), EntityName = $"{property.EntityName}DTO" });
                 }
-                else if (property.Type == "byte[]")
-                {
-                    DTOProperties.Add(new SpiderProperty { Name = property.Name, Type = "string", EntityName = $"{property.EntityName}DTO" });
-                }
+                //else if (property.Type == "byte[]")
+                //{
+                //    DTOProperties.Add(new SpiderProperty { Name = property.Name, Type = "string", EntityName = $"{property.EntityName}DTO" });
+                //}
                 else if (property.IsBlob())
                 {
                     DTOProperties.Add(new SpiderProperty { Name = $"{property.Name}Data", Type = "string", EntityName = $"{property.EntityName}DTO" });

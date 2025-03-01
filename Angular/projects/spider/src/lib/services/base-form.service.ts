@@ -31,7 +31,7 @@ export class BaseFormService {
       console.error('FT: You need to instantiate the form group.')
 
     this.initFormGroup(formGroup, modelConstructor, updateOnChangeControls);
-    parentFormGroup.addControl(propertyNameInSaveBody, formGroup);
+    parentFormGroup.setControl(propertyNameInSaveBody, formGroup); // FT: Use setControl because it will update formGroup if it already exists
 
     return formGroup;
   }
@@ -61,7 +61,7 @@ export class BaseFormService {
       formControl.label = formControlName;
       formControl.labelForDisplay = this.getTranslatedLabel(formControlName);
 
-      formGroup.addControl(formControlName, formControl);
+      formGroup.setControl(formControlName, formControl); // FT: Use setControl because it will update formControl if it already exists
 
       this.validatorService.setValidator(formControl, modelConstructor.typeName);
     });
@@ -124,7 +124,7 @@ export class BaseFormService {
       formArray.push(helperFormGroup);
     });
 
-    parentFormGroup.addControl(formArraySaveBodyName, formArray);
+    parentFormGroup.setControl(formArraySaveBodyName, formArray); // FT: Use setControl because it will update formArray if it already exists
 
     return formArray;
   }

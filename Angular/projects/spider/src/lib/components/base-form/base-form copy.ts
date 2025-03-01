@@ -27,6 +27,7 @@ export class BaseFormCopy implements OnInit {
   formGroup: SpiderFormGroup = new SpiderFormGroup({});
   saveBody: any;
   invalidForm: boolean = false; // FT: We are using this only if we manualy add some form field on the UI, like multiautocomplete, autocomplete etc...
+  successfulSaveToastDescription: string = this.translocoService.translate('SuccessfulSaveToastDescription');
   loading: boolean = true;
 
   private modelDiffer: KeyValueDiffer<string, any>;
@@ -85,7 +86,7 @@ export class BaseFormCopy implements OnInit {
 
     if(isValid && isFormArrayValid){
       this.formGroup.saveObservableMethod(this.saveBody).subscribe(res => {
-        this.messageService.successMessage(this.translocoService.translate('SuccessfulSaveToastDescription'));
+        this.messageService.successMessage(this.successfulSaveToastDescription);
 
         Object.keys(res).forEach((key) => {
           const formControl = this.formGroup.get(key);

@@ -402,6 +402,11 @@ namespace Spider.SourceGenerators.Shared
             return properties.SelectMany(x => x.Attributes).Any(x => x.Name == "BlobName");
         }
 
+        public static bool HasExcludeFromDTOAttribute(this SpiderProperty property)
+        {
+            return property.Attributes.Any(x => x.Name == "ExcludeFromDTO");
+        }
+
         public static bool HasRequiredAttribute(this SpiderProperty property)
         {
             return property.Attributes.Any(x => x.Name == "Required");

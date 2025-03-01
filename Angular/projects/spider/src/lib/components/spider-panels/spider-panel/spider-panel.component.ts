@@ -10,6 +10,7 @@ export class SpiderPanelComponent implements OnInit {
   @Input() isFirstMultiplePanel: boolean = false;
   @Input() isMiddleMultiplePanel: boolean = false;
   @Input() isLastMultiplePanel: boolean = false;
+  @Input() toggleable: boolean = false;
   @Input() crudMenu: MenuItem[];
   @Input() showCrudMenu: boolean = true;
   @Input() showRemoveIcon: boolean = false;

@@ -828,7 +828,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
             return $$"""
                      <div *ngIf="show{{property.Name}}For{{property.EntityName}}" class="col-12">
-                        <spider-panel>
+                        <spider-panel [toggleable]="true">
                             <panel-header [title]="t('{{property.Name}}')" icon="pi pi-list"></panel-header>
                             <panel-body [normalBottomPadding]="true">
                                 @for ({{extractedEntity.Name.FirstCharToLower()}}FormGroup of getFormArrayGroups({{property.Name.FirstCharToLower()}}FormArray); track {{extractedEntity.Name.FirstCharToLower()}}FormGroup; let index = $index; let last = $last) {

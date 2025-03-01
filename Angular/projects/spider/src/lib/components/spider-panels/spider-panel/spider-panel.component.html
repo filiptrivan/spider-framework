@@ -7,8 +7,12 @@
     'multiple-panel-middle': isMiddleMultiplePanel,
     'multiple-panel-last-without-header': isLastMultiplePanel && !showPanelHeader,
     'multiple-panel-last': isLastMultiplePanel,
+    'panel-border': !isFirstMultiplePanel,
     'spider-panel': true,
 }"
+[toggleable]="toggleable"
+expandIcon="pi pi-chevron-up"
+collapseIcon="pi pi-chevron-down"
 >
     <ng-template pTemplate="header">
         <div style="padding-left: 10px; padding-right: 10px;">

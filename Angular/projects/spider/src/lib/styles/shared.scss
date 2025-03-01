@@ -53,6 +53,14 @@
 	}
 }
 
+.panel-border{
+	.p-panel .p-panel-content {
+		border-bottom-left-radius: 12px;
+		border-bottom-right-radius: 12px;
+		border-bottom: 1px solid var(--surface-border);
+	}
+}
+
 .multiple-panel-middle{
 	.p-panel-header {
 		border-top-left-radius: 0px;
