@@ -40,6 +40,16 @@ export class AppTopBarComponent implements OnDestroy {
   companyName: string;
   showProfileIcon: boolean = false;
 
+  notificationMenuItem: SpiderMenuItem =       
+  {
+    label: this.translocoService.translate('Notifications'),
+    icon: 'pi-bell',
+    showNotificationBadge: true,
+    onClick: () => {
+      this.router.navigateByUrl(`/notifications`);
+    },
+  };
+
   @ViewChild('menubutton') menuButton!: ElementRef;
 
   @ViewChild('topbarmenu') menu!: ElementRef;
@@ -66,14 +76,7 @@ export class AppTopBarComponent implements OnDestroy {
           this.routeToUserPage();
         }
       },
-      {
-        label: this.translocoService.translate('Notifications'),
-        icon: 'pi-bell',
-        showNotificationBadge: true,
-        onClick: () => {
-          this.router.navigateByUrl(`/notifications`);
-        },
-      },
+      this.notificationMenuItem,
       // {
       //   label: this.translocoService.translate('Settings'),
       //   icon: 'pi-cog',
@@ -105,6 +108,7 @@ export class AppTopBarComponent implements OnDestroy {
       this.userProfilePath = initTopBarData.userProfilePath;
       this.companyName = initTopBarData.companyName;
       this.unreadNotificationsCount = initTopBarData.unreadNotificationsCount;
+      this.notificationMenuItem.showNotificationBadge = initTopBarData.unreadNotificationsCount > 0;
       this.showProfileIcon = initTopBarData.showProfileIcon;
       this.currentUser = initTopBarData.currentUser;
       this.avatarLabel = initTopBarData.currentUser?.email.charAt(0).toLocaleUpperCase();

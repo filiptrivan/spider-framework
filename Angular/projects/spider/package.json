@@ -1,6 +1,6 @@
 {
   "name": "@playerty/spider",
-  "version": "0.0.20",
+  "version": "0.0.22",
   "private": false,
   "peerDependencies": {
     "@abacritt/angularx-social-login": "2.2.0",
