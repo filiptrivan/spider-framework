@@ -266,3 +266,11 @@ export function capitalizeFirstLetter(inputString: string): string {
           })
       );
   }
+
+  export const isNullOrEmpty = (input: string) => {
+    if(input == null || input === ''){
+      return true;
+    }
+    
+    return false;
+  }

@@ -1267,6 +1267,10 @@ namespace Spider.SourceGenerators.Shared
             {
                 result = "Codebook";
             }
+            else if (cSharpType.Contains("IFormFile"))
+            {
+                result = "any";
+            }
             else if (parts[parts.Length - 1].IsBaseDataType())
             {
                 result = GetAngularType(parts[parts.Length - 1]); // List<long>

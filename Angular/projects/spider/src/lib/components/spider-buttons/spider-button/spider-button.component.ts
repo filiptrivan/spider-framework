@@ -1,8 +1,10 @@
 import { Component, EventEmitter, Input, Output } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { ButtonModule } from "primeng/button";
+import { SplitButtonModule } from "primeng/splitbutton";
 import { Subject, Subscription, throttleTime } from "rxjs";
 import { Router } from "@angular/router";
+import { MenuItem } from "primeng/api";
 
 @Component({
   selector: 'spider-button',
@@ -11,6 +13,7 @@ import { Router } from "@angular/router";
   imports: [
     CommonModule,
     ButtonModule,
+    SplitButtonModule
   ],
   standalone: true,
 })
@@ -25,6 +28,7 @@ export class SpiderButtonComponent {
   @Input() class: string;
   @Input() severity: 'success' | 'info' | 'warning' | 'danger' | 'help' | 'primary' | 'secondary' | 'contrast' | null | undefined;
   @Input() disabled: boolean = false;
+  @Input() dropdownItems: MenuItem[];
 
   @Output() onClick = new EventEmitter<Event>();
   private clickSubject = new Subject<Event>(); // Internal subject to handle click events.

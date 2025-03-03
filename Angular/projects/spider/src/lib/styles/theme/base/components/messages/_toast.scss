@@ -1,5 +1,6 @@
 .p-toast {
     opacity: $toastOpacity;
+    white-space: pre-line;
 
     .p-toast-message {
         margin: $toastMargin;

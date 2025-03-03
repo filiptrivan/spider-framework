@@ -1,4 +1,5 @@
 <p-button 
+*ngIf="dropdownItems === undefined"
 (onClick)="handleClick($event)" 
 [label]="label" 
 [icon]="icon" 
@@ -12,3 +13,20 @@
 >
     <ng-content></ng-content>
 </p-button>
+
+<p-splitButton
+*ngIf="dropdownItems"
+(onClick)="handleClick($event)" 
+[label]="label" 
+[icon]="icon" 
+[outlined]="outlined" 
+[styleClass]="styleClass" 
+[severity]="severity" 
+[rounded]="rounded"
+[style]="style"
+[class]="class"
+[disabled]="disabled"
+[model]="dropdownItems"
+>
+    <ng-content></ng-content>
+</p-splitButton>

@@ -23,12 +23,13 @@ export class SpiderMessageService { // TODO FT: nece da prikaze poruku ako je ne
     });
   }
 
-  warningMessage(detail: string, title: string = this.translocoService.translate('Warning')){
+  warningMessage(detail: string, title?: string, sticky?: boolean){
     this.messageService.add({
       severity: 'warn',
-      summary: title,
+      summary: title ?? this.translocoService.translate('Warning'),
       detail: detail,
       life: 10000,
+      sticky: sticky
     });
   }
 
@@ -49,6 +50,16 @@ export class SpiderMessageService { // TODO FT: nece da prikaze poruku ako je ne
       summary: title,
       detail: detail,
       life: 10000,
+    });
+  }
+
+  infoMessage(detail: string, title?: string, sticky?: boolean){
+    this.messageService.add({
+      severity: 'info',
+      summary: title ?? this.translocoService.translate('Info'),
+      detail: detail,
+      life: 10000,
+      sticky: sticky,
     });
   }
   

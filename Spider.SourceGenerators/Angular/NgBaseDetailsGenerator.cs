@@ -801,6 +801,7 @@ export class {{entity.Name}}BaseDetailsComponent {
     {{property.Name.FirstCharToLower()}}FormArray: SpiderFormArray<{{extractedEntity.Name}}>;
     {{property.Name.FirstCharToLower()}}LastIndexClicked = new LastMenuIconIndexClicked();
     {{property.Name.FirstCharToLower()}}CrudMenu: MenuItem[] = [];
+    @Input() {{property.Name.FirstCharToLower()}}PanelCollapsed: boolean = false;
 """);
             }
 
@@ -828,7 +829,7 @@ export class {{entity.Name}}BaseDetailsComponent {
 
             return $$"""
                      <div *ngIf="show{{property.Name}}For{{property.EntityName}}" class="col-12">
-                        <spider-panel [toggleable]="true">
+                        <spider-panel [toggleable]="true" [collapsed]="{{property.Name.FirstCharToLower()}}PanelCollapsed">
                             <panel-header [title]="t('{{property.Name}}')" icon="pi pi-list"></panel-header>
                             <panel-body [normalBottomPadding]="true">
                                 @for ({{extractedEntity.Name.FirstCharToLower()}}FormGroup of getFormArrayGroups({{property.Name.FirstCharToLower()}}FormArray); track {{extractedEntity.Name.FirstCharToLower()}}FormGroup; let index = $index; let last = $last) {

@@ -32,9 +32,10 @@ export class SpiderFileComponent extends BaseControl implements OnInit {
     @Input() fileData: string;
     @Input() acceptedFileTypes: Array<'image/*' | 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' | 'application/vnd.ms-excel' | '.xlsx' | '.xls'> = ['image/*'];
     @Input() required: boolean; // FT: It's okay for this control, because for the custom uploads where we are not initializing the control from the backend, there is no need for formControl.
+    @Input() multiple: boolean = false;
     
     acceptedFileTypesCommaSeparated: string;
-    files: File[] = [];
+    @Input() files: File[] = [];
 
     constructor(
         protected override translocoService: TranslocoService,

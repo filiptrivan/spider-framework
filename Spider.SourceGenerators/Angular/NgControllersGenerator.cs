@@ -275,12 +275,13 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
         {
             SpiderParameter parameter = controllerMethod.Parameters.Single();
             SpiderClass parameterType = DTOList.Where(x => x.Name == parameter.Type).SingleOrDefault();
+            string angularReturnType = Helpers.GetAngularType(controllerMethod.ReturnType);
 
             return $$"""
-    excelManualUpdatePoints = (dto: {{parameter.Type.Replace("DTO", "")}}): Observable<any> => { 
+    {{controllerMethod.Name.FirstCharToLower()}} = (dto: {{parameter.Type.Replace("DTO", "")}}): Observable<{{angularReturnType}}> => { 
         let formData = new FormData();
 {{string.Join("\n", GetFormDataAppends(parameterType))}}
-        return this.http.post(`${this.config.apiUrl}/{{controllerName}}/ExcelManualUpdatePoints`, formData, this.config.httpOptions);
+        return this.http.post(`${this.config.apiUrl}/{{controllerName}}/{{controllerMethod.Name}}`, formData, this.config.httpOptions);
     }
 """;
         }
@@ -291,22 +292,30 @@ import { {{ngType}} } from '../../entities/{{projectName.FromPascalToKebabCase()
 
             foreach (SpiderProperty property in dto.Properties)
             {
-                
+                if (property.Type == "List<IFormFile>")
+                {
                     result.Add($$"""
-        formData.append('{{property.Name}}', dto.{{GetFormDataAppendedValue(property)}});
+        dto.{{property.Name.FirstCharToLower()}}.forEach((file: File) => {
+            formData.append('{{property.Name}}', file);
+        });
 """);
+                }
+                else if (property.Type == "IFormFile")
+                {
+                    result.Add($$"""
+        formData.append('{{property.Name}}', dto.{{property.Name.FirstCharToLower()}});
+""");
+                }
+                else
+                {
+                    result.Add($$"""
+        formData.append('{{property.Name}}', dto.{{property.Name.FirstCharToLower()}}.toString());
+""");
+                }
                 
             }
 
             return result;
-        }
-
-        private static string GetFormDataAppendedValue(SpiderProperty property)
-        {
-            if (property.Type == "IFormFile")
-                return property.Name.FirstCharToLower();
-            else
-                return $"{property.Name.FirstCharToLower()}.toString()";
         }
 
         #endregion

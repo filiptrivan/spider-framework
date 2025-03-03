@@ -10,7 +10,7 @@
         [files]="files" 
         [disabled]="disabled" 
         [name]="control?.label ?? label" 
-        [multiple]="false" 
+        [multiple]="multiple" 
         [accept]="acceptedFileTypesCommaSeparated" 
         [maxFileSize]="1000000" 
         (onSelect)="filesSelected($event)"
