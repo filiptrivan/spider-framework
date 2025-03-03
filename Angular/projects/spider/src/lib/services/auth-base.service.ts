@@ -16,10 +16,10 @@ export class AuthBaseService implements OnDestroy {
   private readonly apiUrl = this.config.apiUrl;
   private timer?: Subscription;
 
-  protected _currentUserPermissionCodes = new BehaviorSubject<string[] | null>(null);
+  protected _currentUserPermissionCodes = new BehaviorSubject<string[] | null>(undefined);
   currentUserPermissionCodes$ = this._currentUserPermissionCodes.asObservable();
 
-  protected _user = new BehaviorSubject<User | null>(null);
+  protected _user = new BehaviorSubject<User | null>(undefined);
   user$ = this._user.asObservable();
 
   // Google auth
@@ -165,7 +165,6 @@ export class AuthBaseService implements OnDestroy {
           
           this.setLocalStorage(loginResult);
           this.startTokenTimer();
-          this.setCurrentUserPermissionCodes().subscribe(); // FT: Needs to be after setting local storage
           this.onAfterRefreshToken();
           
           return loginResult;
@@ -174,6 +173,7 @@ export class AuthBaseService implements OnDestroy {
   }
 
   onAfterRefreshToken = () => {
+    this.setCurrentUserPermissionCodes().subscribe(); // FT: Needs to be after setting local storage
   }
 
   setLocalStorage(loginResult: AuthResult) {
