@@ -12,7 +12,7 @@
           <div style="display: flex; gap: 8px;">
             <button pButton [label]="t('ClearFilters')" class="p-button-outlined remove-button-border-focus" style="flex: none;" icon="pi pi-filter-slash" (click)="clear(dt)"></button>
             <button pButton *ngIf="showExportToExcelButton" [label]="t('ExportToExcel')" class="p-button-outlined remove-button-border-focus" style="flex: none;" icon="pi pi-download" (click)="exportListToExcel()"></button>
-            <button pButton *ngIf="showReloadTableButton" [label]="t('Reload')" class="p-button-outlined remove-button-border-focus" style="flex: none;" icon="pi pi-refresh" (click)="reloadTable()"></button>
+            <button pButton *ngIf="showReloadTableButton" [label]="t('Reload')" class="p-button-outlined remove-button-border-focus" style="flex: none;" icon="pi pi-refresh" (click)="reload()"></button>
           </div>
         </div>
       </ng-template>

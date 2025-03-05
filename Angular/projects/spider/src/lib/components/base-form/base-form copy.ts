@@ -370,19 +370,4 @@ export class BaseFormCopy implements OnInit {
 
   //#endregion
 
-  //#region Helpers
-
-  selectedTab(tabs: SpiderTab[]): number {
-    const tab = singleOrDefault(tabs, x => x.isSelected);
-
-    if (tab) {
-      return tab.id;
-    }
-    else{
-      return null;
-    }
-  }
-
-  //#endregion
-
 }

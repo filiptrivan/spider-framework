@@ -8,6 +8,7 @@ import { TableFilter } from "../entities/table-filter";
 import { Namebook } from "../entities/namebook";
 import { Codebook } from "../entities/codebook";
 import { PrimengOption } from "../entities/primeng-option";
+import { SpiderTab } from "../components/spider-panels/panel-header/panel-header.component";
 
 // Helper function for PrecisionScale validation (to be added in the TypeScript output):
 export function validatePrecisionScale(value: any, precision: number, scale: number, ignoreTrailingZeros: boolean): boolean {
@@ -273,4 +274,15 @@ export function capitalizeFirstLetter(inputString: string): string {
     }
     
     return false;
+  }
+
+  export const selectedTab = (tabs: SpiderTab[]): number => {
+    const tab = singleOrDefault(tabs, x => x.isSelected);
+
+    if (tab) {
+      return tab.id;
+    }
+    else{
+      return null;
+    }
   }

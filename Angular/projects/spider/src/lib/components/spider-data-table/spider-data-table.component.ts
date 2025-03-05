@@ -281,7 +281,7 @@ export class SpiderDataTableComponent implements OnInit {
   deleteObject(rowId: number){
     this.deleteRef = this.dialogService.open(SpiderDeleteConfirmationComponent, 
       { 
-        header: this.translocoService.translate('AreYouSureToDelete'),
+        header: this.translocoService.translate('AreYouSure'),
         width: '400px',
         data:{ deleteItemFromTableObservableMethod: this.deleteItemFromTableObservableMethod, id: rowId, } 
       });
@@ -289,12 +289,12 @@ export class SpiderDataTableComponent implements OnInit {
       this.deleteRef.onClose.subscribe((deletedSuccessfully: boolean)=>{
         if(deletedSuccessfully === true){
           this.messageService.successMessage(this.translocoService.translate('SuccessfullyDeletedMessage'));
-          this.reloadTable();
+          this.reload();
         }
       });
   }
 
-  reloadTable(){
+  reload(){
     this.loading = true;
     this.items = null;
     this.lazyLoad(this.lastLazyLoadEvent);
@@ -320,7 +320,7 @@ export class SpiderDataTableComponent implements OnInit {
       case 'Delete':
         return 'pi pi-trash text-lg text-red-500 cursor-pointer';
       default:
-        return `pi ${action.icon} text-lg cursor-pointer`;
+        return `${action.icon} ${action.style} text-lg cursor-pointer`;
     }
   }
 
@@ -331,7 +331,7 @@ export class SpiderDataTableComponent implements OnInit {
       case 'Delete':
         return this.deleteObject(rowData.id);
       default:
-        return action.onClick();
+        return action.onClick(rowData.id);
     }
   }
 
@@ -494,24 +494,28 @@ export class Action {
   name?: string;
   field?: string;
   icon?: string;
-  onClick?: () => void;
+  style?: string;
+  onClick?: (id: number) => void;
 
   constructor(
     {
       name,
       field,
       icon,
+      style,
       onClick,
     }:{
       name?: string;
       field?: string;
       icon?: string;
+      style?: string;
       onClick?: () => void;
     } = {}
     ) {
       this.name = name;
       this.field = field;
       this.icon = icon;
+      this.style = style;
       this.onClick = onClick;
   }
 }

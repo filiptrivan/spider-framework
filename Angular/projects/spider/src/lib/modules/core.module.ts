@@ -8,10 +8,11 @@ import { HttpLoadingInterceptor } from '../interceptors/http-loading.interceptor
 import { JsonHttpInterceptor } from '../interceptors/json-parser.interceptor';
 import { AuthBaseService } from '../services/auth-base.service';
 import { SpiderErrorHandler } from '../handlers/spider-error-handler';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { CommonModule } from '@angular/common';
 import { BrowserModule } from '@angular/platform-browser';
 import { ToastModule } from 'primeng/toast';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 @NgModule({
   declarations: [],
@@ -21,9 +22,11 @@ import { ToastModule } from 'primeng/toast';
     HttpClientModule,
     BrowserAnimationsModule,
     ToastModule,
+    ConfirmDialogModule,
   ],
   providers: [
     MessageService,
+    ConfirmationService,
     {
       provide: APP_INITIALIZER,
       useFactory: authInitializer,
@@ -61,6 +64,7 @@ import { ToastModule } from 'primeng/toast';
     HttpClientModule,
     BrowserAnimationsModule,
     ToastModule,
+    ConfirmDialogModule,
   ] 
 })
 export class CoreModule {

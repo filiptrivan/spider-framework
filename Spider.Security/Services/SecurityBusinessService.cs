@@ -47,8 +47,7 @@ namespace Spider.Security.Services
 
         public async Task SendLoginVerificationEmail(LoginDTO loginDTO)
         {
-            LoginDTOValidationRules validationRules = new LoginDTOValidationRules();
-            validationRules.ValidateAndThrow(loginDTO);
+            new LoginDTOValidationRules().ValidateAndThrow(loginDTO);
 
             string userEmail = null;
             long userId = 0;
@@ -75,8 +74,7 @@ namespace Spider.Security.Services
 
         public AuthResultDTO Login(VerificationTokenRequestDTO verificationRequestDTO)
         {
-            VerificationTokenRequestDTOValidationRules validationRules = new VerificationTokenRequestDTOValidationRules();
-            validationRules.ValidateAndThrow(verificationRequestDTO);
+            new VerificationTokenRequestDTOValidationRules().ValidateAndThrow(verificationRequestDTO);
 
             // FT: Can not be null, if its null it already has thrown
             LoginVerificationTokenDTO loginVerificationTokenDTO = _jwtAuthManagerService.ValidateAndGetLoginVerificationTokenDTO(
