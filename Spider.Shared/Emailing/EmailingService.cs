@@ -18,80 +18,81 @@ namespace Spider.Shared.Emailing
 
         public EmailingService()
         {
-            _smtpClient = new SmtpClient(SettingsProvider.Current.SmtpHost, SettingsProvider.Current.SmtpPort)
-            {
-                Credentials = new NetworkCredential(SettingsProvider.Current.SmtpUser, SettingsProvider.Current.SmtpPass),
-                EnableSsl = true
-            };
+            _smtpClient = Helper.GetSmtpClient();
         }
 
         public async Task SendVerificationEmailAsync(string toEmail, string verificationCode)
         {
             string body = GetVerificationEmailBody(verificationCode);
 
-            MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, toEmail)
+            using (MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, toEmail)
             {
                 Subject = SharedTerms.EmailAccountVerificationTitle,
                 Body = body,
                 BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
                 IsBodyHtml = true
-            };
+            })
+            {
+                await _smtpClient.SendMailAsync(mailMessage); // https://stackoverflow.com/questions/11120350/how-to-check-programmatically-if-an-email-is-existing-or-not
+            }
+        }
 
-            await _smtpClient.SendMailAsync(mailMessage); // https://stackoverflow.com/questions/11120350/how-to-check-programmatically-if-an-email-is-existing-or-not
+        public async Task SendEmailAsync(string recipient, string subject, string body, string from = null)
+        {
+            using (MailMessage mailMessage = new MailMessage(from ?? SettingsProvider.Current.EmailSender, recipient)
+            {
+                Subject = subject,
+                Body = body,
+                BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
+                IsBodyHtml = true,
+            })
+            {
+                await _smtpClient.SendMailAsync(mailMessage);
+            }
         }
 
         public async Task SendEmailAsync(List<string> recipients, string subject, string body)
         {
             foreach (string recipient in recipients)
             {
-                MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, recipient)
+                using (MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, recipient)
                 {
                     Subject = subject,
                     Body = body,
                     BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
                     IsBodyHtml = true,
-                };
-
-                await _smtpClient.SendMailAsync(mailMessage);
+                })
+                {
+                    await _smtpClient.SendMailAsync(mailMessage);
+                }
             }
-        }
-
-        public async Task SendEmailAsync(string recipient, string subject, string body)
-        {
-            MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, recipient)
-            {
-                Subject = subject,
-                Body = body,
-                BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
-                IsBodyHtml = true,
-            };
-
-            await _smtpClient.SendMailAsync(mailMessage);
         }
 
         public async Task SendEmailFromBackgroundJobAsync(string recipient, string subject, string body)
         {
-            MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, recipient)
+            using (MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, recipient)
             {
                 Subject = subject,
                 Body = body,
                 BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
                 IsBodyHtml = true,
-            };
+            })
+            {
+                try
+                {
+                    await _smtpClient.SendMailAsync(mailMessage);
+                }
+                catch (Exception ex)
+                {
+                    // FT: We need to log because exception will not get into api global error handler from the background job
+                    Log.Error(
+                        ex,
+                        "We failed to send an email to the recipient: {recipient};",
+                        recipient
+                    );
 
-            try
-            {
-                await _smtpClient.SendMailAsync(mailMessage);
-            }
-            catch (Exception ex)
-            {
-                // FT: We need to log because exception will not get into api global error handler from the background job
-                Log.Error(
-                    ex, 
-                    "We failed to send an email to the recipient: {recipient};", 
-                    recipient
-                );
-                throw;
+                    throw;
+                }
             }
         }
 

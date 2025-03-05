@@ -13,6 +13,11 @@ using System.Security.Claims;
 using System.Globalization;
 using System.Resources;
 using Spider.Shared.BaseEntities;
+using System.Net.Mail;
+using Serilog;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Hosting;
 
 namespace Spider.Shared.Helpers
 {
@@ -68,6 +73,71 @@ namespace Spider.Shared.Helpers
         {
             return ids1.Except(ids2).Any() || ids2.Except(ids1).Any();
         }
+
+        #region Emailing
+
+        public static async Task SendEmailAsync(string recipient, string subject, string body)
+        {
+            using (SmtpClient smtpClient = GetSmtpClient())
+            using (MailMessage mailMessage = new MailMessage(SettingsProvider.Current.EmailSender, recipient)
+            {
+                Subject = subject,
+                Body = body,
+                BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
+                IsBodyHtml = true,
+            })
+            {
+                await smtpClient.SendMailAsync(mailMessage);
+            }
+        }
+
+        public static void SendUnhandledExceptionEmails(string userEmail, long? userId, IWebHostEnvironment env, Exception unhandledEx)
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    using (SmtpClient smtpClient = GetSmtpClient())
+                    using (MailMessage mailMessage = new MailMessage
+                    {
+                        From = new MailAddress(SettingsProvider.Current.EmailSender),
+                        Subject = $"{SettingsProvider.Current.ApplicationName}: Unhandled Exception",
+                        Body = $$"""
+Currently authenticated user: {{userEmail}} (id: {{userId}}); <br>
+{{unhandledEx}}
+""",
+                        BodyEncoding = Encoding.UTF8, // FT: Without this, the email is not sent, and don't throw the exception
+                        IsBodyHtml = true,
+                    })
+                    {
+                        foreach (string recipient in SettingsProvider.Current.UnhandledExceptionRecipients)
+                            mailMessage.To.Add(new MailAddress(recipient));
+
+                        if (env.IsDevelopment() == false)
+                            await smtpClient.SendMailAsync(mailMessage);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(
+                        ex,
+                        "Unhandled Exception email is not sent; Currently authenticated user: {userEmail} (id: {userId});",
+                        userEmail, userId
+                    );
+                }
+            });
+        }
+
+        public static SmtpClient GetSmtpClient()
+        {
+            return new SmtpClient(SettingsProvider.Current.SmtpHost, SettingsProvider.Current.SmtpPort)
+            {
+                Credentials = new NetworkCredential(SettingsProvider.Current.SmtpUser, SettingsProvider.Current.SmtpPass),
+                EnableSsl = true
+            };
+        }
+
+#endregion
 
         #region Security
 

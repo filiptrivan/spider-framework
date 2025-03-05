@@ -264,35 +264,37 @@ namespace Spider.Shared.Extensions
                     {
                         context.Response.ContentType = "application/json";
 
-                        Exception exception = contextFeature.Error;
+                        Exception ex = contextFeature.Error;
 
                         string exceptionString = "";
 
                         if (env.IsDevelopment())
-                            exceptionString = exception.ToString();
+                            exceptionString = ex.ToString();
 
                         string message;
                         LogEventLevel logLevel;
+                        string userEmail = Helper.GetCurrentUserEmailOrDefault(context);
+                        long? userId = Helper.GetCurrentUserIdOrDefault(context);
 
-                        if (exception is BusinessException businessEx)
+                        if (ex is BusinessException businessEx)
                         {
                             context.Response.StatusCode = StatusCodes.Status400BadRequest;
                             message = businessEx.Message;
                             logLevel = LogEventLevel.Warning;
                         }
-                        else if (exception is ExpiredVerificationException expiredVerificationEx)
+                        else if (ex is ExpiredVerificationException expiredVerificationEx)
                         {
                             context.Response.StatusCode = StatusCodes.Status400BadRequest;
                             message = expiredVerificationEx.Message;
                             logLevel = LogEventLevel.Information;
                         }
-                        else if (exception is UnauthorizedException unauthorizedEx)
+                        else if (ex is UnauthorizedException unauthorizedEx)
                         {
                             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                             message = unauthorizedEx.Message;
                             logLevel = LogEventLevel.Error;
                         }
-                        else if (exception is SecurityTokenException securityTokenEx)
+                        else if (ex is SecurityTokenException securityTokenEx)
                         {
                             context.Response.StatusCode = StatusCodes.Status419AuthenticationTimeout;
                             message = securityTokenEx.Message;
@@ -300,15 +302,16 @@ namespace Spider.Shared.Extensions
                         }
                         else
                         {
+                            Helper.SendUnhandledExceptionEmails(userEmail, userId, env, ex);
                             message = $"{SharedTerms.GlobalError}";
                             logLevel = LogEventLevel.Error;
                         }
 
                         Log.Write(
                             logLevel,
-                            exception,
+                            ex,
                             "Currently authenticated user: {userEmail} (id: {userId});",
-                            Helper.GetCurrentUserEmailOrDefault(context), Helper.GetCurrentUserIdOrDefault(context)
+                            userEmail, userId
                         );
 
                         await context.Response.WriteAsJsonAsync(new

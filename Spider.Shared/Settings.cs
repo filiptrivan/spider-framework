@@ -13,10 +13,12 @@ namespace Spider.Shared
 
     public class Settings
     {
+        public string ApplicationName { get; set; }
         public string ConnectionString { get; set; }
 
 
         public string EmailSender { get; set; }
+        public List<string> UnhandledExceptionRecipients { get; set; }
         public string SmtpHost { get; set; }
         public int SmtpPort { get; set; }
         public string SmtpUser { get; set; }
