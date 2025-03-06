@@ -1,7 +1,7 @@
 .p-toast {
     opacity: $toastOpacity;
     white-space: pre-line;
-
+    
     .p-toast-message {
         margin: $toastMargin;
         box-shadow: $toastShadow;
@@ -30,6 +30,8 @@
 
             .p-toast-detail {
                 margin: $toastDetailMargin;
+                max-height: 200px;
+                overflow-y: auto;
             }
         }
 
