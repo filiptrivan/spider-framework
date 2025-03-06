@@ -40,9 +40,11 @@ export class AuthComponent {
 
   initCompanyDetails() {
     this.initCompanyAuthDialogDetailsSubscription = this.authService.initCompanyAuthDialogDetails().subscribe(initCompanyAuthDialogDetails => {
-      this.image = initCompanyAuthDialogDetails.image;
-      this.companyName = initCompanyAuthDialogDetails.companyName;
-      this.onCompanyNameChange.next(this.companyName);
+      if (initCompanyAuthDialogDetails != null) {
+        this.image = initCompanyAuthDialogDetails.image;
+        this.companyName = initCompanyAuthDialogDetails.companyName;
+        this.onCompanyNameChange.next(this.companyName);
+      }
     })
   }
 

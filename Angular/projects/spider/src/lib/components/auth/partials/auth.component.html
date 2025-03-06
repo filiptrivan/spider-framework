@@ -4,7 +4,8 @@
             <div class="w-full sm:w-30rem" style="margin: auto; border-radius:50px; padding:0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%);">
                 <div class="surface-card py-6 px-5 sm:px-6" style="border-radius:45px;">
                     <div class="text-center" style="margin-bottom: 38px;">
-                        <img [src]="image" alt="{{companyName}} Logo" height="60">
+                        <img *ngIf="image != null" [src]="image" alt="{{companyName}} Logo" height="60">
+                        <i *ngIf="image == null" class="pi pi-spin pi-spinner primary-color" style="font-size: 2rem"></i>
                     </div>
 
                     <ng-content></ng-content>
