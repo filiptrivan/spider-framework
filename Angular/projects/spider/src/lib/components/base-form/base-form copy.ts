@@ -6,16 +6,14 @@ import {
   KeyValueDiffers,
   OnInit,
 } from '@angular/core';
-import { FormGroup } from '@angular/forms';
 import { SpiderFormArray, SpiderFormControl, SpiderFormGroup } from '../spider-form-control/spider-form-control';
 import { HttpClient } from '@angular/common/http';
 import { SpiderMessageService } from '../../services/spider-message.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MenuItem } from 'primeng/api';
-import { getControl, getParentUrl, singleOrDefault } from '../../services/helper-functions';
+import { getControl, getParentUrl } from '../../services/helper-functions';
 import { TranslocoService } from '@jsverse/transloco';
 import { BaseEntity } from '../../entities/base-entity';
-import { SpiderTab } from '../spider-panels/panel-header/panel-header.component';
 import { LastMenuIconIndexClicked } from '../../entities/last-menu-icon-index-clicked';
 
 @Component({
@@ -26,7 +24,6 @@ import { LastMenuIconIndexClicked } from '../../entities/last-menu-icon-index-cl
 export class BaseFormCopy implements OnInit { 
   formGroup: SpiderFormGroup = new SpiderFormGroup({});
   saveBody: any;
-  invalidForm: boolean = false; // FT: We are using this only if we manualy add some form field on the UI, like multiautocomplete, autocomplete etc...
   successfulSaveToastDescription: string = this.translocoService.translate('SuccessfulSaveToastDescription');
   loading: boolean = true;
 
@@ -81,7 +78,7 @@ export class BaseFormCopy implements OnInit {
 
     this.saveBody = this.saveBody ?? this.formGroup.getRawValue();
 
-    let isValid: boolean = this.areFormGroupsValid();
+    let isValid: boolean = this.areFormGroupsFromParentFormGroupValid();
     let isFormArrayValid: boolean = this.areFormArraysValid();
 
     if(isValid && isFormArrayValid){
@@ -156,7 +153,7 @@ export class BaseFormCopy implements OnInit {
   onAfterSave = () => {}
   onAfterSaveRequest = () => {}
 
-  areFormGroupsValid(): boolean {
+  areFormGroupsFromParentFormGroupValid(): boolean {
     if(this.formGroup.controls == null)
       return true;
 
@@ -188,21 +185,6 @@ export class BaseFormCopy implements OnInit {
       return false;
     }
 
-    return true;
-  }
-
-  // FT: If you want to call single method
-  checkFormGroupValidity(){
-    if (this.formGroup.invalid || this.invalidForm) {
-      Object.keys(this.formGroup.controls).forEach(key => {
-        this.formGroup.controls[key].markAsDirty(); // this.formGroup.markAsDirty(); // FT: For some reason this doesnt work
-      });
-
-      this.baseFormService.showInvalidFieldsMessage();
-
-      return false;
-    }
-    
     return true;
   }
 
@@ -316,7 +298,7 @@ export class BaseFormCopy implements OnInit {
       }
     });
 
-    if (invalid || this.invalidForm) {
+    if (invalid) {
       return false;
     }
 

@@ -9,14 +9,14 @@
                     
                     <div class="mb-4 gap-5">
                         <div class="text-center" style="font-size: smaller;">
-                            {{t('AgreementsOnRegister')}} <b class="primary-color cursor-pointer">{{t('UserAgreement')}}</b>, <b class="primary-color cursor-pointer">{{t('PrivacyPolicy')}}</b>, {{t('and')}} <b class="primary-color cursor-pointer">{{t('CookiePolicy')}}</b>.
+                            {{t('AgreementsOnRegister')}} <b routerLink="/user-agreement" class="primary-color cursor-pointer">{{t('UserAgreement')}}</b> {{t('and')}} <b routerLink="/privacy-policy" class="primary-color cursor-pointer">{{t('PrivacyPolicy')}}</b>.
                         </div>
                     </div>
                     
                     <div style="display: flex; flex-direction: column; gap: 16px;">
                         <spider-button [label]="t('AgreeAndJoin')" (onClick)="sendRegistrationVerificationEmail()" [outlined]="true" [style]="{width: '100%'}"></spider-button>
                         <!-- TODO FT: Add possibility to change this name from the specific project -->
-                        <spider-button [label]="t('AlreadyHasAccount', {companyName: companyName})" routerLink="/auth/login" [style]="{width: '100%'}"></spider-button>
+                        <spider-button [label]="t('AlreadyHasAccount', {companyName: companyName})" routerLink="/login" [style]="{width: '100%'}"></spider-button>
                     </div>
                 </form>
             </auth>

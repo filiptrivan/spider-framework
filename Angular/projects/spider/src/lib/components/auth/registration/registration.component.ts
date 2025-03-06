@@ -48,8 +48,11 @@ export class RegistrationComponent extends BaseFormCopy implements OnInit {
     }
 
     sendRegistrationVerificationEmail() {
-        let isFormGroupValid: boolean = this.checkFormGroupValidity();
-        if (isFormGroupValid == false) return;
+        let isFormGroupValid: boolean = this.baseFormService.checkFormGroupValidity(this.registrationFormGroup);
+
+        if (isFormGroupValid == false) 
+            return;
+
         // const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '';
         this.authService.sendRegistrationVerificationEmail(this.registrationFormGroup.getRawValue()).subscribe(() => {
             this.showEmailSentDialog = true;

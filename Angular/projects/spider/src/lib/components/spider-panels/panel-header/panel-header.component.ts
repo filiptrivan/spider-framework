@@ -12,7 +12,7 @@ import { Component, OnInit, Input } from '@angular/core';
 })
 export class PanelHeaderComponent implements OnInit {
   @Input() title: string;
-  @Input() bigTitle: boolean;
+  @Input() showBigTitle: boolean;
   @Input() showIcon: boolean = true;
   @Input() icon: string;
   @Input() index: number;

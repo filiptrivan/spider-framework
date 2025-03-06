@@ -1,4 +1,4 @@
-<p-button 
+<p-splitButton
 (onClick)="handleClick($event)" 
 [label]="label" 
 [icon]="icon" 
@@ -9,6 +9,7 @@
 [style]="style"
 [class]="class"
 [disabled]="disabled"
+[model]="dropdownItems"
 >
     <ng-content></ng-content>
-</p-button>
+</p-splitButton>

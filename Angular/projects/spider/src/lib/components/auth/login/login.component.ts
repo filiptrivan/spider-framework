@@ -49,8 +49,11 @@ export class LoginComponent extends BaseFormCopy implements OnInit {
     }
 
     sendLoginVerificationEmail() {
-        let isFormGroupValid: boolean = this.checkFormGroupValidity();
-        if (isFormGroupValid == false) return;
+        let isFormGroupValid: boolean = this.baseFormService.checkFormGroupValidity(this.loginFormGroup);
+        
+        if (isFormGroupValid == false) 
+          return;
+
         this.authService.sendLoginVerificationEmail(this.loginFormGroup.getRawValue()).subscribe(()=>{
             this.showEmailSentDialog = true;
         });

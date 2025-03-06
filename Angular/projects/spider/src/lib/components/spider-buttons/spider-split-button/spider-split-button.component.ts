@@ -1,15 +1,14 @@
-import { Component, EventEmitter, Input, Output } from "@angular/core";
+import { Component, Input } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { ButtonModule } from "primeng/button";
 import { SplitButtonModule } from "primeng/splitbutton";
-import { Subject, Subscription, throttleTime } from "rxjs";
-import { Router } from "@angular/router";
+
 import { MenuItem } from "primeng/api";
 import { SpiderButtonBaseComponent } from "../spider-button-base/spider-button-base";
 
 @Component({
-  selector: 'spider-button',
-  templateUrl: './spider-button.component.html',
+  selector: 'spider-split-button',
+  templateUrl: './spider-split-button.component.html',
   styles: [],
   imports: [
     CommonModule,
@@ -18,11 +17,9 @@ import { SpiderButtonBaseComponent } from "../spider-button-base/spider-button-b
   ],
   standalone: true,
 })
-export class SpiderButtonComponent extends SpiderButtonBaseComponent {
+export class SpiderSplitButtonComponent extends SpiderButtonBaseComponent {
+  @Input() dropdownItems: MenuItem[];
 
-  // constructor() {
-  //   super();
-    
-  // }
+
 
 }

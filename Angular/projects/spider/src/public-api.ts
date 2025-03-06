@@ -39,6 +39,8 @@ export * from './lib/components/not-found/not-found.component';
 export * from './lib/components/required/required.component';
 export * from './lib/components/spider-buttons/return-button/spider-return-button.component';
 export * from './lib/components/spider-buttons/spider-button/spider-button.component';
+export * from './lib/components/spider-buttons/spider-split-button/spider-split-button.component';
+export * from './lib/components/spider-buttons/spider-button-base/spider-button-base';
 export * from './lib/components/spider-data-table/spider-data-table.component';
 export * from './lib/components/spider-delete-dialog/spider-delete-confirmation.component';
 export * from './lib/components/spider-form-control/spider-form-control';

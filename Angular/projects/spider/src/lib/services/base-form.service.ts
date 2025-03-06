@@ -147,23 +147,18 @@ export class BaseFormService {
 
   //#region Helpers
 
-  areFormControlsValid = (formControls: SpiderFormControl[]): boolean => {
-    if(formControls == null)
-      return true;
+  // FT: If you want to call single method
+  checkFormGroupValidity = <T>(formGroup: SpiderFormGroup<T>): boolean => {
+    if (formGroup.invalid) {
+      Object.keys(formGroup.controls).forEach(key => {
+        formGroup.controls[key].markAsDirty(); // this.formGroup.markAsDirty(); // FT: For some reason this doesnt work
+      });
 
-    let invalid: boolean = false;
+      this.showInvalidFieldsMessage();
 
-    formControls.forEach(formControl => {
-      if (formControl.invalid) {
-        formControl.markAsDirty();
-        invalid = true;
-      }
-    });
-
-    if (invalid) {
       return false;
     }
-
+    
     return true;
   }
 

@@ -2,8 +2,8 @@
     @if (tabs == null) {
         <div style="display: flex; align-items: center; gap: 14px;">
             <span *ngIf="index != null" class="number-circle">{{index + 1}}</span>
-            <i class="{{icon}} primary-color" [style]="bigTitle ? 'font-size: 19px' : 'font-size: 16px;'"></i> 
-            <div [style]="bigTitle ? 'font-size: 16px' : ''">{{title}}</div>
+            <i class="{{icon}} primary-color" [style]="showBigTitle ? 'font-size: 19px' : 'font-size: 16px;'"></i> 
+            <h2 [style]="(showBigTitle ? 'font-size: 16px;' : '')" class="remove-h-css">{{title}}</h2>
         </div>
     }
     @else {
@@ -17,8 +17,8 @@
                     fontWeight: tab.isSelected ? '700' : 'normal'
                 }">
                 <span *ngIf="index != null" class="number-circle">{{index + 1}}</span>
-                <i class="{{tab.icon}} primary-color" [style]="bigTitle ? 'font-size: 19px' : 'font-size: 16px;'"></i> 
-                <div [style]="bigTitle ? 'font-size: 16px' : ''">{{tab.label}}</div>
+                <i class="{{tab.icon}} primary-color" [style]="showBigTitle ? 'font-size: 19px' : 'font-size: 16px;'"></i> 
+                <div [style]="showBigTitle ? 'font-size: 16px' : ''">{{tab.label}}</div>
             </div>
         }
     }

@@ -54,7 +54,7 @@ export class VerificationWrapperComponent extends BaseFormCopy implements OnInit
     }
 
     codeSubmit(){
-        let isValid: boolean = this.checkFormGroupValidity();
+        let isValid: boolean = this.baseFormService.checkFormGroupValidity(this.verificationTokenRequestFormGroup);
     
         if(isValid){
             this.onCodeSubmit.next(this.verificationTokenRequestFormGroup.controls.verificationCode.getRawValue());

@@ -17,7 +17,7 @@ export class ConfigBaseService
     usersCanRegister = true;
 
     /* URLs */
-    loginSlug = 'auth/login';
+    loginSlug = 'login';
 
     /* Local storage */
     accessTokenKey = 'access_token';
