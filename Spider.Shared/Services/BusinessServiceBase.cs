@@ -7,6 +7,7 @@ using Azure;
 using System.ComponentModel;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Serilog;
 
 namespace Spider.Shared.Services
 {
@@ -101,7 +102,7 @@ namespace Spider.Shared.Services
 
             await blobClient.UploadAsync(content);
 
-            Dictionary<string, string> tags = new Dictionary<string, string>
+            Dictionary<string, string> tags = new()
             {
                 { "objectType", $"{objectType}" },
                 { "objectProperty", $"{objectProperty}" },
@@ -157,23 +158,15 @@ namespace Spider.Shared.Services
 
         protected async Task<string> GetFileDataAsync(string key)
         {
-            try
-            {
-                BlobClient blobClient = _blobContainerClient.GetBlobClient(key);
+            BlobClient blobClient = _blobContainerClient.GetBlobClient(key);
 
-                Azure.Response<BlobDownloadResult> blobDownloadInfo = await blobClient.DownloadContentAsync();
+            Azure.Response<BlobDownloadResult> blobDownloadInfo = await blobClient.DownloadContentAsync();
 
-                byte[] byteArray = blobDownloadInfo.Value.Content.ToArray();
+            byte[] byteArray = blobDownloadInfo.Value.Content.ToArray();
 
-                string base64 = Convert.ToBase64String(byteArray);
+            string base64 = Convert.ToBase64String(byteArray);
 
-                return $"filename={key};base64,{base64}";
-            }
-            catch (Exception)
-            {
-                // TODO FT: Log
-                return null;
-            }
+            return $"filename={key};base64,{base64}";
         }
 
     }

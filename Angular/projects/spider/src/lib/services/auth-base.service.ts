@@ -247,7 +247,7 @@ export class AuthBaseService implements OnDestroy {
   initCompanyAuthDialogDetails = (): Observable<InitCompanyAuthDialogDetails> => {
     return of(
       new InitCompanyAuthDialogDetails ({
-        image: `assets/demo/images/logo/logo-dark.svg`, 
+        image: `assets/images/logo/logo.svg`, 
         companyName: this.config.companyName,
       })
     );

@@ -29,8 +29,15 @@ namespace Spider.Security.Services
         private readonly EmailingService _emailingService;
         private readonly BlobContainerClient _blobContainerClient;
 
-        public SecurityBusinessService(IApplicationDbContext context, IJwtAuthManager jwtAuthManagerService, EmailingService emailingService, AuthenticationService authenticationService, AuthorizationBusinessService<TUser> authorizationService,
-            ExcelService excelService, BlobContainerClient blobContainerClient)
+        public SecurityBusinessService(
+            IApplicationDbContext context, 
+            IJwtAuthManager jwtAuthManagerService, 
+            EmailingService emailingService, 
+            AuthenticationService authenticationService, 
+            AuthorizationBusinessService<TUser> authorizationService,
+            ExcelService excelService, 
+            BlobContainerClient blobContainerClient
+        )
             : base(context, excelService, authorizationService, blobContainerClient)
         {
             _context = context;

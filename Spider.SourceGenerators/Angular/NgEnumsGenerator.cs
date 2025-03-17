@@ -62,9 +62,6 @@ namespace Spider.SourceGenerators.Angular
 
         private static void Execute(IList<EnumDeclarationSyntax> currentProjectEnums, IList<ClassDeclarationSyntax> classes, List<SpiderClass> referencedProjectClasses, string callingProjectDirectory, SourceProductionContext context)
         {
-            if (currentProjectEnums.Count == 0) 
-                return;
-
             List<SpiderClass> currentProjectClasses = Helpers.GetSpiderClasses(classes, referencedProjectClasses);
             List<SpiderClass> currentProjectEntities = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Entities")).ToList();
             List<SpiderClass> currentProjectClassEnums = currentProjectClasses.Where(x => x.Namespace.EndsWith(".Enums")).ToList();

@@ -1,4 +1,5 @@
-﻿using Spider.Shared.Resources;
+﻿using Microsoft.AspNetCore.Http;
+using Spider.Shared.Resources;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,8 @@ namespace Spider.Shared.Exceptions
 {
     public class ExpiredVerificationException : Exception
     {
+        public int StatusCode { get; set; } = StatusCodes.Status400BadRequest;
+
         // Constructor
         public ExpiredVerificationException() : base(SharedTerms.ExpiredVerificationCodeException) { }
 

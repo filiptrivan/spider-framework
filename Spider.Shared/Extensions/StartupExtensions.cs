@@ -120,6 +120,9 @@ namespace Spider.Shared.Extensions
 
         public static void SpiderAddAzureClients(this IServiceCollection services)
         {
+            if (string.IsNullOrEmpty(SettingsProvider.Current.BlobStorageConnectionString))
+                return;
+
             services.AddAzureClients(clientBuilder =>
             {
                 clientBuilder.AddBlobServiceClient(SettingsProvider.Current.BlobStorageConnectionString);
@@ -278,19 +281,19 @@ namespace Spider.Shared.Extensions
 
                         if (ex is BusinessException businessEx)
                         {
-                            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                            context.Response.StatusCode = businessEx.StatusCode;
                             message = businessEx.Message;
                             logLevel = LogEventLevel.Warning;
                         }
                         else if (ex is ExpiredVerificationException expiredVerificationEx)
                         {
-                            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                            context.Response.StatusCode = expiredVerificationEx.StatusCode;
                             message = expiredVerificationEx.Message;
                             logLevel = LogEventLevel.Information;
                         }
                         else if (ex is UnauthorizedException unauthorizedEx)
                         {
-                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                            context.Response.StatusCode = unauthorizedEx.StatusCode;
                             message = unauthorizedEx.Message;
                             logLevel = LogEventLevel.Error;
                         }

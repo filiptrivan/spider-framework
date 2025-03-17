@@ -79,7 +79,7 @@ namespace Spider.SourceGenerators.Net
 
         private static Dictionary<string, string> GetTranslationData(SpiderClass entity, LanguageCodes language)
         {
-            Dictionary<string, string> dictionary = new Dictionary<string, string>
+            Dictionary<string, string> dictionary = new()
             {
                 { $"{entity.Name}", entity.Translate(TranslationCodes.Singular, language) },
                 { $"{entity.Name}List", entity.Translate(TranslationCodes.Plural, language) },
@@ -94,7 +94,7 @@ namespace Spider.SourceGenerators.Net
 
         private static string GetTermsFilePath(LanguageCodes language)
         {
-            return @$"Terms\TermsGenerated{GetTermsFileExtension(language)}.resx"; ;
+            return @$"Resources\TermsGenerated{GetTermsFileExtension(language)}.resx"; ;
         }
 
         private static string GetTermsFileExtension(LanguageCodes language)

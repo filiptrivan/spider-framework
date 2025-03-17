@@ -80,6 +80,7 @@ using Spider.Shared.Helpers;
 using Spider.Shared.Extensions;
 using Spider.Shared.Attributes;
 using Spider.Shared.Interfaces;
+using Spider.Shared.DTO;
 using {{appName}}.Shared.Resources;
 using {{appName}}.Business.Entities;
 using {{appName}}.Business.DTO;
