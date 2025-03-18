@@ -69,8 +69,13 @@ namespace {{basePartOfNamespace}}.Services
         {{(isSecurityProject ? "private readonly AuthorizationBusinessService<TUser> _authorizationService;" : "private readonly AuthorizationBusinessService _authorizationService;")}}
         private readonly BlobContainerClient _blobContainerClient;
 
-        public BusinessServiceGenerated(IApplicationDbContext context, ExcelService excelService, {{(isSecurityProject ? "AuthorizationBusinessService<TUser> authorizationService" : "AuthorizationBusinessService authorizationService")}}, BlobContainerClient blobContainerClient)
-        : base(context, blobContainerClient)
+        public BusinessServiceGenerated(
+            IApplicationDbContext context, 
+            ExcelService excelService, 
+            {{(isSecurityProject ? "AuthorizationBusinessService<TUser> authorizationService" : "AuthorizationBusinessService authorizationService")}}, 
+            BlobContainerClient blobContainerClient
+        )
+            : base(context, blobContainerClient)
         {
             _context = context;
             _excelService = excelService;

@@ -120,17 +120,21 @@ namespace {{basePartOfNamespace}}.Controllers
     public class {{referencedProjectEntityGroupedClasses.Key}}BaseController : SpiderBaseController
     {
         private readonly IApplicationDbContext _context;
-        private readonly {{servicesNamespace}}.{{GetBusinessServiceClassName(businessServiceName)}} _{{businessServiceName.FirstCharToLower()}};
+        private readonly {{servicesNamespace}}.{{GetBusinessServiceClassName(businessServiceName)}} _businessService;
         private readonly BlobContainerClient _blobContainerClient;
 
-        public {{referencedProjectEntityGroupedClasses.Key}}BaseController(IApplicationDbContext context, {{servicesNamespace}}.{{GetBusinessServiceClassName(businessServiceName)}} {{businessServiceName.FirstCharToLower()}}, BlobContainerClient blobContainerClient)
+        public {{referencedProjectEntityGroupedClasses.Key}}BaseController(
+            IApplicationDbContext context, 
+            {{servicesNamespace}}.{{GetBusinessServiceClassName(businessServiceName)}} businessService, 
+            BlobContainerClient blobContainerClient
+        )
         {
             _context = context;
-            _{{businessServiceName.FirstCharToLower()}} = {{businessServiceName.FirstCharToLower()}};
+            _businessService = businessService;
             _blobContainerClient = blobContainerClient;
         }
 
-{{string.Join("\n\n", GetControllerMethods(referencedProjectEntityGroupedClasses.ToList(), referencedProjectEntities, businessServiceName))}}
+{{string.Join("\n\n", GetControllerMethods(referencedProjectEntityGroupedClasses.ToList(), referencedProjectEntities))}}
 
     }
 """);
@@ -139,7 +143,7 @@ namespace {{basePartOfNamespace}}.Controllers
             return result;
         }
 
-        private static List<string> GetControllerMethods(List<SpiderClass> groupedReferencedProjectEntities, List<SpiderClass> allEntities, string businessServiceName)
+        private static List<string> GetControllerMethods(List<SpiderClass> groupedReferencedProjectEntities, List<SpiderClass> allEntities)
         {
             List<string> result = new();
 
@@ -159,14 +163,14 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<TableResponseDTO<{{referencedProjectEntity.Name}}DTO>> Get{{referencedProjectEntity.Name}}TableData(TableFilterDTO tableFilterDTO)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntity.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntity.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntity)}});
+            return await _businessService.Get{{referencedProjectEntity.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntity.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntity)}});
         }
 
         [HttpPost]
         [AuthGuard]
         public virtual async Task<IActionResult> Export{{referencedProjectEntity.Name}}TableDataToExcel(TableFilterDTO tableFilterDTO)
         {
-            byte[] fileContent = await _{{businessServiceName.FirstCharToLower()}}.Export{{referencedProjectEntity.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{referencedProjectEntity.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntity)}});
+            byte[] fileContent = await _businessService.Export{{referencedProjectEntity.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{referencedProjectEntity.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntity)}});
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"{TermsGenerated.ResourceManager.GetExcelTranslation("{{referencedProjectEntity.Name}}ExcelExportName", "{{referencedProjectEntity.Name}}List")}.xlsx"));
         }
 
@@ -174,42 +178,42 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<List<{{referencedProjectEntity.Name}}DTO>> Get{{referencedProjectEntity.Name}}List()
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntity.Name}}DTOList(_context.DbSet<{{referencedProjectEntity.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntity)}});
+            return await _businessService.Get{{referencedProjectEntity.Name}}DTOList(_context.DbSet<{{referencedProjectEntity.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntity)}});
         }
 
         [HttpGet]
         [AuthGuard]
         public virtual async Task<{{referencedProjectEntity.Name}}MainUIFormDTO> Get{{referencedProjectEntity.Name}}MainUIFormDTO({{referencedProjectEntityClassIdType}} id)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntity.Name}}MainUIFormDTO(id, {{ShouldAuthorizeEntity(referencedProjectEntity)}});
+            return await _businessService.Get{{referencedProjectEntity.Name}}MainUIFormDTO(id, {{ShouldAuthorizeEntity(referencedProjectEntity)}});
         }
 
         [HttpGet]
         [AuthGuard]
         public virtual async Task<{{referencedProjectEntity.Name}}DTO> Get{{referencedProjectEntity.Name}}({{referencedProjectEntityClassIdType}} id)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{referencedProjectEntity.Name}}DTO(id, {{ShouldAuthorizeEntity(referencedProjectEntity)}});
+            return await _businessService.Get{{referencedProjectEntity.Name}}DTO(id, {{ShouldAuthorizeEntity(referencedProjectEntity)}});
         }
 
-{{GetManyToOneReadMethods(referencedProjectEntity, allEntities, businessServiceName)}}
+{{GetManyToOneReadMethods(referencedProjectEntity, allEntities)}}
 
-{{string.Join("\n\n", GetOrderedOneToManyControllerMethods(referencedProjectEntity, allEntities, businessServiceName))}}
+{{string.Join("\n\n", GetOrderedOneToManyControllerMethods(referencedProjectEntity, allEntities))}}
 
-{{string.Join("\n\n", GetManyToManyControllerMethods(referencedProjectEntity, allEntities, businessServiceName))}}
+{{string.Join("\n\n", GetManyToManyControllerMethods(referencedProjectEntity, allEntities))}}
 
         #endregion
 
         #region Save
 
-{{GetSaveControllerMethods(referencedProjectEntity, businessServiceName)}}
+{{GetSaveControllerMethods(referencedProjectEntity)}}
 
-{{string.Join("\n\n", GetUploadBlobControllerMethods(referencedProjectEntity, allEntities, businessServiceName))}}
+{{string.Join("\n\n", GetUploadBlobControllerMethods(referencedProjectEntity, allEntities))}}
 
         #endregion
 
         #region Delete
 
-{{GetDeleteControllerMethods(referencedProjectEntity, allEntities, businessServiceName)}}
+{{GetDeleteControllerMethods(referencedProjectEntity, allEntities)}}
 
         #endregion
 
@@ -222,7 +226,7 @@ namespace {{basePartOfNamespace}}.Controllers
 
         #region Many To One
 
-        private static string GetManyToOneReadMethods(SpiderClass entity, List<SpiderClass> allEntities, string businessServiceName)
+        private static string GetManyToOneReadMethods(SpiderClass entity, List<SpiderClass> allEntities)
         {
             StringBuilder sb = new();
 
@@ -231,7 +235,7 @@ namespace {{basePartOfNamespace}}.Controllers
                 if (property.ShouldGenerateAutocompleteControllerMethod())
                 {
                     sb.Append($$"""
-{{GetAutocompleteMethod(property, entity, allEntities, businessServiceName)}}
+{{GetAutocompleteMethod(property, entity, allEntities)}}
 
 """);
                 }
@@ -239,7 +243,7 @@ namespace {{basePartOfNamespace}}.Controllers
                 if (property.ShouldGenerateDropdownControllerMethod())
                 {
                     sb.Append($$"""
-{{GetDropdownMethod(property, entity, allEntities, businessServiceName)}}
+{{GetDropdownMethod(property, entity, allEntities)}}
 
 """);
                 }
@@ -248,7 +252,7 @@ namespace {{basePartOfNamespace}}.Controllers
             return sb.ToString();
         }
 
-        private static string GetAutocompleteMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> allEntities, string businessServiceName)
+        private static string GetAutocompleteMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> allEntities)
         {
             SpiderClass manyToOneEntity = allEntities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).Single();
             string manyToOneEntityIdType = manyToOneEntity.GetIdType(allEntities);
@@ -259,7 +263,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<List<NamebookDTO<{{manyToOneEntityIdType}}>>> Get{{property.Name}}AutocompleteListFor{{entity.Name}}(int limit, string query, {{entity.GetIdType(allEntities)}}? {{entity.Name.FirstCharToLower()}}Id)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{property.Name}}AutocompleteListFor{{entity.Name}}(
+            return await _businessService.Get{{property.Name}}AutocompleteListFor{{entity.Name}}(
                 limit, 
                 query, 
                 _context.DbSet<{{manyToOneEntity.Name}}>(),
@@ -270,7 +274,7 @@ namespace {{basePartOfNamespace}}.Controllers
 """;
         }
 
-        private static string GetDropdownMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> allEntities, string businessServiceName)
+        private static string GetDropdownMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> allEntities)
         {
             SpiderClass manyToOneEntity = allEntities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).Single();
             string manyToOneEntityIdType = manyToOneEntity.GetIdType(allEntities);
@@ -281,7 +285,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<List<NamebookDTO<{{manyToOneEntityIdType}}>>> Get{{property.Name}}DropdownListFor{{entity.Name}}({{entity.GetIdType(allEntities)}}? {{entity.Name.FirstCharToLower()}}Id)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{property.Name}}DropdownListFor{{entity.Name}}(
+            return await _businessService.Get{{property.Name}}DropdownListFor{{entity.Name}}(
                 _context.DbSet<{{manyToOneEntity.Name}}>(), 
                 {{ShouldAuthorizeEntity(entity)}},
                 {{entity.Name.FirstCharToLower()}}Id
@@ -294,7 +298,7 @@ namespace {{basePartOfNamespace}}.Controllers
 
         #region Many To Many
 
-        private static List<string> GetManyToManyControllerMethods(SpiderClass referencedProjectEntityClass, List<SpiderClass> referencedProjectEntities, string businessServiceName)
+        private static List<string> GetManyToManyControllerMethods(SpiderClass referencedProjectEntityClass, List<SpiderClass> referencedProjectEntities)
         {
             List<string> result = new();
 
@@ -303,18 +307,18 @@ namespace {{basePartOfNamespace}}.Controllers
                 if (property.IsMultiSelectControlType() ||
                     property.IsMultiAutocompleteControlType())
                 {
-                    result.Add(GetManyToManySelectedEntitiesControllerMethod(property, referencedProjectEntityClass, referencedProjectEntities, businessServiceName));
+                    result.Add(GetManyToManySelectedEntitiesControllerMethod(property, referencedProjectEntityClass, referencedProjectEntities));
                 }
                 else if (property.HasSimpleManyToManyTableLazyLoadAttribute())
                 {
-                    result.Add(GetSimpleManyToManyTableLazyLoadControllerMethod(property, referencedProjectEntityClass, referencedProjectEntities, businessServiceName));
+                    result.Add(GetSimpleManyToManyTableLazyLoadControllerMethod(property, referencedProjectEntityClass, referencedProjectEntities));
                 }
             }
 
             return result;
         }
 
-        private static string GetSimpleManyToManyTableLazyLoadControllerMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> entities, string businessServiceName)
+        private static string GetSimpleManyToManyTableLazyLoadControllerMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> entities)
         {
             SpiderClass extractedEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
             string extractedEntityIdType = extractedEntity.GetIdType(entities);
@@ -324,14 +328,14 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<TableResponseDTO<{{extractedEntity.Name}}DTO>> Get{{property.Name}}TableDataFor{{entity.Name}}(TableFilterDTO tableFilterDTO)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{extractedEntity.Name}}TableData(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>().OrderBy(x => x.Id), false);
+            return await _businessService.Get{{extractedEntity.Name}}TableData(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>().OrderBy(x => x.Id), false);
         }
 
         [HttpPost]
         [AuthGuard]
         public virtual async Task<IActionResult> Export{{property.Name}}TableDataToExcelFor{{entity.Name}}(TableFilterDTO tableFilterDTO)
         {
-            byte[] fileContent = await _{{businessServiceName.FirstCharToLower()}}.Export{{extractedEntity.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>(), false);
+            byte[] fileContent = await _businessService.Export{{extractedEntity.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>(), false);
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"{TermsGenerated.{{extractedEntity.Name}}ExcelExportName}.xlsx"));
         }
 
@@ -339,12 +343,12 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<LazyLoadSelectedIdsResultDTO<{{extractedEntityIdType}}>> LazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(TableFilterDTO tableFilterDTO)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.LazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>().OrderBy(x => x.Id), {{ShouldAuthorizeEntity(entity)}});
+            return await _businessService.LazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>().OrderBy(x => x.Id), {{ShouldAuthorizeEntity(entity)}});
         }
 """;
         }
 
-        private static string GetManyToManySelectedEntitiesControllerMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> entities, string businessServiceName)
+        private static string GetManyToManySelectedEntitiesControllerMethod(SpiderProperty property, SpiderClass entity, List<SpiderClass> entities)
         {
             SpiderClass extractedEntity = entities.Where(x => x.Name == Helpers.ExtractTypeFromGenericType(property.Type)).SingleOrDefault();
 
@@ -353,7 +357,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<List<NamebookDTO<{{extractedEntity.GetIdType(entities)}}>>> Get{{property.Name}}NamebookListFor{{entity.Name}}({{entity.GetIdType(entities)}} id)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Get{{property.Name}}NamebookListFor{{entity.Name}}(id, false);
+            return await _businessService.Get{{property.Name}}NamebookListFor{{entity.Name}}(id, false);
         }
 """;
         }
@@ -362,7 +366,7 @@ namespace {{basePartOfNamespace}}.Controllers
 
         #region One To Many
 
-        private static List<string> GetOrderedOneToManyControllerMethods(SpiderClass entity, List<SpiderClass> entities, string businessServiceName)
+        private static List<string> GetOrderedOneToManyControllerMethods(SpiderClass entity, List<SpiderClass> entities)
         {
             List<string> result = new();
 
@@ -375,7 +379,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<List<{{Helpers.ExtractTypeFromGenericType(property.Type)}}DTO>> GetOrdered{{property.Name}}For{{entity.Name}}({{entity.GetIdType(entities)}} id)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.GetOrdered{{property.Name}}For{{entity.Name}}(id, false);
+            return await _businessService.GetOrdered{{property.Name}}For{{entity.Name}}(id, false);
         }
 """);
             }
@@ -387,7 +391,7 @@ namespace {{basePartOfNamespace}}.Controllers
 
         #region Delete
 
-        private static string GetDeleteControllerMethods(SpiderClass entity, List<SpiderClass> entities, string businessServiceName)
+        private static string GetDeleteControllerMethods(SpiderClass entity, List<SpiderClass> entities)
         {
             if (entity.IsReadonlyObject())
                 return null;
@@ -397,7 +401,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task Delete{{entity.Name}}({{entity.GetIdType(entities)}} id)
         {
-            await _{{businessServiceName.FirstCharToLower()}}.Delete{{entity.Name}}(id, {{ShouldAuthorizeEntity(entity)}});
+            await _businessService.Delete{{entity.Name}}(id, {{ShouldAuthorizeEntity(entity)}});
         }
 """;
         }
@@ -406,7 +410,7 @@ namespace {{basePartOfNamespace}}.Controllers
 
         #region Save
 
-        private static string GetSaveControllerMethods(SpiderClass entity, string businessServiceName)
+        private static string GetSaveControllerMethods(SpiderClass entity)
         {
             if (entity.IsReadonlyObject())
                 return null;
@@ -416,12 +420,12 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<{{entity.Name}}SaveBodyDTO> Save{{entity.Name}}({{entity.Name}}SaveBodyDTO saveBodyDTO)
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Save{{entity.Name}}AndReturnSaveBodyDTO(saveBodyDTO, {{ShouldAuthorizeEntity(entity)}}, {{ShouldAuthorizeEntity(entity)}});
+            return await _businessService.Save{{entity.Name}}AndReturnSaveBodyDTO(saveBodyDTO, {{ShouldAuthorizeEntity(entity)}}, {{ShouldAuthorizeEntity(entity)}});
         }
 """;
         }
 
-        private static List<string> GetUploadBlobControllerMethods(SpiderClass entity, List<SpiderClass> entities, string businessServiceName)
+        private static List<string> GetUploadBlobControllerMethods(SpiderClass entity, List<SpiderClass> entities)
         {
             List<string> result = new();
 
@@ -435,7 +439,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<string> Upload{{property.Name}}For{{entity.Name}}([FromForm] IFormFile file) // FT: It doesn't work without interface
         {
-            return await _{{businessServiceName.FirstCharToLower()}}.Upload{{property.Name}}For{{entity.Name}}(file, {{ShouldAuthorizeEntity(entity)}}, {{ShouldAuthorizeEntity(entity)}}); // TODO: Make authorization in business service with override
+            return await _businessService.Upload{{property.Name}}For{{entity.Name}}(file, {{ShouldAuthorizeEntity(entity)}}, {{ShouldAuthorizeEntity(entity)}}); // TODO: Make authorization in business service with override
         }
 """
 );

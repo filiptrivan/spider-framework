@@ -66,7 +66,11 @@ namespace {{basePartOfNamespace}}.Services
         private readonly IApplicationDbContext _context;
         private readonly AuthenticationService _authenticationService;
 
-        public AuthorizationBusinessServiceGenerated(IApplicationDbContext context, AuthenticationService authenticationService, BlobContainerClient blobContainerClient)
+        public AuthorizationBusinessServiceGenerated(
+            IApplicationDbContext context, 
+            AuthenticationService authenticationService, 
+            BlobContainerClient blobContainerClient
+        )
             : base(context, authenticationService, blobContainerClient)
         {
             _context = context;
