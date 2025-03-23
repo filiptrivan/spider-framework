@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace Spider.Shared.Attributes.EF
 {
-    public class ManyToOneRequiredAttribute : Attribute
+    public class CascadeDeleteAttribute : Attribute
     {
-        
     }
 }

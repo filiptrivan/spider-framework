@@ -1,12 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage;
 using Spider.Shared.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Transactions;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace Spider.Shared.Extensions
 {
@@ -17,7 +10,7 @@ namespace Spider.Shared.Extensions
         /// 0 - begin the new transaction
         /// 1 - work with the first transaction
         /// </summary>
-        private static AsyncLocal<Stack<IDbContextTransaction>> _transactionStack = new AsyncLocal<Stack<IDbContextTransaction>>();
+        private static AsyncLocal<Stack<IDbContextTransaction>> _transactionStack = new();
 
         /// <summary>
         /// Explanation why you should use transaction for multiple read operations also: https://stackoverflow.com/questions/308905/should-there-be-a-transaction-for-read-queries
@@ -25,7 +18,7 @@ namespace Spider.Shared.Extensions
         /// </summary>
         public static async Task<T> WithTransactionAsync<T>(this IApplicationDbContext context, Func<Task<T>> action)
         {
-            Stack<IDbContextTransaction> transactionStack = _transactionStack.Value ?? new Stack<IDbContextTransaction>();
+            Stack<IDbContextTransaction> transactionStack = _transactionStack.Value ?? new();
             bool isFirstTransaction = false;
             IDbContextTransaction transaction;
 
@@ -73,7 +66,7 @@ namespace Spider.Shared.Extensions
         /// </summary>
         public static async Task WithTransactionAsync(this IApplicationDbContext context, Func<Task> action)
         {
-            Stack<IDbContextTransaction> transactionStack = _transactionStack.Value ?? new Stack<IDbContextTransaction>();
+            Stack<IDbContextTransaction> transactionStack = _transactionStack.Value ?? new();
             bool isFirstTransaction = false;
             IDbContextTransaction transaction;
 

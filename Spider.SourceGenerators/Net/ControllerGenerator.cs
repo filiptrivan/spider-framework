@@ -163,14 +163,14 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<TableResponseDTO<{{referencedProjectEntity.Name}}DTO>> Get{{referencedProjectEntity.Name}}TableData(TableFilterDTO tableFilterDTO)
         {
-            return await _businessService.Get{{referencedProjectEntity.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntity.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntity)}});
+            return await _businessService.Get{{referencedProjectEntity.Name}}TableData(tableFilterDTO, _context.DbSet<{{referencedProjectEntity.Name}}>(), {{Helpers.GetShouldAuthorizeEntityString(referencedProjectEntity)}});
         }
 
         [HttpPost]
         [AuthGuard]
         public virtual async Task<IActionResult> Export{{referencedProjectEntity.Name}}TableDataToExcel(TableFilterDTO tableFilterDTO)
         {
-            byte[] fileContent = await _businessService.Export{{referencedProjectEntity.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{referencedProjectEntity.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntity)}});
+            byte[] fileContent = await _businessService.Export{{referencedProjectEntity.Name}}TableDataToExcel(tableFilterDTO, _context.DbSet<{{referencedProjectEntity.Name}}>(), {{Helpers.GetShouldAuthorizeEntityString(referencedProjectEntity)}});
             return File(fileContent, SettingsProvider.Current.ExcelContentType, Uri.EscapeDataString($"{TermsGenerated.ResourceManager.GetExcelTranslation("{{referencedProjectEntity.Name}}ExcelExportName", "{{referencedProjectEntity.Name}}List")}.xlsx"));
         }
 
@@ -178,21 +178,21 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<List<{{referencedProjectEntity.Name}}DTO>> Get{{referencedProjectEntity.Name}}List()
         {
-            return await _businessService.Get{{referencedProjectEntity.Name}}DTOList(_context.DbSet<{{referencedProjectEntity.Name}}>(), {{ShouldAuthorizeEntity(referencedProjectEntity)}});
+            return await _businessService.Get{{referencedProjectEntity.Name}}DTOList(_context.DbSet<{{referencedProjectEntity.Name}}>(), {{Helpers.GetShouldAuthorizeEntityString(referencedProjectEntity)}});
         }
 
         [HttpGet]
         [AuthGuard]
         public virtual async Task<{{referencedProjectEntity.Name}}MainUIFormDTO> Get{{referencedProjectEntity.Name}}MainUIFormDTO({{referencedProjectEntityClassIdType}} id)
         {
-            return await _businessService.Get{{referencedProjectEntity.Name}}MainUIFormDTO(id, {{ShouldAuthorizeEntity(referencedProjectEntity)}});
+            return await _businessService.Get{{referencedProjectEntity.Name}}MainUIFormDTO(id, {{Helpers.GetShouldAuthorizeEntityString(referencedProjectEntity)}});
         }
 
         [HttpGet]
         [AuthGuard]
         public virtual async Task<{{referencedProjectEntity.Name}}DTO> Get{{referencedProjectEntity.Name}}({{referencedProjectEntityClassIdType}} id)
         {
-            return await _businessService.Get{{referencedProjectEntity.Name}}DTO(id, {{ShouldAuthorizeEntity(referencedProjectEntity)}});
+            return await _businessService.Get{{referencedProjectEntity.Name}}DTO(id, {{Helpers.GetShouldAuthorizeEntityString(referencedProjectEntity)}});
         }
 
 {{GetManyToOneReadMethods(referencedProjectEntity, allEntities)}}
@@ -267,7 +267,7 @@ namespace {{basePartOfNamespace}}.Controllers
                 limit, 
                 query, 
                 _context.DbSet<{{manyToOneEntity.Name}}>(),
-                {{ShouldAuthorizeEntity(entity)}},
+                {{Helpers.GetShouldAuthorizeEntityString(entity)}},
                 {{entity.Name.FirstCharToLower()}}Id
             );
         }
@@ -287,7 +287,7 @@ namespace {{basePartOfNamespace}}.Controllers
         {
             return await _businessService.Get{{property.Name}}DropdownListFor{{entity.Name}}(
                 _context.DbSet<{{manyToOneEntity.Name}}>(), 
-                {{ShouldAuthorizeEntity(entity)}},
+                {{Helpers.GetShouldAuthorizeEntityString(entity)}},
                 {{entity.Name.FirstCharToLower()}}Id
             );
         }
@@ -343,7 +343,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<LazyLoadSelectedIdsResultDTO<{{extractedEntityIdType}}>> LazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(TableFilterDTO tableFilterDTO)
         {
-            return await _businessService.LazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>().OrderBy(x => x.Id), {{ShouldAuthorizeEntity(entity)}});
+            return await _businessService.LazyLoadSelected{{property.Name}}IdsFor{{entity.Name}}(tableFilterDTO, _context.DbSet<{{extractedEntity.Name}}>().OrderBy(x => x.Id), {{Helpers.GetShouldAuthorizeEntityString(entity)}});
         }
 """;
         }
@@ -401,7 +401,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task Delete{{entity.Name}}({{entity.GetIdType(entities)}} id)
         {
-            await _businessService.Delete{{entity.Name}}(id, {{ShouldAuthorizeEntity(entity)}});
+            await _businessService.Delete{{entity.Name}}(id, {{Helpers.GetShouldAuthorizeEntityString(entity)}});
         }
 """;
         }
@@ -420,7 +420,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<{{entity.Name}}SaveBodyDTO> Save{{entity.Name}}({{entity.Name}}SaveBodyDTO saveBodyDTO)
         {
-            return await _businessService.Save{{entity.Name}}AndReturnSaveBodyDTO(saveBodyDTO, {{ShouldAuthorizeEntity(entity)}}, {{ShouldAuthorizeEntity(entity)}});
+            return await _businessService.Save{{entity.Name}}AndReturnSaveBodyDTO(saveBodyDTO, {{Helpers.GetShouldAuthorizeEntityString(entity)}}, {{Helpers.GetShouldAuthorizeEntityString(entity)}});
         }
 """;
         }
@@ -439,7 +439,7 @@ namespace {{basePartOfNamespace}}.Controllers
         [AuthGuard]
         public virtual async Task<string> Upload{{property.Name}}For{{entity.Name}}([FromForm] IFormFile file) // FT: It doesn't work without interface
         {
-            return await _businessService.Upload{{property.Name}}For{{entity.Name}}(file, {{ShouldAuthorizeEntity(entity)}}, {{ShouldAuthorizeEntity(entity)}}); // TODO: Make authorization in business service with override
+            return await _businessService.Upload{{property.Name}}For{{entity.Name}}(file, {{Helpers.GetShouldAuthorizeEntityString(entity)}}, {{Helpers.GetShouldAuthorizeEntityString(entity)}}); // TODO: Make authorization in business service with override
         }
 """
 );
@@ -451,11 +451,6 @@ namespace {{basePartOfNamespace}}.Controllers
         #endregion
 
         #region Helpers
-
-        private static string ShouldAuthorizeEntity(SpiderClass entity)
-        {
-            return (!entity.HasDoNotAuthorizeAttribute()).ToString().ToLower();
-        }
 
         private static string GetBusinessServiceClassName(string businessServiceName)
         {

@@ -1194,9 +1194,9 @@ namespace {{basePartOfNamespace}}.Services
 
             List<string> result = new();
 
-            List<SpiderProperty> manyToOneRequiredProperties = Helpers.GetManyToOneRequiredProperties(entity.Name, allEntities);
+            List<SpiderProperty> cascadeDeleteProperties = Helpers.GetCascadeDeleteProperties(entity.Name, allEntities);
 
-            foreach (SpiderProperty property in manyToOneRequiredProperties)
+            foreach (SpiderProperty property in cascadeDeleteProperties)
             {
                 SpiderClass parentEntity = allEntities.Where(x => x.Name == property.EntityName).SingleOrDefault();
 

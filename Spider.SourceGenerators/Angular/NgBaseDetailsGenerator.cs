@@ -150,8 +150,8 @@ export class {{entity.Name}}BaseDetailsComponent {
     @Input() panelIcon: string;
     @Input() showReturnButton: boolean = true;
     authorizationForSaveSubscription: Subscription;
-    @Input() authorizedForSaveObservable: () => Observable<boolean> = () => of(false);
-    isAuthorizedForSave: boolean = false;
+    @Input() authorizedForSaveObservable: () => Observable<boolean> = () => of({{(!Helpers.ShouldAuthorizeEntity(entity)).ToString().ToLower()}});
+    isAuthorizedForSave: boolean = {{(!Helpers.ShouldAuthorizeEntity(entity)).ToString().ToLower()}};
     @Output() onIsAuthorizedForSaveChange = new EventEmitter<IsAuthorizedForSaveEvent>(); 
 
     modelId: number;

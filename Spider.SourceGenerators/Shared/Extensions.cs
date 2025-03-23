@@ -239,6 +239,7 @@ namespace Spider.SourceGenerators.Shared
         {
             if (type.IsEnumerable())
                 return false;
+
             if (type.IsBaseDataType())
                 return false;
 

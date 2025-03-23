@@ -132,5 +132,29 @@ namespace Spider.Infrastructure
             }
         }
 
+        public static void ConfigureManyToOneCascadeDelete(this List<IMutableEntityType> mutableEntityTypes, ModelBuilder modelBuilder)
+        {
+            foreach (IMutableEntityType entityType in mutableEntityTypes)
+            {
+                Type clrType = entityType.ClrType;
+
+                foreach (PropertyInfo property in clrType.GetProperties())
+                {
+                    CascadeDeleteAttribute manyToOneCascadeDeleteAttribute = property.GetCustomAttribute<CascadeDeleteAttribute>();
+                    WithManyAttribute withManyAttribute = property.GetCustomAttribute<WithManyAttribute>();
+
+                    if (manyToOneCascadeDeleteAttribute == null || withManyAttribute == null)
+                        continue;
+
+                    modelBuilder.Entity(clrType)
+                        .HasOne(property.PropertyType, property.Name)
+                        .WithMany(withManyAttribute.WithMany)
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired(false)
+                        .HasForeignKey($"{property.Name}Id");
+                }
+            }
+        }
+
     }
 }

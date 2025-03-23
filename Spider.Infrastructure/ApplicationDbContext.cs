@@ -80,6 +80,7 @@ namespace Spider.Infrastructure
             mutableEntityTypes.ConfigureReferenceTypesSetNull(modelBuilder);
             mutableEntityTypes.ConfigureManyToManyRelationships(modelBuilder);
             mutableEntityTypes.ConfigureManyToOneRequired(modelBuilder);
+            mutableEntityTypes.ConfigureManyToOneCascadeDelete(modelBuilder);
 
             base.OnModelCreating(modelBuilder);
         }

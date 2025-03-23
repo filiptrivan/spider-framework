@@ -229,13 +229,15 @@ namespace Spider.SourceGenerators.Shared
             return namespacePartsWithoutLastElement[namespacePartsWithoutLastElement.Length - 1]; // eg. Security
         }
 
-        public static List<SpiderProperty> GetManyToOneRequiredProperties(string entityName, List<SpiderClass> entities)
+        public static List<SpiderProperty> GetCascadeDeleteProperties(string entityName, List<SpiderClass> entities)
         {
             return entities
                 .SelectMany(x => x.Properties)
-                .Where(prop => prop.Type.IsManyToOneType() &&
-                               prop.Attributes.Any(x => x.Name == "ManyToOneRequired") &&
-                               prop.Type == entityName)
+                .Where(prop => 
+                    prop.Type.IsManyToOneType() &&
+                    prop.Attributes.Any(x => x.Name == "ManyToOneRequired" || x.Name == "CascadeDelete") &&
+                    prop.Type == entityName
+                )
                 .ToList();
         }
 
@@ -257,7 +259,7 @@ namespace Spider.SourceGenerators.Shared
         {
             string argumentValue = a?.ArgumentList?.Arguments != null && a.ArgumentList.Arguments.Any()
                     ? string.Join(", ", a.ArgumentList.Arguments.Select(arg => arg?.ToString()))
-                    : null; ; // FT: Doing this because of Range(0, 5) (long tail because of null pointer exception)
+                    : null; // FT: Doing this because of Range(0, 5) (long tail because of null pointer exception)
 
             argumentValue = GetFormatedAttributeValue(argumentValue);
 
@@ -1321,6 +1323,16 @@ namespace Spider.SourceGenerators.Shared
         public static string GetAuthorizeEntityMethodName(string entityName, CrudCodes crudCode)
         {
             return $"Authorize{entityName}{crudCode}AndThrow";
+        }
+
+        public static bool ShouldAuthorizeEntity(SpiderClass entity)
+        {
+            return !entity.HasDoNotAuthorizeAttribute();
+        }
+
+        public static string GetShouldAuthorizeEntityString(SpiderClass entity)
+        {
+            return ShouldAuthorizeEntity(entity).ToString().ToLower();
         }
 
         #endregion
