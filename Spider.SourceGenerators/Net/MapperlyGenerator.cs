@@ -7,6 +7,7 @@ using Spider.SourceGenerators.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System;
 
 namespace Spider.SourceGenerators.Net
 {
@@ -76,11 +77,11 @@ namespace {{basePartOfNamespace}}.DataMappers
 
 {{(entity.IsAbstract ? "" : GetMapperToEntity($"{entity.Name}DTOToEntityConfig", customMapperClass, entity, currentProjectEntities))}}
 
-{{GetMapperToDTO($"{entity.Name}ToDTOConfig", customMapperClass, entity, currentProjectEntities)}}
+{{GetMapToDTO($"{entity.Name}ToDTOConfig", customMapperClass, entity, currentProjectEntities)}}
 
-{{GetMapperToDTO($"{entity.Name}ProjectToConfig", customMapperClass, entity, currentProjectEntities)}}
+{{GetProjectToDTO($"{entity.Name}ProjectToConfig", customMapperClass, entity, currentProjectEntities)}}
 
-{{GetMapperToDTO($"{entity.Name}ExcelProjectToConfig", customMapperClass, entity, currentProjectEntities)}}
+{{GetExcelProjectToDTO($"{entity.Name}ExcelProjectToConfig", customMapperClass, entity, currentProjectEntities)}}
 
         #endregion
 
@@ -144,7 +145,29 @@ namespace {{basePartOfNamespace}}.DataMappers
 
         #region To DTO
 
-        public static string GetMapperToDTO(string methodName, SpiderClass customMapperClass, SpiderClass entity, List<SpiderClass> entities)
+        public static string GetMapToDTO(string methodName, SpiderClass customMapperClass, SpiderClass entity, List<SpiderClass> currentProjectEntities)
+        {
+            return GetToDTOConfig(methodName, customMapperClass, entity, currentProjectEntities, customMappers: []);
+        }
+
+        private static string GetProjectToDTO(string methodName, SpiderClass customMapperClass, SpiderClass entity, List<SpiderClass> currentProjectEntities)
+        {
+            List<string> customMappers = new();
+
+            foreach (SpiderAttribute attribute in entity.Attributes.Where(x => x.Name == "ProjectToDTO"))
+            {
+                customMappers.Add(attribute.Value);
+            }
+
+            return GetToDTOConfig(methodName, customMapperClass, entity, currentProjectEntities, customMappers);
+        }
+
+        private static string GetExcelProjectToDTO(string methodName, SpiderClass customMapperClass, SpiderClass entity, List<SpiderClass> currentProjectEntities)
+        {
+            return GetToDTOConfig(methodName, customMapperClass, entity, currentProjectEntities, customMappers: []);
+        }
+
+        public static string GetToDTOConfig(string methodName, SpiderClass customMapperClass, SpiderClass entity, List<SpiderClass> currentProjectEntities, List<string> customMappers)
         {
             if (customMapperClass == null)
                 return "You didn't define DataMappers";
@@ -152,7 +175,12 @@ namespace {{basePartOfNamespace}}.DataMappers
             if (HasCustomPair(customMapperClass, methodName))
                 return "";
 
-            List<string> manyToOneMappers = GetConfigForManyToOneClass(entity, entities);
+            List<string> manyToOneMappers = GetConfigForManyToOneClass(entity, currentProjectEntities);
+
+            foreach (string manyToOneMapper in manyToOneMappers)
+            {
+                customMappers.Add(manyToOneMapper);
+            }
 
             return $$"""
         public static TypeAdapterConfig {{methodName}}()
@@ -185,7 +213,7 @@ namespace {{basePartOfNamespace}}.DataMappers
                         continue;
 
                     string manyToOneEntityDisplayName = Helpers.GetDisplayNameProperty(manyToOneEntity);
-                    manyToOneEntityDisplayName = manyToOneEntityDisplayName.Replace(".ToString()", "");
+                    manyToOneEntityDisplayName = manyToOneEntityDisplayName.Replace(".ToString()", ""); // TODO FT: Check why are you doing this, maybe it's okay to do ToString()
 
                     manyToOneAttributeMappers.Add($".Map(dest => dest.{property.Name}Id, src => src.{property.Name}.Id)"); // "dest.TierId", "src.Tier.Id"
                     manyToOneAttributeMappers.Add($".Map(dest => dest.{property.Name}DisplayName, src => src.{property.Name}.{manyToOneEntityDisplayName})"); // "dest.TierDisplayName", "src.Tier.Name"
@@ -199,7 +227,7 @@ namespace {{basePartOfNamespace}}.DataMappers
                         continue;
 
                     string extractedEntityDisplayName = Helpers.GetDisplayNameProperty(extractedEntity);
-                    extractedEntityDisplayName = extractedEntityDisplayName.Replace(".ToString()", "");
+                    extractedEntityDisplayName = extractedEntityDisplayName.Replace(".ToString()", ""); 
 
                     if (property.HasGenerateCommaSeparatedDisplayNameAttribute())
                     {
@@ -207,12 +235,6 @@ namespace {{basePartOfNamespace}}.DataMappers
                         manyToOneAttributeMappers.Add($".Map(dest => dest.{property.Name}CommaSeparated, src => string.Join(\", \", src.{property.Name}.Select(x => x.{extractedEntityDisplayName})))");
                     }
                 }
-
-                // FT: This was the code if we store images in our database, delete if you don't need
-                //if (property.Type == "byte[]" && property.HasExcludeFromDTOAttribute() == false)
-                //{
-                //    manyToOneAttributeMappers.Add($".Map(dest => dest.{property.Name}, src => src.{property.Name} == null ? null : Convert.ToBase64String(src.{property.Name}))");
-                //}
             }
 
             return manyToOneAttributeMappers;

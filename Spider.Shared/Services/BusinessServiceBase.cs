@@ -80,6 +80,12 @@ namespace Spider.Shared.Services
 
         public async Task DeleteEntitiesAsync<T, ID>(List<ID> ids) where T : class, IBusinessObject<ID> where ID : struct
         {
+            if (ids == null)
+                throw new ArgumentNullException("You need to pass a list of ids to delete.");
+
+            if (ids.Count == 0)
+                return; // FT: Early return, don't make db call
+
             await _context.WithTransactionAsync(async () =>
             {
                 await _context.DbSet<T>().Where(x => ids.Contains(x.Id)).ExecuteDeleteAsync();
