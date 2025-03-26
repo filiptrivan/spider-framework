@@ -189,7 +189,7 @@ namespace {{basePartOfNamespace}}.DataMappers
 
             config
                 .NewConfig<{{entity.Name}}, {{entity.Name}}DTO>()
-                {{string.Join("\n\t\t\t\t", manyToOneMappers)}}
+                {{string.Join("\n\t\t\t\t", customMappers)}}
                 ;
 
             return config;

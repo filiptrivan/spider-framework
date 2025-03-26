@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace Spider.Shared.Attributes.EF
 {
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public class ProjectToDTOAttribute : Attribute
     {
         public ProjectToDTOAttribute(string customMapper) { }

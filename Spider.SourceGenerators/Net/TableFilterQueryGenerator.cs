@@ -334,14 +334,23 @@ using {{item}};
                 return $"{baseClassInDotNotation}.Id";
             }
 
-            SpiderClass nonGeneratedMapperClass = allClasses.Where(x => x.Namespace.EndsWith(".DataMappers")).SingleOrDefault(); // FT: Can be null if the user still didn't made DataMappers partial class
+            foreach (SpiderAttribute attribute in entity.Attributes.Where(x => x.Name == "ProjectToDTO"))
+            {
+                // ".Map(dest => dest.TransactionPrice, src => src.Transaction.Price)"
+                string wordAfterDest = attribute.Value.Split("dest.")[1].Split(",")[0]; // TransactionPrice
 
-            List<SpiderMethod> methodsOfTheNonGeneratedMapperClass = nonGeneratedMapperClass?.Methods; // FT: Classes from referenced assemblies won't have method body, but here it's not important.
+                if (wordAfterDest == DTOClassProp)
+                    return attribute.Value.Split("src.")[1].Split(")")[0]; // Transaction.Price
+            }
 
-            return GetEntityDotNotationForDTO(methodsOfTheNonGeneratedMapperClass, DTOClass.Name, entity.Name, DTOClassProp);
+            return null;
 
-            //if (mapMethod != null)
-            //    return GetFirstAttributeParamFromMapper(mapMethod, DTOClassProp); // "Role.Id"
+            // TODO FT: Delete, complicating for custom class mapper
+            //SpiderClass nonGeneratedMapperClass = allClasses.Where(x => x.Namespace.EndsWith(".DataMappers")).SingleOrDefault(); // FT: Can be null if the user still didn't made DataMappers partial class
+
+            //List<SpiderMethod> methodsOfTheNonGeneratedMapperClass = nonGeneratedMapperClass?.Methods; // FT: Classes from referenced assemblies won't have method body, but here it's not important.
+
+            //return GetEntityDotNotationForDTO(methodsOfTheNonGeneratedMapperClass, DTOClass.Name, entity.Name, DTOClassProp);
         }
 
         /// <summary>
