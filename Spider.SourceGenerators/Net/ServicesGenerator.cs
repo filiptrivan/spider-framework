@@ -1214,8 +1214,10 @@ namespace {{basePartOfNamespace}}.Services
                 {
                     result.Add($$"""
                 var {{parentEntity.Name.FirstCharToLower()}}ListForDeleteBecause{{property.Name}}_{{deleteIterator + 1}} = await _context.DbSet<{{parentEntity.Name}}>()
+                    .AsNoTracking()
                     .Where(x => {{listForDeleteVariableName}}_{{deleteIterator}}.Contains(x.{{property.Name}}.Id))
-                    .Select(x => x.Id).ToListAsync();
+                    .Select(x => x.Id)
+                    .ToListAsync();
 """);
 
                 }

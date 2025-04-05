@@ -7,6 +7,7 @@ namespace Spider.Shared.BaseEntities
     {
         public T Id { get; private set; } // FT: Protected doesn't work with Mappster
 
+        [ConcurrencyCheck]
         [Required]
         public int Version { get; private set; }
 
